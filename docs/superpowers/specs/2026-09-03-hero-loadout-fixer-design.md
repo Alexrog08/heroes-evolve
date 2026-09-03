@@ -70,7 +70,7 @@ Que `LoadoutPlanner` sea puro es la decisión estructural más importante: toda 
    - arrojadiza: 1
    - arco: 2 (arma + munición)
    - ballesta: 2 (arma + munición)
-5. La ballesta se descarta si el héroe tiene montura equipada: en nativo no se recarga a caballo.
+5. Arco y ballesta se descartan si el héroe está montado y no dispone de ningún ítem de esa categoría utilizable a caballo. Ver 5.3.
 6. Gana la primera candidata cuyo coste sea menor o igual que `E`. Se planifica y se repite el proceso con las ranuras restantes.
 7. Cuando ya no queda ninguna skill candidata viable pero sobran ranuras, se aplica el **relleno de cortesía**, en este orden y repitiendo mientras queden huecos: escudo (si no lleva y su arma principal no es de dos manos), luego munición extra (si porta un arma de proyectil y no lleva ya dos cargas), luego se deja vacía. Una ranura vacía es un resultado válido: es preferible a equipar algo incoherente.
 8. **Nunca** se concede montura en esta ruta.
@@ -83,8 +83,8 @@ Con `dominancia = mejorSkillProyectil - mejorSkillMele` y margen configurable (p
 
 | Caso | Loadout (4 ranuras) |
 |---|---|
-| Montado + ballesta dominante | degradar a arco y aplicar la fila de montado |
-| Montado + arco | arco + 2 munición + sidearm |
+| Montado + proyectil dominante no utilizable a caballo (ver 5.3) | degradar a la siguiente categoría de proyectil viable; si ninguna lo es, tratar como melé dominante |
+| Montado + proyectil viable | arma + 2 munición + sidearm |
 | Sidearm de 2M | arma + 2 munición + 2M |
 | Sidearm de 1M, dominancia mayor o igual que el margen | arma + 2 munición + 1M |
 | Sidearm de 1M, dominancia menor que el margen | arma + 1 munición + escudo + 1M |
@@ -102,7 +102,33 @@ Armaduras: se rellenan las ranuras vacías de cabeza, cuerpo, piernas, manos y c
 
 **Montura:** se concede si Riding está entre las dos mejores skills del héroe **o** si la línea de tropa élite de su cultura va montada. Lo segundo se determina recorriendo `CultureObject.EliteBasicTroop` y sus `UpgradeTargets`, comprobando si el tramo alto lleva un ítem con `HorseComponent.IsMount`. Así khuzaitas y vlandianos salen a caballo y battanios a pie sin cablear ninguna facción, y funciona con culturas moddeadas. Si se concede montura, se añade una barda compatible.
 
-### 5.3 Tier objetivo
+### 5.3 Viabilidad de proyectiles a caballo
+
+**No se decide por clase de arma, sino por ítem.** Un arma de proyectil es utilizable a caballo si:
+
+1. El héroe no tiene montura equipada — entonces cualquiera lo es; o
+2. su `WeaponComponentData.WeaponFlags` **no** incluye `CantReloadOnHorseback`; o
+3. el héroe tiene el perk correspondiente, consultado con `hero.GetPerkValue(...)`:
+   `DefaultPerks.Crossbow.MountedCrossbowman` para ballestas,
+   `DefaultPerks.Bow.MountedArchery` para arcos.
+
+Censo verificado sobre los ficheros de armas de un jugador de la v1.4.8:
+
+| Tipo | `item_usage` | Ítems | Con `CantReloadOnHorseback` |
+|---|---|---|---|
+| Arco | `bow` | 11 | 0 |
+| Arco | `long_bow` | 11 | 0 |
+| Ballesta | `crossbow` | 5 | 5 |
+| Ballesta | `crossbow_light` | 4 | 0 |
+| Ballesta | `crossbow_fast` | 1 | 0 |
+
+Las ballestas ligeras sí se recargan a caballo; solo las pesadas llevan el flag. Ningún arco de vanilla lo lleva, pero uno moddeado podría. Por eso la regla lee el flag y nunca asume por clase.
+
+**Consecuencia arquitectónica.** `LoadoutPlanner` es puro y no conoce ítems, pero necesita saber si una categoría de proyectil es descartable para poder caer a la siguiente skill en lugar de dejar una ranura vacía. El llamante precalcula una estructura `MountedRangedAvailability { BowViable, CrossbowViable }` consultando el catálogo y los perks del héroe, y se la pasa al planner como entrada. El planner trata la categoría como no viable cuando el héroe está montado y esa bandera es falsa.
+
+`ItemPicker` aplica el mismo filtro al elegir el ítem concreto: con héroe montado y sin perk, descarta candidatos que lleven `CantReloadOnHorseback`.
+
+### 5.4 Tier objetivo
 
 - Si el héroe lleva algo equipado: la mediana del tier de sus ítems actuales.
 - Si va completamente desnudo: derivado de `Clan.Tier`.
@@ -169,7 +195,7 @@ Configuración recomendada de NBS para acompañarlo: `Upgrade Equipped Items Onl
 4. Arquero dominante a pie con sidearm de 1M y dominancia alta: 2 munición, sin escudo.
 5. Arquero dominante a pie con sidearm de 1M y dominancia baja: 1 munición + escudo.
 6. Arquero dominante con sidearm de 2M: 2 munición, sin escudo.
-7. Ballestero dominante con montura: degrada a arco.
+7. Ballestero dominante con montura y solo ballestas pesadas disponibles: degrada. Con ballesta ligera disponible o con el perk MountedCrossbowman: mantiene la ballesta.
 8. Héroe completamente desnudo: loadout de 4 ranuras coherente.
 9. Héroe sin ranuras vacías: plan vacío, sin cambios.
 10. Arquero: nunca se le asigna asta como acompañante.
