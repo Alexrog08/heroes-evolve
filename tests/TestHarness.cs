@@ -41,6 +41,7 @@ namespace HeroLoadoutFixer.Tests
         public static int Main()
         {
             SmokeTests.RunAll();
+            SkillProfileTests.RunAll();
 
             Console.WriteLine();
             Console.WriteLine(Check.Passes + " passed, " + Check.Failures + " failed");
