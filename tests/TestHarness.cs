@@ -43,6 +43,7 @@ namespace HeroLoadoutFixer.Tests
             SmokeTests.RunAll();
             SkillProfileTests.RunAll();
             SlotSnapshotTests.RunAll();
+            TierCeilingTests.RunAll();
 
             Console.WriteLine();
             Console.WriteLine(Check.Passes + " passed, " + Check.Failures + " failed");
