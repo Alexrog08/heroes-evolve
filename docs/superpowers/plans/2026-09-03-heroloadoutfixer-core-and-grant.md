@@ -391,7 +391,7 @@ namespace HeroLoadoutFixer.Core
 pwsh -File "E:\Games\Mods\Mis mods\HeroLoadoutFixer\build\build-tests.ps1"
 ```
 
-Esperado: `12 passed, 0 failed`, código de salida 0.
+Esperado: `0 failed` y código de salida 0.
 
 - [ ] **Step 6: Commit**
 
@@ -687,7 +687,7 @@ namespace HeroLoadoutFixer.Core
 pwsh -File "E:\Games\Mods\Mis mods\HeroLoadoutFixer\build\build-tests.ps1"
 ```
 
-Esperado: `32 passed, 0 failed`.
+Esperado: `0 failed` y código de salida 0.
 
 - [ ] **Step 7: Commit**
 
@@ -848,7 +848,7 @@ namespace HeroLoadoutFixer.Core
 pwsh -File "E:\Games\Mods\Mis mods\HeroLoadoutFixer\build\build-tests.ps1"
 ```
 
-Esperado: `42 passed, 0 failed`.
+Esperado: `0 failed` y código de salida 0.
 
 - [ ] **Step 6: Commit**
 
@@ -1264,7 +1264,7 @@ namespace HeroLoadoutFixer.Core
 pwsh -File "E:\Games\Mods\Mis mods\HeroLoadoutFixer\build\build-tests.ps1"
 ```
 
-Esperado: `62 passed, 0 failed`.
+Esperado: `0 failed` y código de salida 0.
 
 - [ ] **Step 7: Commit**
 
@@ -1602,7 +1602,7 @@ Añadir a `src/Core/LoadoutPlanner.cs`, dentro de la clase `LoadoutPlanner`, jus
 pwsh -File "E:\Games\Mods\Mis mods\HeroLoadoutFixer\build\build-tests.ps1"
 ```
 
-Esperado: `80 passed, 0 failed`.
+Esperado: `0 failed` y código de salida 0.
 
 - [ ] **Step 6: Commit**
 
@@ -1760,7 +1760,7 @@ namespace HeroLoadoutFixer.Core
 pwsh -File "E:\Games\Mods\Mis mods\HeroLoadoutFixer\build\build-tests.ps1"
 ```
 
-Esperado: `95 passed, 0 failed`.
+Esperado: `0 failed` y código de salida 0.
 
 - [ ] **Step 6: Commit**
 
@@ -2230,7 +2230,7 @@ Esperado: `DEPLOYED`. Si aparece `CS0117` o `CS1061` sobre algún miembro de Tal
 pwsh -File "E:\Games\Mods\Mis mods\HeroLoadoutFixer\build\build-tests.ps1"
 ```
 
-Esperado: `95 passed, 0 failed`. El núcleo no debe haberse tocado.
+Esperado: `0 failed` y código de salida 0. El núcleo no debe haberse tocado.
 
 - [ ] **Step 6: Commit**
 
@@ -2251,6 +2251,7 @@ git commit -m "feat(game): add adapters from Bannerlord types to core types"
 - Consumes: adaptadores de la tarea 9, `LoadoutPlanner`, `TierCeiling`.
 - Produces:
   - `static ItemObject ItemCatalog.FindBest(WeaponCategory category, CultureObject culture, int maxTier, SkillProfile skills, Hero hero, bool mounted)`
+  - `static ItemObject ItemCatalog.FindBestArmor(ItemObject.ItemTypeEnum wanted, CultureObject culture, int maxTier)`
   - `static MountedRangedAvailability ItemCatalog.RangedAvailability(Hero hero, CultureObject culture, int maxTier)`
   - `static bool GrantService.NeedsGrant(Hero hero)`
   - `static void GrantService.Grant(Hero hero, float clanWeight, float skillWeight, int minimumTier, int dominanceMargin)`
@@ -2302,21 +2303,53 @@ namespace HeroLoadoutFixer
             return best;
         }
 
-        private static bool IsEligible(ItemObject item, WeaponCategory category, CultureObject culture,
-                                       int maxTier, SkillProfile skills, Hero hero, bool mounted)
+        /// <summary>
+        /// The filters every catalogue lookup shares: not a quest or crafted
+        /// item, within the tier ceiling, and either the hero's culture or
+        /// unassigned. One policy, so armour and weapons cannot drift apart.
+        /// </summary>
+        private static bool PassesCommonFilters(ItemObject item, CultureObject culture, int maxTier)
         {
             if (item == null) return false;
             if (item.NotMerchandise) return false;
             if (item.IsCraftedByPlayer) return false;
-            if (ItemClassifier.Classify(item) != category) return false;
             if ((int)item.Tier > maxTier) return false;
+            if (item.Culture != null && culture != null && item.Culture.StringId != culture.StringId) return false;
+            return true;
+        }
+
+        private static bool IsEligible(ItemObject item, WeaponCategory category, CultureObject culture,
+                                       int maxTier, SkillProfile skills, Hero hero, bool mounted)
+        {
+            if (!PassesCommonFilters(item, culture, maxTier)) return false;
+            if (ItemClassifier.Classify(item) != category) return false;
             if (!ItemClassifier.MeetsDifficulty(item, skills)) return false;
             if (mounted && !ItemClassifier.IsUsableMounted(item, hero)) return false;
-
-            // Culture: the hero's own, or unassigned items which suit anyone.
-            if (item.Culture != null && culture != null && item.Culture.StringId != culture.StringId) return false;
-
             return true;
+        }
+
+        /// <summary>
+        /// The best armour of a given slot type within the ceiling. Armour has
+        /// no difficulty gate and no mounted restriction, so it needs only the
+        /// common filters.
+        /// </summary>
+        public static ItemObject FindBestArmor(ItemObject.ItemTypeEnum wanted, CultureObject culture, int maxTier)
+        {
+            ItemObject best = null;
+            int bestTier = -1;
+
+            MBReadOnlyList<ItemObject> all = MBObjectManager.Instance.GetObjectTypeList<ItemObject>();
+            for (int i = 0; i < all.Count; i++)
+            {
+                ItemObject item = all[i];
+                if (item == null || item.ItemType != wanted) continue;
+                if (!PassesCommonFilters(item, culture, maxTier)) continue;
+
+                int tier = (int)item.Tier;
+                if (tier > bestTier) { bestTier = tier; best = item; }
+            }
+
+            return best;
         }
 
         /// <summary>
@@ -2411,13 +2444,13 @@ namespace HeroLoadoutFixer
                 granted++;
             }
 
-            granted += GrantArmor(hero, culture, ceiling, skills);
+            granted += GrantArmor(hero, culture, ceiling);
 
             ModLog.Info("GRANT hero=" + hero.Name + " tier=" + ceiling
                         + " planned=" + plan.Count + " granted=" + granted);
         }
 
-        private static int GrantArmor(Hero hero, CultureObject culture, int ceiling, SkillProfile skills)
+        private static int GrantArmor(Hero hero, CultureObject culture, int ceiling)
         {
             int granted = 0;
 
@@ -2425,7 +2458,7 @@ namespace HeroLoadoutFixer
             {
                 if (hero.BattleEquipment[slot].Item != null) continue;
 
-                ItemObject item = FindArmorFor(slot, culture, ceiling, skills, hero);
+                ItemObject item = FindArmorFor(slot, culture, ceiling);
                 if (item == null) continue;
 
                 hero.BattleEquipment[slot] = new EquipmentElement(item, null, null, false);
@@ -2435,8 +2468,8 @@ namespace HeroLoadoutFixer
             return granted;
         }
 
-        private static ItemObject FindArmorFor(EquipmentIndex slot, CultureObject culture,
-                                               int ceiling, SkillProfile skills, Hero hero)
+        /// <summary>Maps an armour slot to its item type and defers to the catalogue.</summary>
+        private static ItemObject FindArmorFor(EquipmentIndex slot, CultureObject culture, int ceiling)
         {
             ItemObject.ItemTypeEnum wanted;
             switch (slot)
@@ -2448,23 +2481,7 @@ namespace HeroLoadoutFixer
                 default: wanted = ItemObject.ItemTypeEnum.Cape; break;
             }
 
-            ItemObject best = null;
-            int bestTier = -1;
-
-            MBReadOnlyList<ItemObject> all = TaleWorlds.ObjectSystem.MBObjectManager.Instance.GetObjectTypeList<ItemObject>();
-            for (int i = 0; i < all.Count; i++)
-            {
-                ItemObject item = all[i];
-                if (item == null || item.ItemType != wanted) continue;
-                if (item.NotMerchandise || item.IsCraftedByPlayer) continue;
-                if ((int)item.Tier > ceiling) continue;
-                if (item.Culture != null && culture != null && item.Culture.StringId != culture.StringId) continue;
-
-                int tier = (int)item.Tier;
-                if (tier > bestTier) { bestTier = tier; best = item; }
-            }
-
-            return best;
+            return ItemCatalog.FindBestArmor(wanted, culture, ceiling);
         }
     }
 }
