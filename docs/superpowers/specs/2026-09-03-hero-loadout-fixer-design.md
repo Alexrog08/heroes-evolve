@@ -60,22 +60,27 @@ Que `LoadoutPlanner` sea puro es la decisión estructural más importante: toda 
 
 ## 5. Reglas del planner
 
-### 5.1 Ruta gap-fill (hay equipo, hay huecos)
+### 5.1 Algoritmo unificado
 
-1. Clasificar las 4 ranuras de arma. `E` = número de vacías. Si `E` es 0, salir.
-2. Ordenar las skills de combate de mayor a menor.
-3. Descartar las categorías ya representadas en el equipo actual.
-4. Coste en ranuras de cada candidata:
-   - melé (1M / 2M / asta): 1
-   - arrojadiza: 1
-   - arco: 2 (arma + munición)
-   - ballesta: 2 (arma + munición)
-5. Arco y ballesta se descartan si el héroe está montado y no dispone de ningún ítem de esa categoría utilizable a caballo. Ver 5.3.
-6. Gana la primera candidata cuyo coste sea menor o igual que `E`. Se planifica y se repite el proceso con las ranuras restantes.
-7. Cuando ya no queda ninguna skill candidata viable pero sobran ranuras, se aplica el **relleno de cortesía**, en este orden y repitiendo mientras queden huecos: escudo (si no lleva y su arma principal no es de dos manos), luego munición extra (si porta un arma de proyectil y no lleva ya dos cargas), luego se deja vacía. Una ranura vacía es un resultado válido: es preferible a equipar algo incoherente.
-8. **Nunca** se concede montura en esta ruta.
+**No hay dos rutas.** El caso de las cuatro ranuras vacías es raro: un noble que cumple 18 y cae en el fallback de vanilla llega con el set `generic_civ_dummy`, es decir **con una espada de una mano ya equipada** y tres ranuras libres. Un algoritmo separado para «desnudo total» casi nunca se ejecutaría, y el que sí se ejecutaría no aplicaría la lógica de arquetipo. Por eso el mismo procedimiento cubre ambos casos, en tres pasos:
 
-### 5.2 Ruta from-scratch (las 4 ranuras vacías)
+**Paso 1 — Planificar el objetivo.** Calcular el arquetipo ideal a partir de las skills, la montura y la viabilidad de proyectiles (5.2 y 5.3). Se calcula **siempre**, con independencia de lo que el héroe lleve puesto. Produce un conjunto objetivo de categorías, por ejemplo `{Arco, Munición, Munición, 1M}`.
+
+**Paso 2 — Reconciliar con lo equipado.**
+
+- Eliminar del objetivo las entradas que el equipo actual ya satisface.
+- Descartar las entradas que el equipo actual contradice: si el objetivo pide escudo pero el héroe lleva equipada un arma de dos manos, el escudo se cae.
+- **Nunca se retira nada de lo que ya lleva puesto.**
+
+**Paso 3 — Rellenar.** Colocar las entradas restantes del objetivo en las ranuras vacías, por orden de prioridad del arquetipo. Coste en ranuras: melé 1, arrojadiza 1, arco 2, ballesta 2. Una entrada que no quepa se descarta y se pasa a la siguiente.
+
+Si tras agotar el objetivo aún sobran ranuras, se sigue bajando por la lista de skills con el mismo criterio de coste y viabilidad, y después se aplica el **relleno de cortesía**: escudo (si no lleva y su arma principal no es de dos manos), luego munición extra (si porta proyectil y no lleva ya dos cargas), luego dejarla vacía. Una ranura vacía es un resultado válido: preferible a equipar algo incoherente.
+
+La montura solo se evalúa en el paso 1, y solo cuando el héroe no tiene ninguna equipada.
+
+Ejemplo del noble de 18 años con el set dummy y skills de arquero: el objetivo es `{Arco, Munición, Munición, 1M}`; la reconciliación tacha `1M` porque ya lleva la spatha; el relleno coloca arco y dos municiones en las tres ranuras libres. Resultado: arco + 2 municiones + spatha. La spatha sobrevive como arma secundaria y NoblesBuyStuff le subirá el tier más adelante.
+
+### 5.2 Arquetipo objetivo
 
 El sidearm de un arquero es el mayor entre OneHanded y TwoHanded. **Polearm queda excluido como acompañante de proyectil**: dos carcajes y una lanza no es un loadout real.
 
@@ -96,7 +101,7 @@ Si la skill dominante es de melé, se siembran las primeras ranuras así:
 - 2M dominante: 2M + 1M (sin escudo, no lo usaría con el arma principal)
 - 1M o asta dominante: arma principal + escudo
 
-**Cierre común de las ranuras restantes.** Las tablas anteriores siembran las primeras ranuras según el arquetipo; las que sobren se completan aplicando el mismo algoritmo de la ruta gap-fill (sección 5.1, pasos 2 a 7) sobre el estado parcial ya sembrado. Así hay una sola implementación del criterio de viabilidad y no dos que puedan divergir. Un arquetipo de 2M dominante acabaría típicamente en 2M + 1M + arrojadiza + arrojadiza o lanza, según sus skills siguientes.
+Las tablas anteriores definen el **objetivo**, no el resultado final. Lo que de ese objetivo llega a equiparse lo deciden los pasos 2 y 3 de 5.1: se descarta lo ya satisfecho, se descarta lo contradicho por el equipo actual, y lo que queda se coloca en las ranuras libres. Un arquetipo de 2M dominante acabaría típicamente en 2M + 1M + arrojadiza + arrojadiza o lanza, según sus skills siguientes.
 
 Armaduras: se rellenan las ranuras vacías de cabeza, cuerpo, piernas, manos y capa.
 
@@ -108,9 +113,9 @@ Armaduras: se rellenan las ranuras vacías de cabeza, cuerpo, piernas, manos y c
 
 1. El héroe no tiene montura equipada — entonces cualquiera lo es; o
 2. su `WeaponComponentData.WeaponFlags` **no** incluye `CantReloadOnHorseback`; o
-3. el héroe tiene el perk correspondiente, consultado con `hero.GetPerkValue(...)`:
-   `DefaultPerks.Crossbow.MountedCrossbowman` para ballestas,
-   `DefaultPerks.Bow.MountedArchery` para arcos.
+3. es una **ballesta** y el héroe tiene `DefaultPerks.Crossbow.MountedCrossbowman`, consultado con `hero.GetPerkValue(...)`. La localización del juego describe ese perk literalmente como *"You can reload any crossbow on horseback."*, así que lo levanta para todas.
+
+Para **arcos no se aplica ningún perk**. `DefaultPerks.Bow.MountedArchery` reduce la penalización de puntería a caballo; no consta que toque el flag de recarga, y ningún arco de vanilla lo lleva. Un arco moddeado que sí lo llevara se trata como no viable estando montado. El filtro solo puede hacernos descartar un arma, nunca equipar una inutilizable, y el descarte cae limpiamente a la siguiente skill.
 
 Censo verificado sobre los ficheros de armas de un jugador de la v1.4.8:
 
@@ -122,7 +127,7 @@ Censo verificado sobre los ficheros de armas de un jugador de la v1.4.8:
 | Ballesta | `crossbow_light` | 4 | 0 |
 | Ballesta | `crossbow_fast` | 1 | 0 |
 
-Las ballestas ligeras sí se recargan a caballo; solo las pesadas llevan el flag. Ningún arco de vanilla lo lleva, pero uno moddeado podría. Por eso la regla lee el flag y nunca asume por clase.
+Las ballestas ligeras sí se recargan a caballo; solo las pesadas llevan el flag. Ningún arco de vanilla lo lleva. Y no es hipotético que los mods lo usen: con los módulos instalados en esta máquina, Open Source Weaponry aporta `AR_cheirosiphon_a`, de tipo `Crossbow` y **con** el flag. Por eso la regla lee el flag ítem a ítem y nunca asume por clase.
 
 **Consecuencia arquitectónica.** `LoadoutPlanner` es puro y no conoce ítems, pero necesita saber si una categoría de proyectil es descartable para poder caer a la siguiente skill en lugar de dejar una ranura vacía. El llamante precalcula una estructura `MountedRangedAvailability { BowViable, CrossbowViable }` consultando el catálogo y los perks del héroe, y se la pasa al planner como entrada. El planner trata la categoría como no viable cuando el héroe está montado y esa bandera es falsa.
 
@@ -197,6 +202,10 @@ Configuración recomendada de NBS para acompañarlo: `Upgrade Equipped Items Onl
 6. Arquero dominante con sidearm de 2M: 2 munición, sin escudo.
 7. Ballestero dominante con montura y solo ballestas pesadas disponibles: degrada. Con ballesta ligera disponible o con el perk MountedCrossbowman: mantiene la ballesta.
 8. Héroe completamente desnudo: loadout de 4 ranuras coherente.
+11. **Noble de 18 años con el set dummy** (solo una espada 1M equipada, 3 ranuras libres) y skills de arquero dominante: resultado arco + 2 municiones + la spatha conservada. Verifica que el arquetipo se aplica aunque no haya cuatro ranuras vacías.
+12. Objetivo que pide escudo con un arma de dos manos ya equipada: el escudo se descarta en la reconciliación.
+13. Objetivo cuya entrada ya está satisfecha por el equipo actual: no se duplica.
+14. Arco moddeado con `CantReloadOnHorseback` y héroe montado: no viable, cae a la siguiente skill.
 9. Héroe sin ranuras vacías: plan vacío, sin cambios.
 10. Arquero: nunca se le asigna asta como acompañante.
 
