@@ -33,6 +33,20 @@ namespace HeroLoadoutFixer.Tests
             SkillKind[] tiedOrder = tied.CombatSkillsDescending();
             Check.Equal((int)SkillKind.OneHanded, (int)tiedOrder[0], "tie breaks to OneHanded");
             Check.Equal((int)SkillKind.TwoHanded, (int)tiedOrder[1], "tie second is TwoHanded");
+
+            // Riding is the highest of all seven here, so this fixture fails if
+            // MaxCombatSkill ever starts folding Riding into the maximum.
+            SkillProfile ridingHighest = new SkillProfile(120, 40, 100, 90, 10, 60, 250);
+            Check.Equal(120, ridingHighest.MaxCombatSkill, "MaxCombatSkill ignores a dominant Riding");
+
+            // Exactly two weapon skills beat Riding, so it ranks third of seven.
+            // This is the boundary: a threshold of two instead of one fails here.
+            SkillProfile thirdPlace = new SkillProfile(200, 180, 50, 20, 10, 30, 100);
+            Check.False(thirdPlace.RidingInTopTwo(), "two better weapon skills puts Riding third");
+
+            // A weapon skill equal to Riding is not strictly better, so Riding keeps its place.
+            SkillProfile tiedWithRiding = new SkillProfile(150, 150, 50, 20, 10, 30, 150);
+            Check.True(tiedWithRiding.RidingInTopTwo(), "ties do not push Riding out of the top two");
         }
     }
 }
