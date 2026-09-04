@@ -100,13 +100,17 @@ Con `dominancia = mejorSkillProyectil - mejorSkillMele` y margen configurable (p
 
 | Caso | Loadout (4 ranuras) |
 |---|---|
-| Montado + proyectil dominante no utilizable a caballo (ver 5.3) | degradar a la siguiente categoría de proyectil viable; si ninguna lo es, tratar como melé dominante |
-| Montado + proyectil viable | arma + 2 munición + sidearm |
+| Proyectil dominante no utilizable a caballo (ver 5.3) | degradar a la siguiente categoría de proyectil viable; si ninguna lo es, tratar como melé dominante |
 | Sidearm de 2M | arma + 2 munición + 2M |
 | Sidearm de 1M, dominancia mayor o igual que el margen | arma + 2 munición + 1M |
 | Sidearm de 1M, dominancia menor que el margen | arma + 1 munición + escudo + 1M |
 
 El escudo solo aparece acompañado de un arma de una mano.
+
+**La montura no influye en el escudo.** Un arquero a caballo puede llevar escudo
+perfectamente: arco o ballesta, munición, espada y escudo es un loadout válido y
+habitual en Bannerlord. La montura solo interviene en la viabilidad del arma de
+proyectil (5.3), nunca en la decisión de escudo.
 
 Si la skill dominante es de melé, se siembran las primeras ranuras así:
 
