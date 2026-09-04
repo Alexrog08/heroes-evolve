@@ -184,6 +184,18 @@ namespace HeroLoadoutFixer.Tests
             Check.True(Plans(pAllZero, WeaponCategory.OneHandedSword), "an all-zero profile still plans a plain sidearm");
             Check.True(Plans(pAllZero, WeaponCategory.Shield), "and a shield beside it");
             Check.Equal(2, pAllZero.Count, "the other two empty slots are left empty rather than filled with something incoherent");
+
+            // Defect fix pin: a naked dedicated archer must end with a bow,
+            // exactly two quivers, and a sidearm -- four distinct slots. The
+            // Step-3 placement loop must not auto-add a ranged weapon's
+            // ammunition on top of what PlanTarget already emitted
+            // explicitly, or the auto-added quiver crowds out the sidearm
+            // (bow plus three quivers, no sword).
+            List<PlannedSlot> pDedicatedArcher = LoadoutPlanner.Plan(dedicatedArcherSkills, naked, all, 30, false);
+            Check.Equal(4, pDedicatedArcher.Count, "all four slots are used");
+            Check.True(Plans(pDedicatedArcher, WeaponCategory.Bow), "the bow is planned");
+            Check.Equal(2, CountPlanned(pDedicatedArcher, WeaponCategory.Arrows), "exactly two quivers, not three");
+            Check.True(Plans(pDedicatedArcher, WeaponCategory.OneHandedSword), "the sidearm is planned, not crowded out by a phantom quiver");
         }
     }
 }

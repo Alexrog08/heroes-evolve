@@ -34,7 +34,7 @@ namespace HeroLoadoutFixer.Core
 
             if (ranged != WeaponCategory.None && rangedSkill >= sidearmSkill)
             {
-                BuildRangedArchetype(target, ranged, sidearm, rangedSkill, sidearmSkill, dominanceMargin, mounted);
+                BuildRangedArchetype(target, ranged, sidearm, rangedSkill, sidearmSkill, dominanceMargin);
             }
             else
             {
@@ -65,7 +65,14 @@ namespace HeroLoadoutFixer.Core
             int nextFree = 0;
             bool mounted = current.HasMount || target.WantsMount;
 
-            // Step three: place what survived reconciliation.
+            // Step three: place what survived reconciliation. A ranged
+            // weapon's ammunition is deliberately NOT auto-added here:
+            // PlanTarget already emitted it as its own explicit entry, so it
+            // shows up later in `wanted` (or was already satisfied by
+            // Reconcile) and gets placed by its own loop iteration. The room
+            // check below still uses the two-slot cost, so a ranged weapon
+            // is skipped rather than placed with nothing left for the
+            // ammunition that follows it.
             foreach (WeaponCategory category in wanted)
             {
                 if (nextFree >= freeSlots.Length) break;
@@ -75,10 +82,6 @@ namespace HeroLoadoutFixer.Core
                 if (freeSlots.Length - nextFree < cost) continue;
 
                 plan.Add(new PlannedSlot(freeSlots[nextFree++], category));
-                if (cost == 2)
-                {
-                    plan.Add(new PlannedSlot(freeSlots[nextFree++], CategoryRules.AmmoFor(category)));
-                }
             }
 
             // Still room: walk the skill list for anything not yet represented.
@@ -243,7 +246,7 @@ namespace HeroLoadoutFixer.Core
         }
 
         private static void BuildRangedArchetype(LoadoutTarget target, WeaponCategory ranged, WeaponCategory sidearm,
-                                                 int rangedSkill, int sidearmSkill, int dominanceMargin, bool mounted)
+                                                 int rangedSkill, int sidearmSkill, int dominanceMargin)
         {
             WeaponCategory ammo = CategoryRules.AmmoFor(ranged);
 
@@ -254,9 +257,13 @@ namespace HeroLoadoutFixer.Core
             bool dominant = (rangedSkill - sidearmSkill) >= dominanceMargin;
 
             // A shield is only worth a slot beside a one-handed sidearm, and
-            // only when the hero is not a dedicated shooter and is fighting
-            // on foot. Otherwise the fourth slot is a second quiver.
-            bool takesShield = !sidearmIsTwoHanded && !dominant && !mounted;
+            // only when the hero is not a dedicated shooter. Whether the
+            // hero is mounted has no bearing on this: a horse archer can
+            // carry bow, ammunition, sword and shield exactly like a foot
+            // archer. The mount only ever gates whether the ranged weapon
+            // itself is usable (see MountedRangedAvailability), never the
+            // shield decision. Otherwise the fourth slot is a second quiver.
+            bool takesShield = !sidearmIsTwoHanded && !dominant;
 
             target.Weapons.Add(takesShield ? WeaponCategory.Shield : ammo);
             target.Weapons.Add(sidearm);

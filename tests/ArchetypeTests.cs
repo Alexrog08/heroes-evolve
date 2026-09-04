@@ -60,11 +60,13 @@ namespace HeroLoadoutFixer.Tests
             LoadoutTarget t6 = LoadoutPlanner.PlanTarget(crossbowman, Naked(true), all, 30, false);
             Check.True(t6.Weapons.Contains(WeaponCategory.Crossbow), "viable crossbow is kept");
 
-            // Mounted archers always carry two quivers, never a shield.
+            // A mounted archer below the dominance margin takes a shield,
+            // exactly like a foot archer: the mount only ever gates whether
+            // the ranged weapon itself is usable, never the shield decision.
             SkillProfile horseArcher = new SkillProfile(180, 20, 10, 190, 0, 0, 220);
             LoadoutTarget t7 = LoadoutPlanner.PlanTarget(horseArcher, Naked(true), all, 30, false);
-            Check.Equal(2, CountOf(t7, WeaponCategory.Arrows), "mounted archer takes two quivers");
-            Check.False(t7.Weapons.Contains(WeaponCategory.Shield), "mounted archer takes no shield");
+            Check.Equal(1, CountOf(t7, WeaponCategory.Arrows), "mounted archer below the dominance margin takes one quiver");
+            Check.True(t7.Weapons.Contains(WeaponCategory.Shield), "mounted archer below the dominance margin takes a shield");
 
             // Melee dominant with one-handed: weapon plus shield.
             SkillProfile infantry = new SkillProfile(220, 40, 60, 20, 0, 100, 0);
@@ -143,6 +145,23 @@ namespace HeroLoadoutFixer.Tests
             Check.False(t15.Weapons.Contains(WeaponCategory.Crossbow), "no viable crossbow while mounted means no crossbow either");
             Check.False(t15.Weapons.Contains(WeaponCategory.Arrows), "and so no arrows");
             Check.False(t15.Weapons.Contains(WeaponCategory.Bolts), "nor bolts");
+
+            // The project owner's correction: a mounted archer below the
+            // dominance margin ends up with exactly the loadout an
+            // equivalent hero on foot would get, shield included. Mounted
+            // only ever gates which ranged weapon is usable
+            // (MountedRangedAvailability), never the shield decision.
+            SkillProfile belowMarginArcher = new SkillProfile(150, 20, 10, 170, 0, 0, 0);
+            LoadoutTarget tFootArcher = LoadoutPlanner.PlanTarget(belowMarginArcher, Naked(false), all, 30, false);
+            LoadoutTarget tMountedArcher = LoadoutPlanner.PlanTarget(belowMarginArcher, Naked(true), all, 30, false);
+            Check.True(tMountedArcher.Weapons.Contains(WeaponCategory.Shield), "mounted archer below the margin takes a shield, same as on foot");
+            Check.Equal(1, CountOf(tMountedArcher, WeaponCategory.Arrows), "and only one quiver, matching the shield trade-off");
+            Check.Equal(tFootArcher.Weapons.Count, tMountedArcher.Weapons.Count, "mounted and foot loadouts have the same slot count");
+            for (int i = 0; i < tFootArcher.Weapons.Count; i++)
+            {
+                Check.Equal((int)tFootArcher.Weapons[i], (int)tMountedArcher.Weapons[i],
+                    "mounted archer matches the on-foot loadout at slot " + i);
+            }
         }
     }
 }
