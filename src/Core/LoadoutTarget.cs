@@ -16,4 +16,17 @@ namespace HeroLoadoutFixer.Core
         public List<WeaponCategory> Weapons { get; private set; }
         public bool WantsMount { get; set; }
     }
+
+    /// <summary>One decided placement: a category for a specific weapon slot.</summary>
+    public struct PlannedSlot
+    {
+        public int SlotIndex;
+        public WeaponCategory Category;
+
+        public PlannedSlot(int slotIndex, WeaponCategory category)
+        {
+            SlotIndex = slotIndex;
+            Category = category;
+        }
+    }
 }

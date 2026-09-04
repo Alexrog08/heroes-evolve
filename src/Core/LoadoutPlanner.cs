@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace HeroLoadoutFixer.Core
 {
     /// <summary>
@@ -41,6 +43,191 @@ namespace HeroLoadoutFixer.Core
 
             TrimToSlots(target);
             return target;
+        }
+
+        /// <summary>
+        /// The whole algorithm: plan the target, reconcile it against what the
+        /// hero already carries, then fill the empty slots with what remains.
+        /// Nothing already equipped is ever removed.
+        /// </summary>
+        public static List<PlannedSlot> Plan(SkillProfile skills, SlotSnapshot current,
+                                             MountedRangedAvailability availability,
+                                             int dominanceMargin, bool cultureIsMounted)
+        {
+            List<PlannedSlot> plan = new List<PlannedSlot>();
+
+            int[] freeSlots = current.EmptySlotIndices();
+            if (freeSlots.Length == 0) return plan;
+
+            LoadoutTarget target = PlanTarget(skills, current, availability, dominanceMargin, cultureIsMounted);
+            List<WeaponCategory> wanted = Reconcile(target, current);
+
+            int nextFree = 0;
+            bool mounted = current.HasMount || target.WantsMount;
+
+            // Step three: place what survived reconciliation.
+            foreach (WeaponCategory category in wanted)
+            {
+                if (nextFree >= freeSlots.Length) break;
+                if (!IsPlaceable(category, availability, mounted)) continue;
+
+                int cost = CategoryRules.IsRanged(category) ? 2 : 1;
+                if (freeSlots.Length - nextFree < cost) continue;
+
+                plan.Add(new PlannedSlot(freeSlots[nextFree++], category));
+                if (cost == 2)
+                {
+                    plan.Add(new PlannedSlot(freeSlots[nextFree++], CategoryRules.AmmoFor(category)));
+                }
+            }
+
+            // Still room: walk the skill list for anything not yet represented.
+            if (nextFree < freeSlots.Length)
+            {
+                nextFree = FillFromSkills(plan, skills, current, availability, mounted, freeSlots, nextFree);
+            }
+
+            // Still room: courtesy filling.
+            if (nextFree < freeSlots.Length)
+            {
+                FillCourtesy(plan, current, freeSlots, nextFree);
+            }
+
+            return plan;
+        }
+
+        /// <summary>
+        /// Step two: drop target entries the hero already satisfies, and entries
+        /// the current equipment contradicts.
+        /// </summary>
+        private static List<WeaponCategory> Reconcile(LoadoutTarget target, SlotSnapshot current)
+        {
+            List<WeaponCategory> remaining = new List<WeaponCategory>();
+
+            // Count what the hero already has so duplicated target entries (two
+            // quivers) are only satisfied once each.
+            Dictionary<WeaponCategory, int> have = new Dictionary<WeaponCategory, int>();
+            for (int i = 0; i < SlotSnapshot.WeaponSlotCount; i++)
+            {
+                WeaponCategory c = current.WeaponAt(i);
+                if (c == WeaponCategory.None) continue;
+                have[c] = have.ContainsKey(c) ? have[c] + 1 : 1;
+            }
+
+            foreach (WeaponCategory category in target.Weapons)
+            {
+                if (have.ContainsKey(category) && have[category] > 0)
+                {
+                    have[category] = have[category] - 1;
+                    continue;
+                }
+
+                // A shield is pointless next to a two-handed weapon.
+                if (category == WeaponCategory.Shield && current.HasTwoHandedEquipped) continue;
+
+                remaining.Add(category);
+            }
+
+            return remaining;
+        }
+
+        private static bool IsPlaceable(WeaponCategory category,
+                                        MountedRangedAvailability availability, bool mounted)
+        {
+            if (category == WeaponCategory.None) return false;
+            if (mounted && !availability.IsViable(category)) return false;
+            return true;
+        }
+
+        private static int FillFromSkills(List<PlannedSlot> plan, SkillProfile skills, SlotSnapshot current,
+                                          MountedRangedAvailability availability, bool mounted,
+                                          int[] freeSlots, int nextFree)
+        {
+            SkillKind[] order = skills.CombatSkillsDescending();
+
+            foreach (SkillKind skill in order)
+            {
+                if (nextFree >= freeSlots.Length) break;
+                if (skills.Get(skill) <= 0) continue;
+
+                WeaponCategory category = CategoryForSkill(skill);
+                if (current.Contains(category)) continue;
+                if (AlreadyPlanned(plan, category)) continue;
+                if (!IsPlaceable(category, availability, mounted)) continue;
+
+                int cost = CategoryRules.IsRanged(category) ? 2 : 1;
+                if (freeSlots.Length - nextFree < cost) continue;
+
+                plan.Add(new PlannedSlot(freeSlots[nextFree++], category));
+                if (cost == 2)
+                {
+                    plan.Add(new PlannedSlot(freeSlots[nextFree++], CategoryRules.AmmoFor(category)));
+                }
+            }
+
+            return nextFree;
+        }
+
+        /// <summary>
+        /// Last resort: a shield, then spare ammunition, then nothing. Leaving a
+        /// slot empty is a valid outcome and beats equipping something incoherent.
+        /// </summary>
+        private static void FillCourtesy(List<PlannedSlot> plan, SlotSnapshot current,
+                                         int[] freeSlots, int nextFree)
+        {
+            bool shieldPossible = !current.Contains(WeaponCategory.Shield)
+                                  && !AlreadyPlanned(plan, WeaponCategory.Shield)
+                                  && !current.HasTwoHandedEquipped
+                                  && !PlanIntroducesTwoHanded(plan);
+
+            if (shieldPossible && nextFree < freeSlots.Length)
+            {
+                plan.Add(new PlannedSlot(freeSlots[nextFree++], WeaponCategory.Shield));
+            }
+
+            WeaponCategory ammo = SpareAmmoKind(plan, current);
+            while (ammo != WeaponCategory.None && nextFree < freeSlots.Length && CountPlanned(plan, ammo) < 2)
+            {
+                plan.Add(new PlannedSlot(freeSlots[nextFree++], ammo));
+            }
+        }
+
+        private static bool PlanIntroducesTwoHanded(List<PlannedSlot> plan)
+        {
+            foreach (PlannedSlot p in plan)
+            {
+                if (CategoryRules.IsTwoHanded(p.Category)) return true;
+            }
+            return false;
+        }
+
+        /// <summary>The ammunition kind matching whatever ranged weapon is in play, or None.</summary>
+        private static WeaponCategory SpareAmmoKind(List<PlannedSlot> plan, SlotSnapshot current)
+        {
+            if (current.Contains(WeaponCategory.Bow) || AlreadyPlanned(plan, WeaponCategory.Bow))
+                return WeaponCategory.Arrows;
+            if (current.Contains(WeaponCategory.Crossbow) || AlreadyPlanned(plan, WeaponCategory.Crossbow))
+                return WeaponCategory.Bolts;
+            return WeaponCategory.None;
+        }
+
+        private static bool AlreadyPlanned(List<PlannedSlot> plan, WeaponCategory category)
+        {
+            foreach (PlannedSlot p in plan)
+            {
+                if (p.Category == category) return true;
+            }
+            return false;
+        }
+
+        private static int CountPlanned(List<PlannedSlot> plan, WeaponCategory category)
+        {
+            int n = 0;
+            foreach (PlannedSlot p in plan)
+            {
+                if (p.Category == category) n++;
+            }
+            return n;
         }
 
         /// <summary>
@@ -158,6 +345,20 @@ namespace HeroLoadoutFixer.Core
                     return SkillKind.Throwing;
                 default:
                     return SkillKind.OneHanded;
+            }
+        }
+
+        /// <summary>Maps a skill to the weapon category it would buy.</summary>
+        public static WeaponCategory CategoryForSkill(SkillKind skill)
+        {
+            switch (skill)
+            {
+                case SkillKind.TwoHanded: return WeaponCategory.TwoHandedSword;
+                case SkillKind.Polearm: return WeaponCategory.Spear;
+                case SkillKind.Bow: return WeaponCategory.Bow;
+                case SkillKind.Crossbow: return WeaponCategory.Crossbow;
+                case SkillKind.Throwing: return WeaponCategory.Throwing;
+                default: return WeaponCategory.OneHandedSword;
             }
         }
 

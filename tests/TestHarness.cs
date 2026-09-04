@@ -45,6 +45,7 @@ namespace HeroLoadoutFixer.Tests
             SlotSnapshotTests.RunAll();
             TierCeilingTests.RunAll();
             ArchetypeTests.RunAll();
+            PlannerTests.RunAll();
 
             Console.WriteLine();
             Console.WriteLine(Check.Passes + " passed, " + Check.Failures + " failed");

@@ -21,5 +21,18 @@ namespace HeroLoadoutFixer.Core
         {
             return new MountedRangedAvailability(true, true);
         }
+
+        /// <summary>
+        /// Whether this category is usable given mount state, per its own flag.
+        /// Every category that is not a mounted-ranged weapon (melee, shield,
+        /// ammo, throwing) is always viable -- the flags only ever gate Bow
+        /// and Crossbow themselves.
+        /// </summary>
+        public bool IsViable(WeaponCategory category)
+        {
+            if (category == WeaponCategory.Bow) return BowViable;
+            if (category == WeaponCategory.Crossbow) return CrossbowViable;
+            return true;
+        }
     }
 }
