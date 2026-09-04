@@ -156,6 +156,15 @@ namespace HeroLoadoutFixer.Core
                 WeaponCategory category = CategoryForSkill(skill);
                 if (current.Contains(category)) continue;
                 if (AlreadyPlanned(plan, category)) continue;
+
+                // A shield is pointless beside a two-handed weapon (see
+                // Reconcile and FillCourtesy). A shield already equipped or
+                // already planned here came from the archetype pass and
+                // outranks a low-skill fallback weapon, so it is the
+                // two-hander that gets skipped -- the walk just moves on to
+                // the next skill.
+                if (CategoryRules.IsTwoHanded(category) && IsShieldPresent(current, plan)) continue;
+
                 if (!IsPlaceable(category, availability, mounted)) continue;
 
                 int cost = CategoryRules.IsRanged(category) ? 2 : 1;
@@ -202,6 +211,12 @@ namespace HeroLoadoutFixer.Core
                 if (CategoryRules.IsTwoHanded(p.Category)) return true;
             }
             return false;
+        }
+
+        /// <summary>True when a shield is already equipped or already planned.</summary>
+        private static bool IsShieldPresent(SlotSnapshot current, List<PlannedSlot> plan)
+        {
+            return current.Contains(WeaponCategory.Shield) || AlreadyPlanned(plan, WeaponCategory.Shield);
         }
 
         /// <summary>The ammunition kind matching whatever ranged weapon is in play, or None.</summary>

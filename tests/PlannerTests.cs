@@ -18,6 +18,12 @@ namespace HeroLoadoutFixer.Tests
             return n;
         }
 
+        private static bool PlansAnyTwoHanded(List<PlannedSlot> plan)
+        {
+            foreach (PlannedSlot p in plan) { if (CategoryRules.IsTwoHanded(p.Category)) return true; }
+            return false;
+        }
+
         public static void RunAll()
         {
             MountedRangedAvailability all = MountedRangedAvailability.All();
@@ -32,10 +38,33 @@ namespace HeroLoadoutFixer.Tests
             Check.True(Plans(p1, WeaponCategory.Throwing), "throwing fills the gap");
 
             // Spec case 2: same, but Bow is third. Cost two, only one slot free.
+            //
+            // Skill order here is Polearm(210), OneHanded(200), Bow(160),
+            // TwoHanded(150), Throwing(20), Crossbow(10) (confirmed by
+            // running CombatSkillsDescending on this profile). Polearm and
+            // OneHanded are skipped for free (Spear and OneHandedSword are
+            // already equipped on `infantry`), Bow is skipped for not
+            // fitting -- that much was always the point of this fixture.
+            //
+            // Before the shield-vs-two-handed guard, the walk then landed on
+            // TwoHanded, the 4th-ranked skill, and this assertion checked
+            // for TwoHandedSword. But `infantry` already has a Shield
+            // equipped (see case 1 above), and the guard added in
+            // FillFromSkills to fix the defect where it could plant a
+            // two-handed weapon beside a planned or equipped shield now
+            // correctly skips TwoHanded too -- the same domain rule
+            // Reconcile (case 12) and FillCourtesy already enforce. The walk
+            // falls through one skill further, to Throwing, which fits the
+            // one free slot and gets placed. "Falls through to the next
+            // skill" is still exactly what happens; it is just Throwing, not
+            // TwoHandedSword, once the shield guard is applied everywhere it
+            // belongs. Confirmed by running the fixture: p2 is exactly one
+            // entry, WeaponCategory.Throwing at slot 3.
             SkillProfile bowThirdSkills = new SkillProfile(200, 150, 210, 160, 10, 20, 40);
             List<PlannedSlot> p2 = LoadoutPlanner.Plan(bowThirdSkills, infantry, all, 30, false);
             Check.False(Plans(p2, WeaponCategory.Bow), "bow does not fit in one slot");
-            Check.True(Plans(p2, WeaponCategory.TwoHandedSword), "falls through to the next skill");
+            Check.False(Plans(p2, WeaponCategory.TwoHandedSword), "two-hander is skipped: a shield is already equipped");
+            Check.True(Plans(p2, WeaponCategory.Throwing), "falls through past the guarded two-hander to the next skill");
 
             // Spec case 3: two free slots and Bow third -> bow plus ammo.
             //
@@ -196,6 +225,22 @@ namespace HeroLoadoutFixer.Tests
             Check.True(Plans(pDedicatedArcher, WeaponCategory.Bow), "the bow is planned");
             Check.Equal(2, CountPlanned(pDedicatedArcher, WeaponCategory.Arrows), "exactly two quivers, not three");
             Check.True(Plans(pDedicatedArcher, WeaponCategory.OneHandedSword), "the sidearm is planned, not crowded out by a phantom quiver");
+
+            // Defect fix pin: a shield beside a two-handed weapon is one of
+            // the mod's core rules. Reconcile enforces it (case 12 above)
+            // and FillCourtesy enforces it (PlanIntroducesTwoHanded), but
+            // FillFromSkills had no equivalent guard. An ordinary naked
+            // hero with OneHanded=100 and TwoHanded=50 (everything else,
+            // including Riding, zero) is a plain melee archetype: PlanTarget
+            // yields {OneHandedSword, Shield} (BuildMeleeArchetype), and
+            // Step 3 places both at slots 0 and 1. The skill walk then skips
+            // OneHanded (already planned) but, without a guard, happily
+            // plants TwoHandedSword -- the hero's second-best skill -- right
+            // beside the shield already sitting in the plan.
+            SkillProfile weakTwoHandedSkills = new SkillProfile(100, 50, 0, 0, 0, 0, 0);
+            List<PlannedSlot> pShieldVsTwoHanded = LoadoutPlanner.Plan(weakTwoHandedSkills, naked, all, 30, false);
+            Check.False(Plans(pShieldVsTwoHanded, WeaponCategory.Shield) && PlansAnyTwoHanded(pShieldVsTwoHanded),
+                "plan never carries both a shield and a two-handed category");
         }
     }
 }
