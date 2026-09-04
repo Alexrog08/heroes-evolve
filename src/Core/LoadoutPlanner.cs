@@ -128,6 +128,12 @@ namespace HeroLoadoutFixer.Core
                 // A shield is pointless next to a two-handed weapon.
                 if (category == WeaponCategory.Shield && current.HasTwoHandedEquipped) continue;
 
+                // Mirror of the check above: a two-handed weapon is just as
+                // pointless next to a shield. The shield is already equipped
+                // and this mod never removes equipped gear, so here it is
+                // the two-handed entry that has to give way instead.
+                if (CategoryRules.IsTwoHanded(category) && current.Contains(WeaponCategory.Shield)) continue;
+
                 remaining.Add(category);
             }
 

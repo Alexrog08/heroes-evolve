@@ -241,6 +241,28 @@ namespace HeroLoadoutFixer.Tests
             List<PlannedSlot> pShieldVsTwoHanded = LoadoutPlanner.Plan(weakTwoHandedSkills, naked, all, 30, false);
             Check.False(Plans(pShieldVsTwoHanded, WeaponCategory.Shield) && PlansAnyTwoHanded(pShieldVsTwoHanded),
                 "plan never carries both a shield and a two-handed category");
+
+            // Defect fix pin: Reconcile enforces the shield-vs-two-hander
+            // rule in only one direction (case 12: drop a wanted shield when
+            // a two-hander is equipped). There is no mirror check, so a hero
+            // who already has a shield equipped and trains Two-Handed above
+            // everything else (TwoHanded=200, OneHanded=50) is unprotected:
+            // BuildMeleeArchetype looks only at skills, never at what is
+            // already worn, so it correctly yields {TwoHandedSword,
+            // OneHandedSword} with no shield of its own -- it has no way to
+            // know one is already equipped. Without the mirror guard,
+            // Reconcile drops nothing and Step 3 places TwoHandedSword in a
+            // free slot right beside the still-equipped shield, before
+            // FillFromSkills's own shield guard (above) ever runs. Nothing
+            // already worn is ever removed, so the equipped shield stays and
+            // it is the two-hander that must give way.
+            SkillProfile shieldEquippedSkills = new SkillProfile(50, 200, 0, 0, 0, 0, 0);
+            SlotSnapshot shieldOnly = new SlotSnapshot(
+                new WeaponCategory[] { WeaponCategory.Shield, WeaponCategory.None, WeaponCategory.None, WeaponCategory.None },
+                false, false, true, true, true, true, false);
+            List<PlannedSlot> pTwoHanderVsShield = LoadoutPlanner.Plan(shieldEquippedSkills, shieldOnly, all, 30, false);
+            Check.False(PlansAnyTwoHanded(pTwoHanderVsShield), "two-hander is dropped: a shield is already equipped");
+            Check.True(Plans(pTwoHanderVsShield, WeaponCategory.OneHandedSword), "the archetype's one-handed entry still fills a slot");
         }
     }
 }
