@@ -33,6 +33,20 @@ namespace HeroLoadoutFixer
         /// <summary>How many weapon placements the planner produced.</summary>
         public int PlannedWeaponCount;
 
+        /// <summary>
+        /// The archetype the planner chose, before reconciliation, as text.
+        /// Logged because a plan can only be judged against what it intended:
+        /// a slot holding a shield is correct or wrong depending entirely on
+        /// whether the target asked for one.
+        /// </summary>
+        public string TargetWeapons;
+
+        /// <summary>The categories actually placed, in slot order.</summary>
+        public string PlacedWeapons;
+
+        /// <summary>What the hero's weapon slots looked like going in.</summary>
+        public string CurrentWeapons;
+
         public List<ResolvedSlot> Slots { get; private set; }
 
         /// <summary>Slots that would actually receive an item.</summary>

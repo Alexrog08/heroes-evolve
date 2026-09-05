@@ -411,7 +411,10 @@ namespace HeroLoadoutFixer
                     + " xbowViable=" + resolved.Availability.CrossbowViable
                     + " plannedWeapons=" + resolved.PlannedWeaponCount
                     + " wouldGrant=" + resolved.WouldGrantCount
-                    + " needsGrant=" + GrantService.NeedsGrant(hero);
+                    + " needsGrant=" + GrantService.NeedsGrant(hero)
+                    + " | current=" + resolved.CurrentWeapons
+                    + " | target=" + resolved.TargetWeapons
+                    + " | placed=" + resolved.PlacedWeapons;
 
                 ModLog.Info(header);
                 echo.AppendLine(header);

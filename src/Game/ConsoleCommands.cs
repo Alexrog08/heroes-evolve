@@ -83,8 +83,34 @@ namespace HeroLoadoutFixer
             report.AppendLine("stripped: " + Describe(hero));
             report.AppendLine("needsGrant: " + GrantService.NeedsGrant(hero));
 
-            GrantService.Grant(hero, HeroLoadoutBehavior.ClanWeight, HeroLoadoutBehavior.SkillWeight,
-                               HeroLoadoutBehavior.MinimumTier, HeroLoadoutBehavior.DominanceMargin);
+            // Resolve/log/Apply rather than Grant: the forced test exists to be
+            // inspected, and a slot is only judgeable against the category the
+            // planner asked for. Grant would write the same items but log only
+            // the totals.
+            ResolvedGrant resolved = GrantService.Resolve(hero, HeroLoadoutBehavior.ClanWeight,
+                                                          HeroLoadoutBehavior.SkillWeight,
+                                                          HeroLoadoutBehavior.MinimumTier,
+                                                          HeroLoadoutBehavior.DominanceMargin);
+            if (resolved == null) return "hlf: could not resolve a loadout for " + hero.Name + ".";
+
+            ModLog.Info("TESTREPAIR plan hero=" + hero.Name
+                        + " current=" + resolved.CurrentWeapons
+                        + " target=" + resolved.TargetWeapons
+                        + " placed=" + resolved.PlacedWeapons);
+            report.AppendLine("target: " + resolved.TargetWeapons);
+            report.AppendLine("placed: " + resolved.PlacedWeapons);
+
+            for (int i = 0; i < resolved.Slots.Count; i++)
+            {
+                ResolvedSlot slot = resolved.Slots[i];
+                ModLog.Info("TESTREPAIR   " + slot.Label + " want=" + slot.Want + " -> "
+                            + (slot.SkipReason != null ? "SKIP (" + slot.SkipReason + ")"
+                               : slot.Item == null ? "NONE FOUND" : slot.Item.StringId));
+            }
+
+            int granted = GrantService.Apply(hero, resolved);
+            ModLog.Info("GRANT hero=" + hero.Name + " tier=" + resolved.Ceiling
+                        + " planned=" + resolved.PlannedWeaponCount + " granted=" + granted);
 
             ModLog.Info("TESTREPAIR hero=" + hero.Name + " after=" + Describe(hero));
             report.AppendLine("after: " + Describe(hero));

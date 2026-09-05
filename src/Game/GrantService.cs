@@ -94,6 +94,9 @@ namespace HeroLoadoutFixer
             resolved.Availability = availability;
             resolved.Culture = culture;
             resolved.PlannedWeaponCount = plan.Count;
+            resolved.TargetWeapons = Join(target.Weapons);
+            resolved.CurrentWeapons = Describe(current);
+            resolved.PlacedWeapons = JoinPlan(plan);
 
             foreach (PlannedSlot slot in plan)
             {
@@ -224,6 +227,41 @@ namespace HeroLoadoutFixer
 
                 resolved.Slots.Add(entry);
             }
+        }
+
+        private static string Join(List<WeaponCategory> categories)
+        {
+            if (categories == null || categories.Count == 0) return "<none>";
+            System.Text.StringBuilder text = new System.Text.StringBuilder();
+            for (int i = 0; i < categories.Count; i++)
+            {
+                if (i > 0) text.Append(',');
+                text.Append(categories[i]);
+            }
+            return text.ToString();
+        }
+
+        private static string JoinPlan(List<PlannedSlot> plan)
+        {
+            if (plan == null || plan.Count == 0) return "<none>";
+            System.Text.StringBuilder text = new System.Text.StringBuilder();
+            for (int i = 0; i < plan.Count; i++)
+            {
+                if (i > 0) text.Append(',');
+                text.Append('w').Append(plan[i].SlotIndex).Append(':').Append(plan[i].Category);
+            }
+            return text.ToString();
+        }
+
+        private static string Describe(SlotSnapshot current)
+        {
+            System.Text.StringBuilder text = new System.Text.StringBuilder();
+            for (int i = 0; i < SlotSnapshot.WeaponSlotCount; i++)
+            {
+                if (i > 0) text.Append(',');
+                text.Append(current.WeaponAt(i));
+            }
+            return text.ToString();
         }
 
         /// <summary>Null-safe item name for logging.</summary>
