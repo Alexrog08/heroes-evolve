@@ -53,6 +53,8 @@ namespace HeroLoadoutFixer
         {
             ModLog.Info("===== CENSUS BEGIN =====");
             ReportCatalog();
+            ReportTiers();
+            ReportGold();
             List<Hero> broken = ReportHeroes();
             ReportDryRuns(broken, clanWeight, skillWeight, minimumTier, dominanceMargin);
             ModLog.Info("===== CENSUS END =====");
@@ -120,6 +122,158 @@ namespace HeroLoadoutFixer
             ModLog.Info("CATALOG armor head=" + head + " body=" + body + " leg=" + leg
                         + " hand=" + hand + " cape=" + cape
                         + " mounts=" + mounts + " harnesses=" + harnesses);
+        }
+
+        /// <summary>
+        /// Armour and mounts broken down by tier and culture, with sample item
+        /// ids at the low tiers. ItemObject.Tier is computed at load from item
+        /// properties and appears nowhere in the module XML, so this is the only
+        /// way to answer what a given tier actually looks like -- specifically,
+        /// which is the lowest tier that still reads as military kit rather than
+        /// a peasant tunic, which is what the free grant should hand out.
+        /// </summary>
+        private static void ReportTiers()
+        {
+            MBReadOnlyList<ItemObject> all = MBObjectManager.Instance.GetObjectTypeList<ItemObject>();
+            if (all == null) return;
+
+            ItemObject.ItemTypeEnum[] kinds =
+            {
+                ItemObject.ItemTypeEnum.BodyArmor,
+                ItemObject.ItemTypeEnum.HeadArmor,
+                ItemObject.ItemTypeEnum.LegArmor,
+                ItemObject.ItemTypeEnum.HandArmor,
+                ItemObject.ItemTypeEnum.Cape,
+                ItemObject.ItemTypeEnum.Horse
+            };
+
+            for (int k = 0; k < kinds.Length; k++)
+            {
+                ItemObject.ItemTypeEnum kind = kinds[k];
+
+                // culture id -> per-tier counts, tier 1..6 in slots 1..6.
+                Dictionary<string, int[]> byCulture = new Dictionary<string, int[]>();
+                // "culture|tier" -> a few example ids, for the low tiers only.
+                Dictionary<string, List<string>> samples = new Dictionary<string, List<string>>();
+
+                for (int i = 0; i < all.Count; i++)
+                {
+                    ItemObject item = all[i];
+                    if (item == null || item.ItemType != kind) continue;
+                    if (item.NotMerchandise) continue;
+
+                    int tier = (int)item.Tier + 1;
+                    if (tier < 1) tier = 1;
+                    if (tier > 6) tier = 6;
+
+                    string culture = item.Culture != null ? item.Culture.StringId : "<any>";
+
+                    int[] counts;
+                    if (!byCulture.TryGetValue(culture, out counts))
+                    {
+                        counts = new int[7];
+                        byCulture[culture] = counts;
+                    }
+                    counts[tier]++;
+
+                    if (tier > 3) continue;
+                    string key = culture + "|" + tier;
+                    List<string> ids;
+                    if (!samples.TryGetValue(key, out ids))
+                    {
+                        ids = new List<string>();
+                        samples[key] = ids;
+                    }
+                    if (ids.Count < 4) ids.Add(item.StringId);
+                }
+
+                foreach (KeyValuePair<string, int[]> pair in byCulture)
+                {
+                    int[] c = pair.Value;
+                    ModLog.Info("TIER " + kind + " culture=" + pair.Key
+                                + " t1=" + c[1] + " t2=" + c[2] + " t3=" + c[3]
+                                + " t4=" + c[4] + " t5=" + c[5] + " t6=" + c[6]);
+                }
+
+                // Only body and head armour are worth sampling by name: they are
+                // what makes a hero read as a soldier or a peasant on the field.
+                if (kind != ItemObject.ItemTypeEnum.BodyArmor && kind != ItemObject.ItemTypeEnum.HeadArmor) continue;
+
+                foreach (KeyValuePair<string, List<string>> pair in samples)
+                {
+                    ModLog.Info("TIERSAMPLE " + kind + " " + pair.Key + " -> " + string.Join(", ", pair.Value.ToArray()));
+                }
+            }
+        }
+
+        /// <summary>
+        /// What the poorest lords could actually afford. The free grant only has
+        /// to carry a hero until the purchase engine takes over, so the question
+        /// that decides how generous it must be is whether a genuinely poor lord
+        /// can buy his own way up -- not what the richest can.
+        /// </summary>
+        private static void ReportGold()
+        {
+            int poorestAvailable = int.MaxValue;
+            string poorestHero = "<none>";
+            string poorestClan = "<none>";
+
+            int poorestClanGold = int.MaxValue;
+            string poorestClanName = "<none>";
+
+            int under1000 = 0, under3000 = 0, under10000 = 0, counted = 0;
+            long total = 0;
+
+            foreach (Hero hero in Hero.AllAliveHeroes)
+            {
+                try
+                {
+                    if (!HeroFilter.IsEligible(hero)) continue;
+                    if (hero.Clan == null || hero.Clan.IsEliminated) continue;
+
+                    Clan clan = hero.Clan;
+                    int warParties = clan.WarPartyComponents != null ? clan.WarPartyComponents.Count : 0;
+                    int reserve = BudgetMath.Reserve(warParties, 1.0f);
+                    int available = BudgetMath.Available(hero.Gold, clan.Gold, 0, reserve);
+
+                    counted++;
+                    total += available;
+                    if (available < 1000) under1000++;
+                    if (available < 3000) under3000++;
+                    if (available < 10000) under10000++;
+
+                    if (available < poorestAvailable)
+                    {
+                        poorestAvailable = available;
+                        poorestHero = hero.Name + " (own=" + hero.Gold + " clan=" + clan.Gold
+                                      + " parties=" + warParties + " reserve=" + reserve + ")";
+                        poorestClan = clan.Name.ToString();
+                    }
+
+                    if (clan.Gold < poorestClanGold)
+                    {
+                        poorestClanGold = clan.Gold;
+                        poorestClanName = clan.Name + " tier=" + clan.Tier + " parties=" + warParties;
+                    }
+                }
+                catch
+                {
+                    // One unreadable hero must not cost us the whole picture.
+                }
+            }
+
+            if (counted == 0)
+            {
+                ModLog.Info("GOLD no eligible heroes with a clan");
+                return;
+            }
+
+            ModLog.Info("GOLD heroes=" + counted + " meanAvailable=" + (int)(total / counted)
+                        + " under1000=" + under1000 + " under3000=" + under3000
+                        + " under10000=" + under10000);
+            ModLog.Info("GOLD poorestHero available=" + poorestAvailable + " " + poorestHero
+                        + " clan=" + poorestClan);
+            ModLog.Info("GOLD poorestClan gold=" + poorestClanGold + " " + poorestClanName);
         }
 
         /// <summary>
