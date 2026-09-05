@@ -181,18 +181,34 @@ disponible = hero.Gold + Math.Max(0, clan.Gold − gastoPendiente(clan) − rese
 
 ### 7.2 Reparto del coste
 
-Cada compra se reparte entre el clan y el héroe. Cuota del clan, por orden de aplicación:
+Cada compra se reparte entre el clan y el héroe. La cuota del clan parte de una
+base y se ajusta de forma **aditiva**:
 
-| Condición | Cuota del clan |
+| Condición | Ajuste |
 |---|---|
-| base | 60% |
-| el héroe es el líder del clan | 70% |
-| clan tier ≥ 1 | 40% |
-| héroe con más de 2.000 de oro | 30% |
-| clan con más de 40.000 de oro | 20% |
+| base | **60%** |
+| el héroe es el líder del clan | **+10%** |
+| clan tier ≥ 1 | **+5%** |
+| clan con más de 40.000 de oro | **+15%** |
+| héroe con más de 2.000 de oro | **−30%** |
 | | acotado entre **10% y 80%** |
 
-Cuanto más rico es el héroe, más paga de su bolsillo; cuanto más rica la casa, más cubre ella.
+Cuanto más rico es el héroe, más paga de su bolsillo; cuanto más rica la casa,
+más cubre ella.
+
+**Por qué aditivo y no una cadena de sobrescrituras.** La riqueza del héroe y la
+de la casa son dos ejes independientes que tiran en sentidos opuestos. Una cadena
+donde cada regla pisa a la anterior no puede representarlos: la última condición
+que se cumple decide sola, e ignora todas las demás. Con sobrescrituras, un líder
+casi arruinado de una casa boyante acababa recibiendo *menos* ayuda (20%) que un
+líder acomodado de una casa modesta (30%) — lo contrario de lo que dice la regla.
+Sumando contribuciones, cada eje aporta lo suyo y el resultado queda ordenado:
+ese mismo líder pobre de casa rica llega a 85%, que el tope recorta a 80%, frente
+al 45% del líder acomodado.
+
+El tope superior es alcanzable y por tanto significativo. El inferior no lo es con
+estos valores —el mínimo posible es 30%— y se conserva como red por si los ajustes
+se hacen configurables más adelante.
 
 ### 7.3 Ledger de gasto pendiente
 
