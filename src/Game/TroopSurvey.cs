@@ -67,10 +67,24 @@ namespace HeroLoadoutFixer
             if (troop == null || depth > MaxDepth) return;
             if (!seen.Add(troop.StringId)) return;
 
-            Signature signature = Describe(troop);
-            if (signature != null) found.Add(signature);
+            CharacterObject[] upgrades;
+            try
+            {
+                Signature signature = Describe(troop);
+                if (signature != null) found.Add(signature);
 
-            CharacterObject[] upgrades = troop.UpgradeTargets;
+                upgrades = troop.UpgradeTargets;
+            }
+            catch (System.Exception ex)
+            {
+                // Guarded per troop, not per culture: a single unreadable troop
+                // must not cost the whole tree below it. Same lesson the hero
+                // census already learned.
+                ModLog.Error("TROOP failed on " + troop.StringId + ": "
+                             + ex.GetType().Name + " " + ex.Message);
+                return;
+            }
+
             if (upgrades == null) return;
 
             // Every branch, not just the last: a culture's archer and its

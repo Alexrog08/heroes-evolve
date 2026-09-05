@@ -87,6 +87,7 @@ namespace HeroLoadoutFixer
             }
 
             int[] byCategory = new int[highest + 1];
+            int[] bySupport = new int[highest + 1];
             int mounts = 0, harnesses = 0, notMerchandise = 0;
             int head = 0, body = 0, leg = 0, hand = 0, cape = 0;
 
@@ -109,6 +110,18 @@ namespace HeroLoadoutFixer
 
                 WeaponCategory category = ItemClassifier.Classify(item);
                 byCategory[(int)category]++;
+
+                // Counted a second way on purpose. byCategory is the item's
+                // primary identity, which is what Classify reports; bySupport is
+                // how many items the catalogue would actually accept for that
+                // request, which is what FindBest uses. The two differ exactly
+                // by the hand-and-a-half weapons, so printing only the first
+                // hides whether the wildcard is working at all.
+                foreach (WeaponCategory wanted in System.Enum.GetValues(typeof(WeaponCategory)))
+                {
+                    if (wanted == WeaponCategory.None) continue;
+                    if (ItemClassifier.Supports(item, wanted)) bySupport[(int)wanted]++;
+                }
             }
 
             ModLog.Info("CATALOG items=" + all.Count + " notMerchandise=" + notMerchandise);
@@ -120,6 +133,14 @@ namespace HeroLoadoutFixer
                 weapons.Append(' ').Append(category).Append('=').Append(byCategory[(int)category]);
             }
             ModLog.Info(weapons.ToString());
+
+            StringBuilder usable = new StringBuilder("CATALOG accepted");
+            foreach (WeaponCategory category in System.Enum.GetValues(typeof(WeaponCategory)))
+            {
+                if (category == WeaponCategory.None) continue;
+                usable.Append(' ').Append(category).Append('=').Append(bySupport[(int)category]);
+            }
+            ModLog.Info(usable.ToString());
 
             ModLog.Info("CATALOG armor head=" + head + " body=" + body + " leg=" + leg
                         + " hand=" + hand + " cape=" + cape
@@ -223,7 +244,7 @@ namespace HeroLoadoutFixer
             int poorestClanGold = int.MaxValue;
             string poorestClanName = "<none>";
 
-            int under1000 = 0, under3000 = 0, under10000 = 0, counted = 0;
+            int under1000 = 0, under3000 = 0, under10000 = 0, counted = 0, leaders = 0;
             long total = 0;
 
             foreach (Hero hero in Hero.AllAliveHeroes)
@@ -236,7 +257,17 @@ namespace HeroLoadoutFixer
                     Clan clan = hero.Clan;
                     int warParties = clan.WarPartyComponents != null ? clan.WarPartyComponents.Count : 0;
                     int reserve = BudgetMath.Reserve(warParties, 1.0f);
-                    int available = BudgetMath.Available(hero.Gold, clan.Gold, 0, reserve);
+
+                    // Clan.Gold is not a separate purse. Disassembled from
+                    // v1.4.8: Clan::get_Gold returns Leader.Gold (or 0 with no
+                    // leader). So for a clan leader, hero.Gold and clan.Gold are
+                    // the same coins, and adding both counts his money twice --
+                    // which is what inflated the first census's mean. Only the
+                    // clan side is counted for a leader.
+                    bool isLeader = clan.Leader == hero;
+                    if (isLeader) leaders++;
+                    int ownGold = isLeader ? 0 : hero.Gold;
+                    int available = BudgetMath.Available(ownGold, clan.Gold, 0, reserve);
 
                     counted++;
                     total += available;
@@ -247,7 +278,8 @@ namespace HeroLoadoutFixer
                     if (available < poorestAvailable)
                     {
                         poorestAvailable = available;
-                        poorestHero = hero.Name + " (own=" + hero.Gold + " clan=" + clan.Gold
+                        poorestHero = hero.Name + " (leader=" + isLeader
+                                      + " own=" + hero.Gold + " clan=" + clan.Gold
                                       + " parties=" + warParties + " reserve=" + reserve + ")";
                         poorestClan = clan.Name.ToString();
                     }
@@ -270,7 +302,8 @@ namespace HeroLoadoutFixer
                 return;
             }
 
-            ModLog.Info("GOLD heroes=" + counted + " meanAvailable=" + (int)(total / counted)
+            ModLog.Info("GOLD heroes=" + counted + " clanLeaders=" + leaders
+                        + " meanAvailable=" + (int)(total / counted)
                         + " under1000=" + under1000 + " under3000=" + under3000
                         + " under10000=" + under10000);
             ModLog.Info("GOLD poorestHero available=" + poorestAvailable + " " + poorestHero
@@ -361,7 +394,7 @@ namespace HeroLoadoutFixer
         private static List<Hero> ReportHeroes()
         {
             List<Hero> broken = new List<Hero>();
-            int alive = 0, eligible = 0, dead = 0, templates = 0, children = 0, notLord = 0;
+            int alive = 0, eligible = 0, dead = 0, templates = 0, children = 0, notLord = 0, player = 0;
 
             int failed = 0;
 
@@ -382,7 +415,10 @@ namespace HeroLoadoutFixer
                     if (hero.IsChild) { children++; continue; }
                     if (!hero.IsLord) { notLord++; continue; }
 
-                    if (!HeroFilter.IsEligible(hero)) continue;
+                    // IsEligible also drops the player character, which no
+                    // bucket above catches -- without this the printed counts
+                    // silently fail to add up to `alive`.
+                    if (!HeroFilter.IsEligible(hero)) { player++; continue; }
                     eligible++;
 
                     if (GrantService.NeedsGrant(hero)) broken.Add(hero);
@@ -398,7 +434,8 @@ namespace HeroLoadoutFixer
 
             ModLog.Info("HEROES alive=" + alive + " eligible=" + eligible
                         + " (excluded: dead=" + dead + " templates=" + templates
-                        + " children=" + children + " nonLord=" + notLord + ")");
+                        + " children=" + children + " nonLord=" + notLord
+                        + " player=" + player + ")");
             ModLog.Info("HEROES needingGrant=" + broken.Count
                         + " alreadyRepairedThisSession=" + _repairsBeforeCensus);
 
