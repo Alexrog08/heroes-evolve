@@ -352,8 +352,13 @@ namespace HeroLoadoutFixer.Core
             return WeaponCategory.None;
         }
 
-        /// <summary>Maps a planned category back to the skill that governs it.</summary>
-        private static SkillKind SkillForCategory(WeaponCategory category)
+        /// <summary>
+        /// Maps a planned category back to the skill that governs it. Public
+        /// because the game-side ItemClassifier.MeetsDifficulty (Task 9) needs
+        /// the same mapping to gate on item difficulty; kept as this single
+        /// definition rather than duplicated so the two can never drift apart.
+        /// </summary>
+        public static SkillKind SkillForCategory(WeaponCategory category)
         {
             switch (category)
             {
