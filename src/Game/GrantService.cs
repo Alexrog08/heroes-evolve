@@ -13,7 +13,7 @@ namespace HeroLoadoutFixer
     public static class GrantService
     {
         /// <summary>The one-handed sword vanilla's dummy fallback hands out.</summary>
-        private const string DummySwordId = "iron_spatha_sword_t2";
+        internal const string DummySwordId = "iron_spatha_sword_t2";
 
         /// <summary>
         /// True when the hero's battle equipment is empty, or is the vanilla
@@ -208,7 +208,7 @@ namespace HeroLoadoutFixer
             foreach (EquipmentIndex slot in SlotMapping.ArmorSlots)
             {
                 ResolvedSlot entry = new ResolvedSlot();
-                entry.Label = slot.ToString();
+                entry.Label = SlotMapping.NameOf(slot);
                 entry.Want = ArmorTypeFor(slot).ToString();
                 entry.Slot = slot;
                 entry.Existing = NameOf(hero.BattleEquipment[slot].Item);

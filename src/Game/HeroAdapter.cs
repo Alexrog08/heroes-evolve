@@ -35,6 +35,22 @@ namespace HeroLoadoutFixer
             for (int i = 0; i < weapons.Length; i++)
             {
                 EquipmentElement element = equipment[SlotMapping.WeaponSlot(i)];
+
+                // The lone spatha vanilla's dummy fallback hands out is the
+                // marker of the come-of-age failure, never kit the hero chose.
+                // Reported as a OneHandedSword it satisfies the planner's
+                // sidearm slot, so Reconcile plans around it and leaves it in
+                // place: observed in a real campaign, a king with 258 weapon
+                // skill and a tier-6 ceiling kept a tier-2 starter sword, and
+                // because he then had four weapons NeedsGrant returned false
+                // and he was never looked at again. Read it as an empty slot
+                // so the repair replaces it like the junk it is.
+                if (IsVanillaDummySword(element.Item))
+                {
+                    weapons[i] = WeaponCategory.None;
+                    continue;
+                }
+
                 weapons[i] = ItemClassifier.Classify(element.Item);
             }
 
@@ -47,6 +63,16 @@ namespace HeroLoadoutFixer
                 equipment[EquipmentIndex.Leg].Item != null,
                 equipment[EquipmentIndex.Gloves].Item != null,
                 equipment[EquipmentIndex.Cape].Item != null);
+        }
+
+        /// <summary>
+        /// The one-handed sword vanilla's dummy fallback hands out when a hero
+        /// comes of age with no usable equipment template. Kept in step with
+        /// GrantService.DummySwordId, which is what detects the same state.
+        /// </summary>
+        internal static bool IsVanillaDummySword(ItemObject item)
+        {
+            return item != null && item.StringId == GrantService.DummySwordId;
         }
 
         /// <summary>

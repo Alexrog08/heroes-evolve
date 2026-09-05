@@ -18,9 +18,6 @@ namespace HeroLoadoutFixer
     /// </summary>
     public static class ConsoleCommands
     {
-        /// <summary>The one-handed sword vanilla's dummy fallback hands out.</summary>
-        private const string DummySwordId = "iron_spatha_sword_t2";
-
         [CommandLineFunctionality.CommandLineArgumentFunction("census", "hlf")]
         public static string Census(List<string> args)
         {
@@ -116,7 +113,7 @@ namespace HeroLoadoutFixer
             hero.BattleEquipment[EquipmentIndex.Horse] = EquipmentElement.Invalid;
             hero.BattleEquipment[EquipmentIndex.HorseHarness] = EquipmentElement.Invalid;
 
-            ItemObject spatha = MBObjectManager.Instance.GetObject<ItemObject>(DummySwordId);
+            ItemObject spatha = MBObjectManager.Instance.GetObject<ItemObject>(GrantService.DummySwordId);
             if (spatha != null)
             {
                 hero.BattleEquipment[EquipmentIndex.Weapon0] = new EquipmentElement(spatha, null, null, false);
@@ -132,7 +129,7 @@ namespace HeroLoadoutFixer
             }
             foreach (EquipmentIndex slot in SlotMapping.ArmorSlots)
             {
-                text.Append(slot).Append('=').Append(IdOf(hero, slot)).Append(' ');
+                text.Append(SlotMapping.NameOf(slot)).Append('=').Append(IdOf(hero, slot)).Append(' ');
             }
             text.Append("Horse=").Append(IdOf(hero, EquipmentIndex.Horse));
             text.Append(" Harness=").Append(IdOf(hero, EquipmentIndex.HorseHarness));
