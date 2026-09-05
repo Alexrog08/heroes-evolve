@@ -45,6 +45,16 @@ namespace HeroLoadoutFixer.Core
             // here rather than let it silently subsidize the clan side below.
             if (heroGold < 0) heroGold = 0;
 
+            // Same story for the clan-side inputs: pendingClanSpend and reserve
+            // should never be negative in a real campaign either, and nothing
+            // upstream enforces that here either. Left unguarded, a negative
+            // value flips the subtraction below into addition and inflates the
+            // clan's apparent contribution above what it actually holds --
+            // exactly what the reserve exists to prevent (see
+            // PartyGoldLowerThreshold above).
+            if (pendingClanSpend < 0) pendingClanSpend = 0;
+            if (reserve < 0) reserve = 0;
+
             int clanContribution = clanGold - pendingClanSpend - reserve;
             if (clanContribution < 0) clanContribution = 0;
 
@@ -55,23 +65,34 @@ namespace HeroLoadoutFixer.Core
         /// The fraction of a purchase the clan covers. The richer the hero, the
         /// more he pays himself; the richer the house, the less it needs to.
         ///
-        /// The four conditions below are evaluated in a fixed order -- base,
-        /// then leader, then clan tier, then hero wealth, then clan wealth --
-        /// and each later match overwrites whatever the previous ones set,
-        /// rather than combining or short-circuiting. A hero can satisfy
-        /// several conditions simultaneously (e.g. be his clan's leader *and*
-        /// belong to a tier-3 clan with 5000 gold); when that happens, the
-        /// last matching rule in this order wins, per the design doc's
-        /// "cuota del clan, por orden de aplicacion" table.
+        /// Hero wealth and clan wealth are independent axes pulling in opposite
+        /// directions. An overwrite chain -- where only the last matching
+        /// condition decides -- cannot represent both at once: it used to leave
+        /// an almost-broke leader of a rich clan with a LOWER share (20%) than a
+        /// well-off leader of a modest clan (30%), which is backwards. Each
+        /// condition below instead contributes its own additive adjustment to
+        /// the base, so a hero satisfying several at once (e.g. being his
+        /// clan's leader *and* belonging to a wealthy tier-3 clan) gets the sum
+        /// of all of them, per the design doc's now-additive "cuota del clan"
+        /// table.
+        ///
+        /// The upper 80% clamp is genuinely reachable and is not dead code: an
+        /// almost-broke leader of a rich clan (leader +10%, clan-wealth +15%,
+        /// no hero-wealth deduction) sums to 0.60+0.10+0.15 = 0.85, clamped
+        /// down to 0.80. The lower 10% clamp is NOT reachable with today's five
+        /// literals -- the minimum achievable is the base minus the hero-wealth
+        /// deduction alone, 0.30 -- but it is kept anyway as a guard for if
+        /// these adjustments become configurable/data-driven later, where a
+        /// combination could actually undershoot it.
         /// </summary>
         public static float ClanShare(bool isClanLeader, int clanTier, int heroGold, int clanGold)
         {
             float share = 0.60f;
 
-            if (isClanLeader) share = 0.70f;
-            if (clanTier >= 1) share = 0.40f;
-            if (heroGold > 2000) share = 0.30f;
-            if (clanGold > 40000) share = 0.20f;
+            if (isClanLeader) share += 0.10f;
+            if (clanTier >= 1) share += 0.05f;
+            if (clanGold > 40000) share += 0.15f;
+            if (heroGold > 2000) share -= 0.30f;
 
             if (share < 0.10f) share = 0.10f;
             if (share > 0.80f) share = 0.80f;

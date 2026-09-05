@@ -22,11 +22,14 @@ namespace HeroLoadoutFixer.Tests
             // A poor clan contributes nothing but the hero can still spend his own.
             Check.Equal(300, BudgetMath.Available(300, 1000, 0, reserve), "poor clan contributes nothing");
 
-            // Spec case 17: the cost split.
-            Check.Equal(30, (int)(BudgetMath.ClanShare(false, 2, 5000, 10000) * 100f), "rich hero pays most of it");
-            Check.Equal(20, (int)(BudgetMath.ClanShare(false, 2, 5000, 50000) * 100f), "rich clan covers less as the hero is rich too");
+            // Spec case 17: the cost split. ClanShare moved from an overwrite
+            // chain to additive contributions (see BudgetMath.cs); every
+            // expected value below was recomputed by hand for the new rule,
+            // not copied from the old implementation.
+            Check.Equal(35, (int)(BudgetMath.ClanShare(false, 2, 5000, 10000) * 100f), "established clan (+5) and rich hero (-30) net below base");
+            Check.Equal(50, (int)(BudgetMath.ClanShare(false, 2, 5000, 50000) * 100f), "established clan (+5) and rich clan (+15) offset most of the rich-hero deduction (-30)");
             Check.Equal(70, (int)(BudgetMath.ClanShare(true, 0, 100, 100) * 100f), "poor clan leader is covered by the house");
-            Check.Equal(40, (int)(BudgetMath.ClanShare(false, 3, 100, 100) * 100f), "established clan covers less than base");
+            Check.Equal(65, (int)(BudgetMath.ClanShare(false, 3, 100, 100) * 100f), "established clan adds five points on top of base");
             Check.Equal(60, (int)(BudgetMath.ClanShare(false, 0, 100, 100) * 100f), "base share");
 
             // The share never leaves the ten to eighty band.
@@ -37,19 +40,37 @@ namespace HeroLoadoutFixer.Tests
 
             // --- Extra boundary coverage beyond the brief's fixtures ---
             //
-            // Finding: given the five fixed shares this rule table assigns
-            // (0.60 base, 0.70 leader, 0.40 tier, 0.30 hero-rich, 0.20 clan-rich),
-            // the last-applicable rule always wins (see the ordering block below)
-            // and every one of those five literals already sits inside [0.10, 0.80].
-            // No combination of the four booleans/thresholds can produce anything
-            // outside {0.20, 0.30, 0.40, 0.60, 0.70}. That means the closing
-            // `if (share < 0.10f)` / `if (share > 0.80f)` clamp in ClanShare can
-            // never actually fire through this public signature: it is dead code
-            // given these fixed values, not a reachable safety net. The two
-            // "never below ten / above eighty" checks above hold trivially (0.20
-            // and 0.70 both clear their bound with room to spare) and were never
-            // going to catch a broken clamp either way. Recorded here rather than
-            // faked with a test that pretends some input can reach the clamp.
+            // Superseded finding: this comment used to record that the 10%-80%
+            // clamp was dead code, because the old overwrite chain could only
+            // ever return one of five fixed literals ({0.20, 0.30, 0.40, 0.60,
+            // 0.70}), all comfortably inside the band. ClanShare is now
+            // additive (see BudgetMath.cs), and that is no longer true: the
+            // upper clamp is genuinely reachable, proved below by pinning the
+            // exact combination that hits it. The lower clamp is still
+            // unreachable today (minimum achievable is 0.30) -- see
+            // BudgetMath.cs for why it is kept anyway -- and remains covered
+            // only by the generic "never below ten percent" check above.
+
+            // Finding 2 fixture: an overwrite chain let an almost-broke leader
+            // of a rich clan (tier 0, so the tier bonus does not apply) end up
+            // with LESS help (old: 0.20) than a well-off leader of a modest
+            // clan (old: 0.30) -- backwards, since the two axes should add, not
+            // compete. This pins the corrected relationship directly, rather
+            // than just checking two numbers that happen to be right: whatever
+            // the exact literals, the rich-clan leader must come out strictly
+            // ahead of the modest-clan one.
+            float brokeLeaderOfRichClan = BudgetMath.ClanShare(true, 0, 100, 50000);
+            float wellOffLeaderOfModestClan = BudgetMath.ClanShare(true, 3, 3000, 10000);
+            Check.True(brokeLeaderOfRichClan > wellOffLeaderOfModestClan,
+                "an almost-broke leader of a rich clan gets a strictly higher clan share than a well-off leader of a modest clan");
+
+            // Same brokeLeaderOfRichClan case, pinned to its exact value: raw
+            // sum is 0.60 base + 0.10 leader + 0.15 clan-wealth = 0.85 (tier is
+            // 0, so the +0.05 tier bonus does not apply, and heroGold is 100,
+            // so the -0.30 hero-wealth deduction does not apply either). The
+            // 80% clamp must bring that down to exactly 0.80, not leave it at
+            // 0.85 -- proving the upper clamp is live, not dead code.
+            Check.Equal(80, (int)(brokeLeaderOfRichClan * 100f), "upper clamp brings the 0.85 raw sum down to exactly 0.80");
 
             // Reserve: the brief only exercises warPartyCount 0 and 4, both
             // non-negative. A negative party count is a real input shape (a
@@ -73,6 +94,16 @@ namespace HeroLoadoutFixer.Tests
             Check.Equal(80000, BudgetMath.Available(-500, 100000, 0, 20000), "negative hero gold clamps to zero before adding the clan's contribution");
             Check.Equal(0, BudgetMath.Available(-500, 1000, 0, 20000), "negative hero gold and an exhausted clan both clamp, leaving nothing");
 
+            // Finding 1: pendingClanSpend and reserve used to feed the same
+            // subtraction unguarded, even though heroGold was already clamped.
+            // A negative value on either one flips the subtraction into
+            // addition and inflates the clan's apparent contribution above
+            // what it actually holds -- exactly what the reserve exists to
+            // prevent. A clan holding 1000 must never appear to offer 1500.
+            Check.Equal(1000, BudgetMath.Available(0, 1000, -500, 0), "negative pending clan spend clamps to zero instead of inflating the clan's contribution above its actual 1000 gold");
+            Check.Equal(1000, BudgetMath.Available(0, 1000, 0, -500), "negative reserve clamps to zero instead of inflating the clan's contribution above its actual 1000 gold");
+            Check.Equal(1000, BudgetMath.Available(0, 1000, -500, -500), "negative pending clan spend and negative reserve both clamp at once, still capped at the clan's actual 1000 gold");
+
             // ClanShare's heroGold threshold: the brief only tests 5000 (above)
             // and 100 (below), never anywhere near 2000 itself, and the rule
             // uses a strict '>'. Below/above alone cannot tell '>' from '>=';
@@ -86,27 +117,26 @@ namespace HeroLoadoutFixer.Tests
             // heroGold rule (heroGold stays at 100, well under its own threshold).
             Check.Equal(60, (int)(BudgetMath.ClanShare(false, 0, 100, 39999) * 100f), "one gold under the clan-wealth threshold: base share still applies");
             Check.Equal(60, (int)(BudgetMath.ClanShare(false, 0, 100, 40000) * 100f), "exactly on the clan-wealth threshold: '>' is strict, so it does not fire yet");
-            Check.Equal(20, (int)(BudgetMath.ClanShare(false, 0, 100, 40001) * 100f), "one gold over the clan-wealth threshold: now it fires");
+            Check.Equal(75, (int)(BudgetMath.ClanShare(false, 0, 100, 40001) * 100f), "one gold over the clan-wealth threshold: the +15 clan-wealth contribution now applies on top of base");
 
             // clanTier's own threshold ('>= 1') is never tested exactly at 1 by
             // the brief (it uses 0, 2, 3 and 6): this doubles as that boundary
-            // case and as an ordering case. isClanLeader is also true here, so
-            // it also proves the tier rule is applied *after* the leader rule
-            // and overwrites it, per the design doc's "cuota del clan, por
-            // orden de aplicacion" table (base -> leader -> tier -> hero ->
-            // clan-wealth) -- a hero can be both his clan's leader and belong
-            // to a clan of tier >= 1 at once, and the later rule must win.
-            Check.Equal(40, (int)(BudgetMath.ClanShare(true, 1, 100, 100) * 100f), "clan tier exactly one both crosses the tier threshold and, applied after the leader rule, overwrites it");
+            // case and as an additive-combination case. isClanLeader is also
+            // true here, so this also proves the tier bonus (+5) and the
+            // leader bonus (+10) both apply together instead of one
+            // overwriting the other: base 0.60 + leader 0.10 + tier 0.05 =
+            // 0.75, not just one of the two ten/five-point bonuses alone.
+            Check.Equal(75, (int)(BudgetMath.ClanShare(true, 1, 100, 100) * 100f), "clan tier exactly one crosses the tier threshold and adds on top of the leader bonus, rather than overwriting it");
 
-            // Full ordering coverage: a hero can satisfy several ClanShare
-            // conditions simultaneously, and the design doc specifies the rules
-            // apply in a fixed order where a later match overwrites an earlier
-            // one. Neither of the brief's own multi-condition fixtures ever
-            // makes isClanLeader true alongside the others, so a bug that let
-            // "is clan leader" dominate (e.g. applied last, or short-circuiting
-            // an else-if chain) would ship unnoticed by the brief alone.
-            Check.Equal(30, (int)(BudgetMath.ClanShare(true, 3, 3000, 100) * 100f), "leader, established clan and hero wealth all true: hero wealth is applied last among the three and wins");
-            Check.Equal(20, (int)(BudgetMath.ClanShare(true, 3, 3000, 50000) * 100f), "all four conditions true at once: clan wealth is applied last of all and wins over leader, tier and hero wealth alike");
+            // Full additive-combination coverage: a hero can satisfy several
+            // ClanShare conditions simultaneously, and now that the rule is
+            // additive every one of them must contribute, not just whichever
+            // was checked last. Neither of the brief's own multi-condition
+            // fixtures ever makes isClanLeader true alongside the others, so a
+            // bug that dropped or double-applied one contribution when several
+            // fire together would ship unnoticed by the brief alone.
+            Check.Equal(45, (int)(BudgetMath.ClanShare(true, 3, 3000, 100) * 100f), "leader, established clan and rich hero all at once: 0.60 base + 0.10 leader + 0.05 tier - 0.30 hero-wealth = 0.45");
+            Check.Equal(60, (int)(BudgetMath.ClanShare(true, 3, 3000, 50000) * 100f), "all four conditions true at once: 0.60 base + 0.10 leader + 0.05 tier + 0.15 clan-wealth - 0.30 hero-wealth = 0.60");
         }
     }
 }
