@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Module>
+  <Name value="Hero Loadout Fixer"/>
+  <Id value="HeroLoadoutFixer"/>
+  <Version value="v0.1.0"/>
+  <SingleplayerModule value="true"/>
+  <MultiplayerModule value="false"/>
+  <DependedModules>
+    <DependedModule Id="Native" DependentVersion="v1.4.8" MinVersion="v1.4.8"/>
+    <DependedModule Id="SandBoxCore" DependentVersion="v1.4.8" MinVersion="v1.4.8"/>
+    <DependedModule Id="Sandbox" DependentVersion="v1.4.8" MinVersion="v1.4.8"/>
+    <DependedModule Id="StoryMode" DependentVersion="v1.4.8" MinVersion="v1.4.8"/>
+  </DependedModules>
+  <SubModules>
+    <SubModule>
+      <Name value="HeroLoadoutFixer"/>
+      <DLLName value="HeroLoadoutFixer.dll"/>
+      <SubModuleClassType value="HeroLoadoutFixer.SubModule"/>
+      <Tags>
+        <Tag key="DedicatedServerType" value="none"/>
+        <Tag key="IsNoRenderModeElement" value="false"/>
+      </Tags>
+      <Official value="false"/>
+    </SubModule>
+  </SubModules>
+</Module>
