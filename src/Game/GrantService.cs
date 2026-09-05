@@ -38,10 +38,16 @@ namespace HeroLoadoutFixer
             return weapons == 1 && onlyDummySword;
         }
 
-        public static void Grant(Hero hero, float clanWeight, float skillWeight,
-                                 int minimumTier, int dominanceMargin)
+        /// <summary>
+        /// Resolves everything this hero would be given, without writing a
+        /// single slot. Split out of Grant so the diagnostic dry-run runs the
+        /// real decision code rather than a copy of it. Returns null only when
+        /// the hero cannot be reasoned about at all.
+        /// </summary>
+        public static ResolvedGrant Resolve(Hero hero, float clanWeight, float skillWeight,
+                                            int minimumTier, int dominanceMargin)
         {
-            if (hero == null || hero.BattleEquipment == null) return;
+            if (hero == null || hero.BattleEquipment == null) return null;
 
             SkillProfile skills = HeroAdapter.ReadSkills(hero);
             SlotSnapshot current = HeroAdapter.ReadEquipment(hero.BattleEquipment);
@@ -78,88 +84,166 @@ namespace HeroLoadoutFixer
             // the horse those rules assumed.
             bool mounted = current.HasMount || target.WantsMount;
 
-            int granted = 0;
+            ResolvedGrant resolved = new ResolvedGrant();
+            resolved.ClanTier = clanTier;
+            resolved.MaxCombatSkill = skills.MaxCombatSkill;
+            resolved.Ceiling = ceiling;
+            resolved.CultureFieldsMountedElites = cultureMounted;
+            resolved.WantsMount = target.WantsMount;
+            resolved.Mounted = mounted;
+            resolved.Availability = availability;
+            resolved.Culture = culture;
+            resolved.PlannedWeaponCount = plan.Count;
+
             foreach (PlannedSlot slot in plan)
             {
-                ItemObject item = ItemCatalog.FindBest(slot.Category, culture, ceiling, skills, hero, mounted);
-                if (item == null) continue;
-
-                hero.BattleEquipment[SlotMapping.WeaponSlot(slot.SlotIndex)] =
-                    new EquipmentElement(item, null, null, false);
-                granted++;
+                EquipmentIndex index = SlotMapping.WeaponSlot(slot.SlotIndex);
+                ResolvedSlot entry = new ResolvedSlot();
+                entry.Label = "w" + slot.SlotIndex;
+                entry.Want = slot.Category.ToString();
+                entry.Slot = index;
+                entry.Existing = NameOf(hero.BattleEquipment[index].Item);
+                entry.Item = ItemCatalog.FindBest(slot.Category, culture, ceiling, skills, hero, mounted);
+                resolved.Slots.Add(entry);
             }
 
-            granted += GrantMount(hero, culture, ceiling, skills, target.WantsMount);
-            granted += GrantArmor(hero, culture, ceiling);
+            ResolveMount(hero, culture, ceiling, skills, target.WantsMount, resolved);
+            ResolveArmor(hero, culture, ceiling, resolved);
 
-            ModLog.Info("GRANT hero=" + hero.Name + " tier=" + ceiling
-                        + " planned=" + plan.Count + " granted=" + granted);
+            return resolved;
         }
 
         /// <summary>
-        /// Grants the mount the plan assumes, then a compatible harness.
+        /// Writes a resolved plan into the hero's battle equipment and returns
+        /// how many slots were actually filled. The only method in this class
+        /// that mutates anything.
+        /// </summary>
+        public static int Apply(Hero hero, ResolvedGrant resolved)
+        {
+            if (hero == null || hero.BattleEquipment == null || resolved == null) return 0;
+
+            int granted = 0;
+            for (int i = 0; i < resolved.Slots.Count; i++)
+            {
+                ResolvedSlot entry = resolved.Slots[i];
+                if (!entry.WouldWrite) continue;
+
+                hero.BattleEquipment[entry.Slot] = new EquipmentElement(entry.Item, null, null, false);
+                granted++;
+            }
+            return granted;
+        }
+
+        public static void Grant(Hero hero, float clanWeight, float skillWeight,
+                                 int minimumTier, int dominanceMargin)
+        {
+            ResolvedGrant resolved = Resolve(hero, clanWeight, skillWeight, minimumTier, dominanceMargin);
+            if (resolved == null) return;
+
+            int granted = Apply(hero, resolved);
+
+            ModLog.Info("GRANT hero=" + hero.Name + " tier=" + resolved.Ceiling
+                        + " planned=" + resolved.PlannedWeaponCount + " granted=" + granted);
+        }
+
+        /// <summary>
+        /// Resolves the mount the plan assumes, then a compatible harness.
         /// Only acts when the plan actually wants a mount and the hero does
         /// not already have one -- an equipped mount or harness is never
         /// replaced. The harness lookup only ever runs once a mount was
-        /// just found, since compatibility is judged against that specific
-        /// mount's family (see ItemCatalog.FindBestHarness).
+        /// found, since compatibility is judged against that specific mount's
+        /// family (see ItemCatalog.FindBestHarness). Note the harness is
+        /// resolved against the mount we are about to grant, not against the
+        /// (still empty) Horse slot, so the pairing holds at apply time.
         /// </summary>
-        private static int GrantMount(Hero hero, CultureObject culture, int ceiling, SkillProfile skills, bool wantsMount)
+        private static void ResolveMount(Hero hero, CultureObject culture, int ceiling,
+                                         SkillProfile skills, bool wantsMount, ResolvedGrant resolved)
         {
-            if (!wantsMount) return 0;
-            if (hero.BattleEquipment[EquipmentIndex.Horse].Item != null) return 0;
+            ResolvedSlot horse = new ResolvedSlot();
+            horse.Label = "Horse";
+            horse.Want = "Mount";
+            horse.Slot = EquipmentIndex.Horse;
+            horse.Existing = NameOf(hero.BattleEquipment[EquipmentIndex.Horse].Item);
+
+            if (!wantsMount)
+            {
+                horse.SkipReason = "plan wants no mount";
+                resolved.Slots.Add(horse);
+                return;
+            }
+
+            if (hero.BattleEquipment[EquipmentIndex.Horse].Item != null)
+            {
+                horse.SkipReason = "already mounted";
+                resolved.Slots.Add(horse);
+                return;
+            }
 
             ItemObject mount = ItemCatalog.FindBestMount(culture, ceiling, skills);
-            if (mount == null) return 0;
+            horse.Item = mount;
+            resolved.Slots.Add(horse);
 
-            hero.BattleEquipment[EquipmentIndex.Horse] = new EquipmentElement(mount, null, null, false);
-            int granted = 1;
+            if (mount == null) return;
 
-            if (hero.BattleEquipment[EquipmentIndex.HorseHarness].Item == null)
+            ResolvedSlot harness = new ResolvedSlot();
+            harness.Label = "Harness";
+            harness.Want = "Harness";
+            harness.Slot = EquipmentIndex.HorseHarness;
+            harness.Existing = NameOf(hero.BattleEquipment[EquipmentIndex.HorseHarness].Item);
+
+            if (hero.BattleEquipment[EquipmentIndex.HorseHarness].Item != null)
             {
-                ItemObject harness = ItemCatalog.FindBestHarness(mount, culture, ceiling);
-                if (harness != null)
-                {
-                    hero.BattleEquipment[EquipmentIndex.HorseHarness] = new EquipmentElement(harness, null, null, false);
-                    granted++;
-                }
+                harness.SkipReason = "already fitted";
+            }
+            else
+            {
+                harness.Item = ItemCatalog.FindBestHarness(mount, culture, ceiling);
             }
 
-            return granted;
+            resolved.Slots.Add(harness);
         }
 
-        private static int GrantArmor(Hero hero, CultureObject culture, int ceiling)
+        private static void ResolveArmor(Hero hero, CultureObject culture, int ceiling, ResolvedGrant resolved)
         {
-            int granted = 0;
-
             foreach (EquipmentIndex slot in SlotMapping.ArmorSlots)
             {
-                if (hero.BattleEquipment[slot].Item != null) continue;
+                ResolvedSlot entry = new ResolvedSlot();
+                entry.Label = slot.ToString();
+                entry.Want = ArmorTypeFor(slot).ToString();
+                entry.Slot = slot;
+                entry.Existing = NameOf(hero.BattleEquipment[slot].Item);
 
-                ItemObject item = FindArmorFor(slot, culture, ceiling);
-                if (item == null) continue;
+                if (hero.BattleEquipment[slot].Item != null)
+                {
+                    entry.SkipReason = "already worn";
+                }
+                else
+                {
+                    entry.Item = ItemCatalog.FindBestArmor(ArmorTypeFor(slot), culture, ceiling);
+                }
 
-                hero.BattleEquipment[slot] = new EquipmentElement(item, null, null, false);
-                granted++;
+                resolved.Slots.Add(entry);
             }
-
-            return granted;
         }
 
-        /// <summary>Maps an armour slot to its item type and defers to the catalogue.</summary>
-        private static ItemObject FindArmorFor(EquipmentIndex slot, CultureObject culture, int ceiling)
+        /// <summary>Null-safe item name for logging.</summary>
+        private static string NameOf(ItemObject item)
         {
-            ItemObject.ItemTypeEnum wanted;
+            if (item == null) return null;
+            return item.StringId;
+        }
+
+        /// <summary>Maps an armour slot to the item type that fills it.</summary>
+        private static ItemObject.ItemTypeEnum ArmorTypeFor(EquipmentIndex slot)
+        {
             switch (slot)
             {
-                case EquipmentIndex.Head: wanted = ItemObject.ItemTypeEnum.HeadArmor; break;
-                case EquipmentIndex.Body: wanted = ItemObject.ItemTypeEnum.BodyArmor; break;
-                case EquipmentIndex.Leg: wanted = ItemObject.ItemTypeEnum.LegArmor; break;
-                case EquipmentIndex.Gloves: wanted = ItemObject.ItemTypeEnum.HandArmor; break;
-                default: wanted = ItemObject.ItemTypeEnum.Cape; break;
+                case EquipmentIndex.Head: return ItemObject.ItemTypeEnum.HeadArmor;
+                case EquipmentIndex.Body: return ItemObject.ItemTypeEnum.BodyArmor;
+                case EquipmentIndex.Leg: return ItemObject.ItemTypeEnum.LegArmor;
+                case EquipmentIndex.Gloves: return ItemObject.ItemTypeEnum.HandArmor;
+                default: return ItemObject.ItemTypeEnum.Cape;
             }
-
-            return ItemCatalog.FindBestArmor(wanted, culture, ceiling);
         }
     }
 }

@@ -10,13 +10,17 @@ namespace HeroLoadoutFixer
     public class HeroLoadoutBehavior : CampaignBehaviorBase
     {
         // Defaults from the design spec, section 6 and 11.
-        private const float ClanWeight = 0.5f;
-        private const float SkillWeight = 1.0f;
-        private const int MinimumTier = 1;
-        private const int DominanceMargin = 30;
+        internal const float ClanWeight = 0.5f;
+        internal const float SkillWeight = 1.0f;
+        internal const int MinimumTier = 1;
+        internal const int DominanceMargin = 30;
 
         public override void RegisterEvents()
         {
+            // A fresh behaviour instance is built per campaign load, but the
+            // diagnostics counter is static and outlives one campaign.
+            Diagnostics.ResetSession();
+
             // Deliberately NOT subscribed to CampaignEvents.HeroComesOfAgeEvent.
             //
             // Verified from the game's IL: MbEvent<T>.AddNonSerializedListener
@@ -35,6 +39,29 @@ namespace HeroLoadoutFixer
             // heroes one in-game day later instead, which actually works, so
             // the dead subscription is removed rather than fought.
             CampaignEvents.DailyTickHeroEvent.AddNonSerializedListener(this, OnDailyTickHero);
+            CampaignEvents.DailyTickEvent.AddNonSerializedListener(this, OnDailyTick);
+        }
+
+        /// <summary>
+        /// Runs the diagnostic census exactly once per session, on the first
+        /// daily tick rather than at load: by the time a day ticks, every
+        /// campaign object and the item catalogue are fully initialised.
+        /// </summary>
+        private bool _censusDone;
+
+        private void OnDailyTick()
+        {
+            if (_censusDone) return;
+            _censusDone = true;
+
+            try
+            {
+                Diagnostics.RunCensus(ClanWeight, SkillWeight, MinimumTier, DominanceMargin);
+            }
+            catch (System.Exception ex)
+            {
+                ModLog.Error("census failed: " + ex.GetType().Name + " " + ex.Message);
+            }
         }
 
         /// <summary>Nothing is stored in the save. Deliberately empty.</summary>
@@ -49,11 +76,12 @@ namespace HeroLoadoutFixer
         {
             try
             {
-                if (!IsEligible(hero)) return;
+                if (!HeroFilter.IsEligible(hero)) return;
                 if (!GrantService.NeedsGrant(hero)) return;
 
                 ModLog.Info("REPAIR hero=" + hero.Name + " reason=" + reason);
                 GrantService.Grant(hero, ClanWeight, SkillWeight, MinimumTier, DominanceMargin);
+                Diagnostics.NoteRepair();
             }
             catch (System.Exception ex)
             {
@@ -76,25 +104,5 @@ namespace HeroLoadoutFixer
             }
         }
 
-        private static bool IsEligible(Hero hero)
-        {
-            if (hero == null) return false;
-            if (hero.IsDead) return false;
-            if (hero.IsHumanPlayerCharacter) return false;
-            if (hero == Hero.MainHero) return false;
-            if (hero.IsChild) return false;
-            if (!hero.IsLord) return false;
-
-            // Hero.AllAliveHeroes (which drives DailyTickHeroEvent) includes
-            // template heroes. Vanilla's own AgingCampaignBehavior.DailyTickHero
-            // guards with this same hero.IsTemplate check. A template is not a
-            // member of the live campaign roster -- it exists only to seed the
-            // starting equipment/skills of heroes generated from it -- so
-            // writing a granted loadout into its BattleEquipment would mutate
-            // data that every hero later spawned from that template inherits.
-            if (hero.IsTemplate) return false;
-
-            return true;
-        }
     }
 }
