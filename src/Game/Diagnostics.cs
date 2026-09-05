@@ -56,6 +56,7 @@ namespace HeroLoadoutFixer
             ReportTiers();
             ReportGold();
             TroopSurvey.Report();
+            ReportFormations();
             List<Hero> broken = ReportHeroes();
             ReportDryRuns(broken, clanWeight, skillWeight, minimumTier, dominanceMargin);
             ModLog.Info("===== CENSUS END =====");
@@ -278,6 +279,82 @@ namespace HeroLoadoutFixer
         }
 
         /// <summary>
+        /// How TaleWorlds itself labels each hero's battlefield role.
+        ///
+        /// lords.xml tags every authored lord with default_group, and the
+        /// distribution is blunt: 326 of 391 are Cavalry, Battania is inverted
+        /// (37 of 40 Ranged), and there is not one Vlandian ranged lord nor a
+        /// single crossbow lord anywhere. That is a far better archetype source
+        /// than inferring one from skills -- but it is only useful if it
+        /// survives to the heroes this mod actually repairs.
+        ///
+        /// Authored lords are not those heroes. The come-of-age bug hits
+        /// children generated during the campaign, and whether they inherit a
+        /// meaningful DefaultFormationClass appears in no XML file. So the split
+        /// below is the whole point: authored (character id "lord_...") against
+        /// generated, plus the children who will become the real test cases.
+        /// </summary>
+        private static void ReportFormations()
+        {
+            Dictionary<string, int> authored = new Dictionary<string, int>();
+            Dictionary<string, int> generated = new Dictionary<string, int>();
+            Dictionary<string, int> children = new Dictionary<string, int>();
+            int childCount = 0;
+
+            foreach (Hero hero in Hero.AllAliveHeroes)
+            {
+                try
+                {
+                    if (hero == null || hero.IsDead || hero.IsTemplate) continue;
+
+                    CharacterObject character = hero.CharacterObject;
+                    if (character == null) continue;
+
+                    string formation = character.DefaultFormationClass.ToString();
+
+                    if (hero.IsChild)
+                    {
+                        childCount++;
+                        Bump(children, formation);
+                        continue;
+                    }
+
+                    if (!HeroFilter.IsEligible(hero)) continue;
+
+                    bool isAuthored = character.StringId != null && character.StringId.StartsWith("lord_");
+                    Bump(isAuthored ? authored : generated, formation);
+                }
+                catch
+                {
+                    // One unreadable hero must not cost the whole breakdown.
+                }
+            }
+
+            ModLog.Info("FORMATION authored  " + Render(authored));
+            ModLog.Info("FORMATION generated " + Render(generated));
+            ModLog.Info("FORMATION children  " + Render(children) + " total=" + childCount);
+        }
+
+        private static void Bump(Dictionary<string, int> counts, string key)
+        {
+            int n;
+            if (!counts.TryGetValue(key, out n)) n = 0;
+            counts[key] = n + 1;
+        }
+
+        private static string Render(Dictionary<string, int> counts)
+        {
+            if (counts.Count == 0) return "<none>";
+            StringBuilder text = new StringBuilder();
+            foreach (KeyValuePair<string, int> pair in counts)
+            {
+                if (text.Length > 0) text.Append(' ');
+                text.Append(pair.Key).Append('=').Append(pair.Value);
+            }
+            return text.ToString();
+        }
+
+        /// <summary>
         /// Counts the live hero population the mod acts on and returns the
         /// heroes that are actually broken right now.
         /// </summary>
@@ -413,6 +490,9 @@ namespace HeroLoadoutFixer
                     + " plannedWeapons=" + resolved.PlannedWeaponCount
                     + " wouldGrant=" + resolved.WouldGrantCount
                     + " needsGrant=" + GrantService.NeedsGrant(hero)
+                    + " formation=" + (hero.CharacterObject != null
+                                            ? hero.CharacterObject.DefaultFormationClass.ToString() : "<none>")
+                    + " charId=" + (hero.CharacterObject != null ? hero.CharacterObject.StringId : "<none>")
                     + " | skills=" + RenderSkills(HeroAdapter.ReadSkills(hero))
                     + " | current=" + resolved.CurrentWeapons
                     + " | target=" + resolved.TargetWeapons
