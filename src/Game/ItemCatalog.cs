@@ -17,6 +17,23 @@ namespace HeroLoadoutFixer
         public static ItemObject FindBest(WeaponCategory category, CultureObject culture,
                                           int maxTier, SkillProfile skills, Hero hero, bool mounted)
         {
+            return FindBest(category, culture, maxTier, skills, hero, mounted, WeaponCategory.None);
+        }
+
+        /// <summary>
+        /// As above, but refusing items that also serve <paramref name="avoidAlsoServing"/>.
+        ///
+        /// A bastard sword answers a one-handed request legitimately -- the game
+        /// itself lists OneHandedBastardSword as its primary usage. But a hero
+        /// who already carries a two-handed sword gains nothing from filling his
+        /// one-handed slot with a second weapon that is also a two-handed sword;
+        /// the point of that slot is the shield hand. Pass the two-handed
+        /// category already present and such items are excluded.
+        /// </summary>
+        public static ItemObject FindBest(WeaponCategory category, CultureObject culture,
+                                          int maxTier, SkillProfile skills, Hero hero, bool mounted,
+                                          WeaponCategory avoidAlsoServing)
+        {
             if (category == WeaponCategory.None) return null;
 
             ItemObject best = null;
@@ -27,6 +44,8 @@ namespace HeroLoadoutFixer
             {
                 ItemObject item = all[i];
                 if (!IsEligible(item, category, culture, maxTier, skills, hero, mounted)) continue;
+                if (avoidAlsoServing != WeaponCategory.None
+                    && ItemClassifier.AlsoServesTwoHanded(item, avoidAlsoServing)) continue;
 
                 int tier = (int)item.Tier;
                 if (tier > bestTier)
@@ -67,7 +86,12 @@ namespace HeroLoadoutFixer
             // polearm, and a culture with no item of the precise class the
             // planner named got an empty slot even when a perfectly good
             // family member was in the catalogue.
-            if (!CategoryRules.SameFamily(category, ItemClassifier.Classify(item))) return false;
+            // Supports, not SameFamily(Classify(...)): an item can be wielded in
+            // more than one way and Classify only reports the first. Matching on
+            // the primary usage alone left the two-handed pool at 8 items out of
+            // 3500, because every crafted bastard sword files itself as
+            // one-handed (see ItemClassifier.AllUsages).
+            if (!ItemClassifier.Supports(item, category)) return false;
             if (!ItemClassifier.MeetsDifficulty(item, skills)) return false;
             if (mounted && !ItemClassifier.IsUsableMounted(item, hero)) return false;
             return true;

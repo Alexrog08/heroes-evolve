@@ -106,7 +106,8 @@ namespace HeroLoadoutFixer
                 entry.Want = slot.Category.ToString();
                 entry.Slot = index;
                 entry.Existing = NameOf(hero.BattleEquipment[index].Item);
-                entry.Item = ItemCatalog.FindBest(slot.Category, culture, ceiling, skills, hero, mounted);
+                entry.Item = ItemCatalog.FindBest(slot.Category, culture, ceiling, skills, hero, mounted,
+                                                  RedundantTwoHander(slot.Category, current, plan));
                 resolved.Slots.Add(entry);
             }
 
@@ -227,6 +228,36 @@ namespace HeroLoadoutFixer
 
                 resolved.Slots.Add(entry);
             }
+        }
+
+        /// <summary>
+        /// The two-handed category a one-handed slot must not duplicate, or None.
+        ///
+        /// A bastard sword is a legitimate answer to a one-handed request, but
+        /// not when the hero already carries a two-handed sword: the one-handed
+        /// slot exists so the shield hand is free, and a second two-hander adds
+        /// nothing. The same reasoning applies to axes, which have their own
+        /// bastard variants (the TwoHandedAxe crafting template's first usage is
+        /// OneHandedBastardAxe). Maces are deliberately absent: the core enum
+        /// collapses one- and two-handed maces into a single Mace category, so
+        /// the rule cannot be expressed for them without splitting that first.
+        /// </summary>
+        private static WeaponCategory RedundantTwoHander(WeaponCategory wanted, SlotSnapshot current,
+                                                         List<PlannedSlot> plan)
+        {
+            WeaponCategory partner;
+            if (wanted == WeaponCategory.OneHandedSword) partner = WeaponCategory.TwoHandedSword;
+            else if (wanted == WeaponCategory.OneHandedAxe) partner = WeaponCategory.TwoHandedAxe;
+            else return WeaponCategory.None;
+
+            if (current.Contains(partner)) return partner;
+
+            for (int i = 0; i < plan.Count; i++)
+            {
+                if (plan[i].Category == partner) return partner;
+            }
+
+            return WeaponCategory.None;
         }
 
         private static string Join(List<WeaponCategory> categories)

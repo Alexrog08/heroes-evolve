@@ -55,6 +55,7 @@ namespace HeroLoadoutFixer
             ReportCatalog();
             ReportTiers();
             ReportGold();
+            TroopSurvey.Report();
             List<Hero> broken = ReportHeroes();
             ReportDryRuns(broken, clanWeight, skillWeight, minimumTier, dominanceMargin);
             ModLog.Info("===== CENSUS END =====");
@@ -412,6 +413,7 @@ namespace HeroLoadoutFixer
                     + " plannedWeapons=" + resolved.PlannedWeaponCount
                     + " wouldGrant=" + resolved.WouldGrantCount
                     + " needsGrant=" + GrantService.NeedsGrant(hero)
+                    + " | skills=" + RenderSkills(HeroAdapter.ReadSkills(hero))
                     + " | current=" + resolved.CurrentWeapons
                     + " | target=" + resolved.TargetWeapons
                     + " | placed=" + resolved.PlacedWeapons;
@@ -457,6 +459,22 @@ namespace HeroLoadoutFixer
                    + " tier=" + ((int)slot.Item.Tier + 1)
                    + " value=" + slot.Item.Value
                    + (slot.Existing != null ? " (replaces " + slot.Existing + ")" : "");
+        }
+
+        /// <summary>
+        /// Every combat skill with its value. Two rounds of argument about why a
+        /// hero was planned as an archer were spent without anyone being able to
+        /// see the numbers the decision was made from.
+        /// </summary>
+        private static string RenderSkills(SkillProfile skills)
+        {
+            return "1h=" + skills.Get(SkillKind.OneHanded)
+                   + " 2h=" + skills.Get(SkillKind.TwoHanded)
+                   + " pole=" + skills.Get(SkillKind.Polearm)
+                   + " bow=" + skills.Get(SkillKind.Bow)
+                   + " xbow=" + skills.Get(SkillKind.Crossbow)
+                   + " throw=" + skills.Get(SkillKind.Throwing)
+                   + " ride=" + skills.Get(SkillKind.Riding);
         }
 
         internal static string CultureIdOf(Hero hero)
