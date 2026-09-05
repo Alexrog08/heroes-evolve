@@ -340,8 +340,11 @@ Economía:
 
 Techo:
 
-21. Clan tier 3 y skill 240 con pesos por defecto: techo 6.
-22. Clan tier 6 y skill 80 con pesos por defecto: techo 4.
+21. Clan tier 3 y skill 240 con pesos por defecto: techo **5**. La mezcla da
+    (3·0,5 + 6·1,0) / 1,5 = 5,0. Un héroe solo alcanza el techo 6 si también su
+    clan lo tiene, o si se sube el peso de skill.
+22. Clan tier 6 y skill 80 con pesos por defecto: techo **3**. La mezcla da
+    (6·0,5 + 2·1,0) / 1,5 = 3,33, que redondea a 3.
 23. Ítem con `difficulty` superior a la skill: rechazado aunque el techo lo permita.
 
 ## 15. Fases de entrega
