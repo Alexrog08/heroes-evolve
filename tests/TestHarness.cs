@@ -48,6 +48,8 @@ namespace HeroLoadoutFixer.Tests
             ArchetypeTests.RunAll();
             PlannerTests.RunAll();
             BudgetMathTests.RunAll();
+            WeaponCategoryTests.RunAll();
+            MountHarnessTests.RunAll();
 
             Console.WriteLine();
             Console.WriteLine(Check.Passes + " passed, " + Check.Failures + " failed");

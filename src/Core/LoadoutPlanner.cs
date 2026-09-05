@@ -69,16 +69,27 @@ namespace HeroLoadoutFixer.Core
             // weapon's ammunition is deliberately NOT auto-added here:
             // PlanTarget already emitted it as its own explicit entry, so it
             // shows up later in `wanted` (or was already satisfied by
-            // Reconcile) and gets placed by its own loop iteration. The room
-            // check below still uses the two-slot cost, so a ranged weapon
-            // is skipped rather than placed with nothing left for the
-            // ammunition that follows it.
+            // Reconcile) and gets placed by its own loop iteration.
+            //
+            // That means a ranged weapon skipped for want of room (the cost
+            // check below) leaves its ammunition entry still sitting later
+            // in `wanted` -- reached by this same loop's very next
+            // iteration. Without the ammo-without-its-weapon guard, that
+            // entry would place a quiver with no bow to go with it: an
+            // empty slot beats an incoherent one, so ammunition is only
+            // ever placed once its weapon is present, exactly as
+            // SpareAmmoKind already requires for the courtesy pass.
             foreach (WeaponCategory category in wanted)
             {
                 if (nextFree >= freeSlots.Length) break;
                 if (!IsPlaceable(category, availability, mounted)) continue;
+                if (CategoryRules.IsAmmo(category) && !AmmoWeaponPresent(category, current, plan)) continue;
 
-                int cost = CategoryRules.IsRanged(category) ? 2 : 1;
+                // SlotCost(category), not the ranged-check ternary: IsPlaceable
+                // just above already rejected None, the one input where the two
+                // would disagree (SlotCost(None) is 0; IsRanged(None) ? 2 : 1 is
+                // 1), so category is never None here and the two are equal.
+                int cost = CategoryRules.SlotCost(category);
                 if (freeSlots.Length - nextFree < cost) continue;
 
                 plan.Add(new PlannedSlot(freeSlots[nextFree++], category));
@@ -173,7 +184,10 @@ namespace HeroLoadoutFixer.Core
 
                 if (!IsPlaceable(category, availability, mounted)) continue;
 
-                int cost = CategoryRules.IsRanged(category) ? 2 : 1;
+                // SlotCost(category), not the ranged-check ternary: CategoryForSkill
+                // above never returns None (its default branch yields OneHandedSword),
+                // so category is never the one input where the two would disagree.
+                int cost = CategoryRules.SlotCost(category);
                 if (freeSlots.Length - nextFree < cost) continue;
 
                 plan.Add(new PlannedSlot(freeSlots[nextFree++], category));
@@ -233,6 +247,23 @@ namespace HeroLoadoutFixer.Core
             if (current.Contains(WeaponCategory.Crossbow) || AlreadyPlanned(plan, WeaponCategory.Crossbow))
                 return WeaponCategory.Bolts;
             return WeaponCategory.None;
+        }
+
+        /// <summary>
+        /// True when the weapon this ammunition belongs to is present --
+        /// already equipped on the hero, or already placed earlier in this
+        /// same plan. A category that is not ammo at all has nothing to
+        /// gate, so it is vacuously true. Mirrors the same presence check
+        /// SpareAmmoKind uses for the courtesy pass, so the two can never
+        /// disagree about what counts as an orphan quiver.
+        /// </summary>
+        private static bool AmmoWeaponPresent(WeaponCategory ammo, SlotSnapshot current, List<PlannedSlot> plan)
+        {
+            if (ammo == WeaponCategory.Arrows)
+                return current.Contains(WeaponCategory.Bow) || AlreadyPlanned(plan, WeaponCategory.Bow);
+            if (ammo == WeaponCategory.Bolts)
+                return current.Contains(WeaponCategory.Crossbow) || AlreadyPlanned(plan, WeaponCategory.Crossbow);
+            return true;
         }
 
         private static bool AlreadyPlanned(List<PlannedSlot> plan, WeaponCategory category)

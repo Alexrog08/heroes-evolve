@@ -172,11 +172,34 @@ namespace HeroLoadoutFixer.Tests
             // A ranged weapon must never be placed in the last free slot
             // with no room left for its ammunition -- not by itself (empty
             // quiver forever) and not as an orphan quiver with no bow
-            // anywhere either. One slot is free; everything the hero
-            // already carries is irrelevant to the target, so the wanted
-            // list here is just the archetype's own Bow entry.
+            // anywhere either. One slot is free.
+            //
+            // The hero must NOT already carry the quivers here. An earlier
+            // version of this fixture equipped two quivers up front, which
+            // made Reconcile consume both Arrows entries from the target
+            // before Step 3 ever ran -- `wanted` was left as just [Bow], so
+            // the orphan-ammo path (falling through from a skipped Bow to
+            // the very next `wanted` entry) could never be reached at all.
+            // That version of the fixture passed on both the buggy and the
+            // fixed planner, which means it was not actually testing
+            // anything: confirmed by running it against the pre-fix Step 3
+            // and seeing every assertion below still pass.
+            //
+            // So here the hero instead carries a sword plus two harmless
+            // fillers (Mace, OneHandedAxe -- neither Bow, Arrows, Shield
+            // nor a two-hander, so nothing about them gets consumed by
+            // Reconcile or caught by a shield/two-handed guard). `wanted`
+            // is now genuinely [Bow, Arrows, Arrows]: Bow costs two slots
+            // and does not fit in the one free slot, and -- this is the
+            // defect -- the pre-fix Step 3 fell through to the very next
+            // `wanted` entry and placed the Arrows anyway, leaving the
+            // hero with a quiver and no bow. Confirmed by running this
+            // exact fixture against the pre-fix planner: it produces
+            // [(3, Arrows)], which fails both "no orphan ammunition"
+            // (CountPlanned comes back 1, not 0) and "falls through to
+            // TwoHandedSword" (Arrows took the slot instead).
             SlotSnapshot noRoomForAmmo = new SlotSnapshot(
-                new WeaponCategory[] { WeaponCategory.Arrows, WeaponCategory.Arrows, WeaponCategory.OneHandedSword, WeaponCategory.None },
+                new WeaponCategory[] { WeaponCategory.OneHandedSword, WeaponCategory.Mace, WeaponCategory.OneHandedAxe, WeaponCategory.None },
                 false, false, true, true, true, true, false);
             List<PlannedSlot> pNoRoom = LoadoutPlanner.Plan(dedicatedArcherSkills, noRoomForAmmo, all, 30, false);
             Check.False(Plans(pNoRoom, WeaponCategory.Bow), "a ranged weapon is never placed when its ammunition would not also fit");

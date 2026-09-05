@@ -61,7 +61,13 @@ namespace HeroLoadoutFixer
                                        int maxTier, SkillProfile skills, Hero hero, bool mounted)
         {
             if (!PassesCommonFilters(item, culture, maxTier)) return false;
-            if (ItemClassifier.Classify(item) != category) return false;
+            // A skill governs a family of weapons, not one exact WeaponClass
+            // (see CategoryRules.SameFamily): an exact match here meant no
+            // hero could ever receive an axe, a mace or a two-handed
+            // polearm, and a culture with no item of the precise class the
+            // planner named got an empty slot even when a perfectly good
+            // family member was in the catalogue.
+            if (!CategoryRules.SameFamily(category, ItemClassifier.Classify(item))) return false;
             if (!ItemClassifier.MeetsDifficulty(item, skills)) return false;
             if (mounted && !ItemClassifier.IsUsableMounted(item, hero)) return false;
             return true;
@@ -82,6 +88,72 @@ namespace HeroLoadoutFixer
             {
                 ItemObject item = all[i];
                 if (item == null || item.ItemType != wanted) continue;
+                if (!PassesCommonFilters(item, culture, maxTier)) continue;
+
+                int tier = (int)item.Tier;
+                if (tier > bestTier) { bestTier = tier; best = item; }
+            }
+
+            return best;
+        }
+
+        /// <summary>
+        /// The best mount the hero may have: within the tier ceiling,
+        /// culture-appropriate, and usable given their Riding skill. Mounts
+        /// do carry a difficulty, gated on Riding -- ItemClassifier.MeetsDifficulty
+        /// already special-cases ItemTypeEnum.Horse to route there instead of
+        /// the per-category skill map, so it is reused as-is rather than
+        /// duplicating that routing here. Returns null when nothing
+        /// qualifies; callers must tolerate that (an empty catalogue for
+        /// this hero's culture/tier/skill combination is a real outcome,
+        /// not a bug).
+        /// </summary>
+        public static ItemObject FindBestMount(CultureObject culture, int maxTier, SkillProfile skills)
+        {
+            ItemObject best = null;
+            int bestTier = -1;
+
+            MBReadOnlyList<ItemObject> all = MBObjectManager.Instance.GetObjectTypeList<ItemObject>();
+            for (int i = 0; i < all.Count; i++)
+            {
+                ItemObject item = all[i];
+                if (item == null || item.ItemType != ItemObject.ItemTypeEnum.Horse) continue;
+                if (!PassesCommonFilters(item, culture, maxTier)) continue;
+                if (!ItemClassifier.MeetsDifficulty(item, skills)) continue;
+
+                int tier = (int)item.Tier;
+                if (tier > bestTier) { bestTier = tier; best = item; }
+            }
+
+            return best;
+        }
+
+        /// <summary>
+        /// The best harness compatible with a specific mount: within the
+        /// tier ceiling, culture-appropriate, and matching the mount's
+        /// family (a harness modelled for a horse cannot dress a camel).
+        /// Confirmed by reflecting the installed TaleWorlds.Core.dll: both
+        /// ItemObject.ArmorComponent.FamilyType and
+        /// ItemObject.HorseComponent.Monster.FamilyType exist exactly as
+        /// named (both System.Int32) -- see the fix report. Like armour,
+        /// a harness has no difficulty gate, so only the common filters and
+        /// the family match apply. Returns null for a null mount or when
+        /// nothing qualifies; callers must tolerate that.
+        /// </summary>
+        public static ItemObject FindBestHarness(ItemObject mount, CultureObject culture, int maxTier)
+        {
+            if (mount == null || !mount.HasHorseComponent || mount.HorseComponent.Monster == null) return null;
+            int mountFamily = mount.HorseComponent.Monster.FamilyType;
+
+            ItemObject best = null;
+            int bestTier = -1;
+
+            MBReadOnlyList<ItemObject> all = MBObjectManager.Instance.GetObjectTypeList<ItemObject>();
+            for (int i = 0; i < all.Count; i++)
+            {
+                ItemObject item = all[i];
+                if (item == null || item.ItemType != ItemObject.ItemTypeEnum.HorseHarness) continue;
+                if (!item.HasArmorComponent || item.ArmorComponent.FamilyType != mountFamily) continue;
                 if (!PassesCommonFilters(item, culture, maxTier)) continue;
 
                 int tier = (int)item.Tier;

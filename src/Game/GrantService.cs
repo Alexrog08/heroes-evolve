@@ -55,8 +55,28 @@ namespace HeroLoadoutFixer
             bool cultureMounted = HeroAdapter.CultureFieldsMountedElites(hero);
             MountedRangedAvailability availability = ItemCatalog.RangedAvailability(hero, culture, ceiling);
 
+            // PlanTarget is called here as well as inside Plan (which calls it
+            // again internally) purely to read WantsMount: Plan's own return
+            // value is just the slot placements, and both the mount grant
+            // below and the `mounted` flag need to know what the planner
+            // assumed about this hero's mount state. PlanTarget is pure and
+            // cheap (no game calls), so computing it twice costs nothing and
+            // avoids changing Plan's public signature for every existing caller.
+            LoadoutTarget target = LoadoutPlanner.PlanTarget(skills, current, availability, dominanceMargin, cultureMounted);
             List<PlannedSlot> plan = LoadoutPlanner.Plan(skills, current, availability, dominanceMargin, cultureMounted);
-            bool mounted = current.HasMount;
+
+            // Must agree with the planner's own assumption (HasMount ||
+            // WantsMount, see LoadoutPlanner.Plan): the plan already
+            // restricted which ranged weapons are viable on the assumption
+            // this hero ends up mounted, and GrantMount below is what makes
+            // that assumption true. Using current.HasMount alone here silently
+            // disagreed with the plan whenever WantsMount -- not an already-
+            // owned horse -- was what put the hero on one: a Vlandian
+            // crossbowman on foot, whose culture fields mounted elites, had
+            // his crossbow planned around mounted-viability rules that were
+            // never actually going to apply, because nothing ever gave him
+            // the horse those rules assumed.
+            bool mounted = current.HasMount || target.WantsMount;
 
             int granted = 0;
             foreach (PlannedSlot slot in plan)
@@ -69,10 +89,43 @@ namespace HeroLoadoutFixer
                 granted++;
             }
 
+            granted += GrantMount(hero, culture, ceiling, skills, target.WantsMount);
             granted += GrantArmor(hero, culture, ceiling);
 
             ModLog.Info("GRANT hero=" + hero.Name + " tier=" + ceiling
                         + " planned=" + plan.Count + " granted=" + granted);
+        }
+
+        /// <summary>
+        /// Grants the mount the plan assumes, then a compatible harness.
+        /// Only acts when the plan actually wants a mount and the hero does
+        /// not already have one -- an equipped mount or harness is never
+        /// replaced. The harness lookup only ever runs once a mount was
+        /// just found, since compatibility is judged against that specific
+        /// mount's family (see ItemCatalog.FindBestHarness).
+        /// </summary>
+        private static int GrantMount(Hero hero, CultureObject culture, int ceiling, SkillProfile skills, bool wantsMount)
+        {
+            if (!wantsMount) return 0;
+            if (hero.BattleEquipment[EquipmentIndex.Horse].Item != null) return 0;
+
+            ItemObject mount = ItemCatalog.FindBestMount(culture, ceiling, skills);
+            if (mount == null) return 0;
+
+            hero.BattleEquipment[EquipmentIndex.Horse] = new EquipmentElement(mount, null, null, false);
+            int granted = 1;
+
+            if (hero.BattleEquipment[EquipmentIndex.HorseHarness].Item == null)
+            {
+                ItemObject harness = ItemCatalog.FindBestHarness(mount, culture, ceiling);
+                if (harness != null)
+                {
+                    hero.BattleEquipment[EquipmentIndex.HorseHarness] = new EquipmentElement(harness, null, null, false);
+                    granted++;
+                }
+            }
+
+            return granted;
         }
 
         private static int GrantArmor(Hero hero, CultureObject culture, int ceiling)

@@ -79,5 +79,53 @@ namespace HeroLoadoutFixer.Core
             if (ranged == WeaponCategory.Crossbow) return WeaponCategory.Bolts;
             return WeaponCategory.None;
         }
+
+        /// <summary>
+        /// True when a skill that governs `planned` would also let a hero
+        /// use `candidate` -- a family of weapons, not one exact WeaponClass.
+        /// A skill trains a whole class of arms in Bannerlord (One-Handed
+        /// covers swords, axes and maces alike), so the catalogue must not
+        /// reject an axe or a mace just because the planner's shorthand for
+        /// the category happens to spell out "OneHandedSword".
+        ///
+        /// Families:
+        ///   one-handed melee: OneHandedSword, OneHandedAxe, Mace
+        ///   two-handed melee: TwoHandedSword, TwoHandedAxe
+        ///   polearm:          Spear, Polearm
+        /// Bow, Crossbow, Throwing, Shield, Arrows and Bolts each stand
+        /// alone -- notably Arrows and Bolts are NOT a family: arrows cannot
+        /// feed a crossbow (see the WeaponCategory doc comment above).
+        /// Everything else (None, Other) falls through to plain equality.
+        ///
+        /// Membership is checked once per family and the same membership
+        /// function is used for both arguments, so the result is
+        /// symmetric: SameFamily(a, b) == SameFamily(b, a) always.
+        /// </summary>
+        public static bool SameFamily(WeaponCategory planned, WeaponCategory candidate)
+        {
+            if (IsOneHandedMeleeFamily(planned)) return IsOneHandedMeleeFamily(candidate);
+            if (IsTwoHandedMeleeFamily(planned)) return IsTwoHandedMeleeFamily(candidate);
+            if (IsPolearmFamily(planned)) return IsPolearmFamily(candidate);
+            return planned == candidate;
+        }
+
+        private static bool IsOneHandedMeleeFamily(WeaponCategory category)
+        {
+            return category == WeaponCategory.OneHandedSword
+                || category == WeaponCategory.OneHandedAxe
+                || category == WeaponCategory.Mace;
+        }
+
+        private static bool IsTwoHandedMeleeFamily(WeaponCategory category)
+        {
+            return category == WeaponCategory.TwoHandedSword
+                || category == WeaponCategory.TwoHandedAxe;
+        }
+
+        private static bool IsPolearmFamily(WeaponCategory category)
+        {
+            return category == WeaponCategory.Spear
+                || category == WeaponCategory.Polearm;
+        }
     }
 }

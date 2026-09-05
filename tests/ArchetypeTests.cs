@@ -162,6 +162,19 @@ namespace HeroLoadoutFixer.Tests
                 Check.Equal((int)tFootArcher.Weapons[i], (int)tMountedArcher.Weapons[i],
                     "mounted archer matches the on-foot loadout at slot " + i);
             }
+
+            // BestViableRanged checks Crossbow before Bow (see
+            // LoadoutPlanner.BestViableRanged), so an exact tie between the
+            // two silently favors the crossbow. That was previously an
+            // accident with no fixture pinning it either way; this test
+            // puts the current behavior on record as a decision. Bow and
+            // Crossbow are tied at 150, both strictly above the OneHanded
+            // sidearm (50) and Riding (0), so neither the dominance margin
+            // nor mount state is in play here -- only the tie-break.
+            SkillProfile tiedRanged = new SkillProfile(50, 20, 10, 150, 150, 0, 0);
+            LoadoutTarget t16 = LoadoutPlanner.PlanTarget(tiedRanged, Naked(false), all, 30, false);
+            Check.True(t16.Weapons.Contains(WeaponCategory.Crossbow), "an exact bow/crossbow skill tie favors the crossbow (documented, current behavior)");
+            Check.False(t16.Weapons.Contains(WeaponCategory.Bow), "and not the bow, so a tie can never plan both");
         }
     }
 }
