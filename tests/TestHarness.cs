@@ -44,6 +44,7 @@ namespace HeroLoadoutFixer.Tests
             SkillProfileTests.RunAll();
             SlotSnapshotTests.RunAll();
             TierCeilingTests.RunAll();
+            TierVocabularyTests.RunAll();
             ArchetypeTests.RunAll();
             PlannerTests.RunAll();
             BudgetMathTests.RunAll();

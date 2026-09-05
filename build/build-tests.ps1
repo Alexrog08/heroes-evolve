@@ -5,8 +5,11 @@ $out  = Join-Path $root "build\out"
 New-Item -ItemType Directory -Force -Path $out | Out-Null
 
 $sources = @()
-$sources += Get-ChildItem (Join-Path $root "src\Core") -Filter *.cs -ErrorAction SilentlyContinue
-$sources += Get-ChildItem (Join-Path $root "tests")    -Filter *.cs -ErrorAction SilentlyContinue
+# -Recurse: build-mod.ps1 already recurses src/. Without it here, a future
+# subdirectory under src/Core (or tests/) would silently drop out of the test
+# build and CoreTests.exe would still print a green "N passed, 0 failed".
+$sources += Get-ChildItem (Join-Path $root "src\Core") -Recurse -Filter *.cs -ErrorAction SilentlyContinue
+$sources += Get-ChildItem (Join-Path $root "tests")    -Recurse -Filter *.cs -ErrorAction SilentlyContinue
 
 $rsp = Join-Path $out "tests.rsp"
 $lines = @("/nologo", "/target:exe", "/platform:x64", "/out:`"$out\CoreTests.exe`"")

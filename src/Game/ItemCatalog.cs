@@ -49,7 +49,10 @@ namespace HeroLoadoutFixer
             if (item == null) return false;
             if (item.NotMerchandise) return false;
             if (item.IsCraftedByPlayer) return false;
-            if ((int)item.Tier > maxTier) return false;
+            // TierCeiling speaks 1-based tiers (1..6); ItemObject.Tier is the 0-based
+            // ItemTiers enum (Tier1 = 0 .. Tier6 = 5). Convert rather than letting the
+            // two vocabularies meet raw.
+            if ((int)item.Tier + 1 > maxTier) return false;
             if (item.Culture != null && culture != null && item.Culture.StringId != culture.StringId) return false;
             return true;
         }
