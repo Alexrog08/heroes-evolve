@@ -22,31 +22,56 @@ namespace HeroLoadoutFixer.Core
     public static class SkillGrowth
     {
         /// <summary>
-        /// The median best combat skill of a campaign-born lord at each age,
-        /// measured rather than chosen: 18-24 -> 115, 25-34 -> 122, 35-44 -> 126,
-        /// 45-54 -> 129, 55+ -> 134.
+        /// The peak a lord of average talent should reach by the end of his
+        /// life. Taken from the median best combat skill of campaign-born lords
+        /// past fifty-five, which the campaign measures at 134.
         ///
         /// The measurement deliberately excludes lords present when the campaign
         /// began. Those were authored as veterans on day one and their spread
         /// (p90 of 231 against 153 for the campaign-born) describes TaleWorlds'
         /// starting roster, not what a campaign grows.
         /// </summary>
-        public static int AgeNorm(int age)
+        public const int PeakNorm = 134;
+
+        /// <summary>Age at which a hero is considered fully developed.</summary>
+        public const int MatureAge = 60;
+
+        /// <summary>Age at which growth begins.</summary>
+        public const int StartAge = 18;
+
+        /// <summary>Share of his peak a hero has reached on coming of age.</summary>
+        public const float StartMaturity = 0.55f;
+
+        /// <summary>
+        /// How much of his lifetime peak a hero has reached at a given age.
+        ///
+        /// This exists because the first version of this model was wrong in a
+        /// way worth recording. It scaled a measured age curve by talent, but
+        /// that curve runs from 115 at twenty to 134 at fifty-five -- nearly
+        /// flat, because it describes exactly the stagnation being fixed. With
+        /// talent multiplying at every age, a gifted twenty-year-old was aimed
+        /// at 230 from his first day: a boy with a veteran's arm.
+        ///
+        /// Talent decides how far a hero can go; age decides how far along he
+        /// is. The peak belongs to old men.
+        /// </summary>
+        public static float Maturity(int age)
         {
-            if (age < 25) return 115;
-            if (age < 35) return 122;
-            if (age < 45) return 126;
-            if (age < 55) return 129;
-            return 134;
+            if (age <= StartAge) return StartMaturity;
+            if (age >= MatureAge) return 1f;
+
+            float progress = (float)(age - StartAge) / (MatureAge - StartAge);
+            return StartMaturity + (1f - StartMaturity) * progress;
         }
 
         /// <summary>
-        /// Where this hero's best combat skill should be sitting, given his age
-        /// and how quickly he learns.
+        /// Where this hero's best combat skill should be sitting: as far along
+        /// his own ceiling as his years have carried him.
         /// </summary>
         public static int PrimaryTarget(int age, float talent)
         {
-            return Talent.TargetFor(AgeNorm(age), talent);
+            int peak = Talent.TargetFor(PeakNorm, talent);
+            return (int)(peak * Maturity(age));
         }
 
         /// <summary>

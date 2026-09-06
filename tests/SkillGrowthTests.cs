@@ -6,34 +6,41 @@ namespace HeroLoadoutFixer.Tests
     {
         public static void RunAll()
         {
-            // The curve is the campaign's own, measured on lords born in play.
-            Check.Equal(115, SkillGrowth.AgeNorm(18), "a young lord's norm");
-            Check.Equal(115, SkillGrowth.AgeNorm(24), "still young at 24");
-            Check.Equal(122, SkillGrowth.AgeNorm(25), "the norm steps up at 25");
-            Check.Equal(126, SkillGrowth.AgeNorm(40), "mid career");
-            Check.Equal(129, SkillGrowth.AgeNorm(50), "late career");
-            Check.Equal(134, SkillGrowth.AgeNorm(60), "veteran");
-            Check.Equal(134, SkillGrowth.AgeNorm(90), "the curve does not keep climbing");
+            // Maturity: a hero starts part-formed and peaks in old age.
+            Check.True(SkillGrowth.Maturity(18) == SkillGrowth.StartMaturity, "a youth is part formed");
+            Check.True(SkillGrowth.Maturity(10) == SkillGrowth.StartMaturity, "younger than 18 clamps");
+            Check.True(SkillGrowth.Maturity(60) == 1f, "fully developed at 60");
+            Check.True(SkillGrowth.Maturity(90) == 1f, "and no further");
+            Check.True(SkillGrowth.Maturity(40) > SkillGrowth.Maturity(25), "maturity rises with age");
 
-            // It only ever rises with age -- a lord must never be told to shrink.
-            int previous = 0;
+            int previousTarget = 0;
             bool monotonic = true;
             for (int age = 18; age <= 90; age++)
             {
-                int norm = SkillGrowth.AgeNorm(age);
-                if (norm < previous) monotonic = false;
-                previous = norm;
+                int target = SkillGrowth.PrimaryTarget(age, 1.3f);
+                if (target < previousTarget) monotonic = false;
+                previousTarget = target;
             }
-            Check.True(monotonic, "the age curve never falls");
+            Check.True(monotonic, "a hero's target never falls with age");
 
-            // Talent scales the destination, and the gifted lord this system can
-            // produce stays below a character played for thirty years (Bow 288).
-            int gifted = SkillGrowth.PrimaryTarget(60, Talent.Maximum);
-            Check.True(gifted < 288, "even the most gifted lord stays under a played founder");
-            Check.True(gifted > 230, "...but above what the campaign already grows unaided");
+            // The peak belongs to old men. This is the mistake the first model
+            // made: it scaled a nearly flat age curve by talent, aiming a gifted
+            // twenty-year-old at 230 on his first day.
+            int giftedYouth = SkillGrowth.PrimaryTarget(20, Talent.Maximum);
+            int giftedOld = SkillGrowth.PrimaryTarget(60, Talent.Maximum);
+            Check.True(giftedYouth < 160, "a gifted youth is promising, not a veteran");
+            Check.True(giftedOld > giftedYouth + 80, "his peak arrives decades later");
+
+            // And that peak stays below a founder played for thirty years (288)
+            // while sitting above what the campaign already grows unaided (230).
+            Check.True(giftedOld < 288, "even the most gifted lord stays under a played founder");
+            Check.True(giftedOld > 230, "...but above what the campaign already grows unaided");
+
+            // The average lord ends meaningfully above today's stagnant 134.
+            Check.True(SkillGrowth.PrimaryTarget(60, 1.275f) > 150, "the median lord stops stagnating");
 
             int poor = SkillGrowth.PrimaryTarget(60, Talent.Minimum);
-            Check.True(poor < SkillGrowth.AgeNorm(60), "a slow learner falls short of the norm");
+            Check.True(poor < SkillGrowth.PeakNorm, "a slow learner falls short of the norm");
 
             // The shape comes from real lords: 100/79/50/9, then nothing.
             int primary = 200;
