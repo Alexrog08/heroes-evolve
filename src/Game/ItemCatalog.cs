@@ -209,6 +209,13 @@ namespace HeroLoadoutFixer
             if (item == null) return false;
             if (item.NotMerchandise) return false;
             if (item.IsCraftedByPlayer) return false;
+
+            // A unique item belongs to whoever TaleWorlds gave it to. Caladog's
+            // gilded armour and horned helm are the whole of how that character
+            // reads on a battlefield, and a mod that hands them to a passing
+            // Vlandian because a shop had one has destroyed something it cannot
+            // put back.
+            if (item.IsUniqueItem) return false;
             // TierCeiling speaks 1-based tiers (1..6); ItemObject.Tier is the 0-based
             // ItemTiers enum (Tier1 = 0 .. Tier6 = 5). Convert rather than letting the
             // two vocabularies meet raw.

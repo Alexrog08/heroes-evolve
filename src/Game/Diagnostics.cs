@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Text;
 using TaleWorlds.CampaignSystem;
+using TaleWorlds.CampaignSystem.CharacterDevelopment;
 using TaleWorlds.CampaignSystem.Roster;
 using TaleWorlds.CampaignSystem.Settlements;
 using TaleWorlds.Core;
@@ -76,6 +77,10 @@ namespace HeroLoadoutFixer
             ReportClanWealth();
             ReportGearVsClan();
             ReportWornBySlot();
+            ReportUniqueGear();
+            ReportWeaponPerks();
+            ReportArmorWeight();
+            ReportTierSpread();
             ReportMarkets();
             ReportHeadroom(clanWeight, skillWeight, minimumTier);
             ReportShopping(clanWeight, skillWeight, minimumTier);
@@ -1956,6 +1961,277 @@ namespace HeroLoadoutFixer
             cap.TryGetValue(type + "/*", out neutral);
             if (culture != null) cap.TryGetValue(type + "/" + culture.StringId, out own);
             return own > neutral ? own : neutral;
+        }
+
+        /// <summary>
+        /// The gear TaleWorlds hung on one specific character, which the engine
+        /// now refuses to touch.
+        ///
+        /// Reported so the refusal can be checked rather than trusted: if this
+        /// says zero lords wear anything unique, then IsUniqueItem is not the
+        /// marker the game uses for Caladog's gilded armour and the guard is
+        /// protecting nothing.
+        /// </summary>
+        private static void ReportUniqueGear()
+        {
+            int uniqueInCatalog = 0;
+            MBReadOnlyList<ItemObject> all = MBObjectManager.Instance.GetObjectTypeList<ItemObject>();
+            for (int i = 0; i < all.Count; i++)
+            {
+                if (all[i] != null && all[i].IsUniqueItem) uniqueInCatalog++;
+            }
+
+            int wearers = 0, pieces = 0, shown = 0;
+            StringBuilder sample = new StringBuilder("UNIQUE sample");
+
+            foreach (Hero hero in Hero.AllAliveHeroes)
+            {
+                try
+                {
+                    if (!HeroFilter.IsEligible(hero) || hero.BattleEquipment == null) continue;
+
+                    bool any = false;
+                    for (int i = 0; i < SlotSnapshot.WeaponSlotCount; i++)
+                    {
+                        any |= NoteUnique(hero, SlotMapping.WeaponSlot(i), ref pieces, ref shown, sample);
+                    }
+                    foreach (EquipmentIndex slot in SlotMapping.ArmorSlots)
+                    {
+                        any |= NoteUnique(hero, slot, ref pieces, ref shown, sample);
+                    }
+                    any |= NoteUnique(hero, EquipmentIndex.Horse, ref pieces, ref shown, sample);
+                    any |= NoteUnique(hero, EquipmentIndex.HorseHarness, ref pieces, ref shown, sample);
+
+                    if (any) wearers++;
+                }
+                catch
+                {
+                    // One unreadable hero must not cost the survey.
+                }
+            }
+
+            ModLog.Info("UNIQUE itemsInCatalog=" + uniqueInCatalog
+                        + " lordsWearingOne=" + wearers + " piecesWorn=" + pieces);
+            if (shown > 0) ModLog.Info(sample.ToString());
+        }
+
+        private static bool NoteUnique(Hero hero, EquipmentIndex slot, ref int pieces, ref int shown,
+                                       StringBuilder sample)
+        {
+            ItemObject worn = hero.BattleEquipment[slot].Item;
+            if (worn == null || !worn.IsUniqueItem) return false;
+
+            pieces++;
+            if (shown < 12)
+            {
+                shown++;
+                sample.Append(' ').Append(hero.Name).Append('/').Append(worn.StringId);
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// How many lords hold a perk that favours one weapon type over another
+        /// inside the same category.
+        ///
+        /// Of 164 weapon perks in the game, exactly two discriminate within a
+        /// category: "one handed axes and maces" and "two handed axes and
+        /// maces". Everything else says "one handed weapons" or "polearms" and
+        /// is blind to which one a lord carries. Whether it is worth teaching
+        /// the market about those two depends entirely on how many lords have
+        /// them, which nothing has ever measured.
+        ///
+        /// A handful of other perks discriminate by weapon flag rather than
+        /// type -- couchable lances, polearms that can knock down, swingable
+        /// polearms -- and are counted alongside.
+        /// </summary>
+        private static void ReportWeaponPerks()
+        {
+            PerkObject bluntOneHanded = FindPerk("SwiftStrike");
+            PerkObject bluntTwoHanded = FindPerk("OnTheEdge");
+            PerkObject swingablePolearm = FindPerk("SharpenTheTip");
+            PerkObject couchedLance = FindPerk("Guards");
+
+            int lords = 0, one = 0, two = 0, swing = 0, couch = 0;
+
+            foreach (Hero hero in Hero.AllAliveHeroes)
+            {
+                try
+                {
+                    if (!HeroFilter.IsEligible(hero)) continue;
+                    lords++;
+
+                    if (bluntOneHanded != null && hero.GetPerkValue(bluntOneHanded)) one++;
+                    if (bluntTwoHanded != null && hero.GetPerkValue(bluntTwoHanded)) two++;
+                    if (swingablePolearm != null && hero.GetPerkValue(swingablePolearm)) swing++;
+                    if (couchedLance != null && hero.GetPerkValue(couchedLance)) couch++;
+                }
+                catch
+                {
+                    // One unreadable hero must not cost the survey.
+                }
+            }
+
+            ModLog.Info("PERK found1h=" + (bluntOneHanded != null) + " found2h=" + (bluntTwoHanded != null)
+                        + " lords=" + lords);
+            ModLog.Info("PERK axesAndMaces oneHanded=" + one + " twoHanded=" + two
+                        + " swingablePolearm=" + swing + " couchedLance=" + couch);
+        }
+
+        /// <summary>A perk by a fragment of its id, or null.</summary>
+        private static PerkObject FindPerk(string fragment)
+        {
+            MBReadOnlyList<PerkObject> all = PerkObject.All;
+            if (all == null) return null;
+
+            for (int i = 0; i < all.Count; i++)
+            {
+                PerkObject perk = all[i];
+                if (perk == null || perk.StringId == null) continue;
+                if (perk.StringId.IndexOf(fragment, System.StringComparison.OrdinalIgnoreCase) >= 0) return perk;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// What a culture's own elite troops carry in armour weight, and what
+        /// its lords carry.
+        ///
+        /// The reference for a weight cap has to come from the game, not from a
+        /// number someone liked: a Battanian Fian is an archer and should not
+        /// end up in the mail a Vlandian knight wears just because the market
+        /// ranked it higher. The troop the hero's loadout points at is the
+        /// honest yardstick, and it is per slot as well as total -- otherwise a
+        /// hero spends his whole weight budget on a cuirass and finishes in a
+        /// leather cap.
+        /// </summary>
+        private static void ReportArmorWeight()
+        {
+            foreach (CultureObject culture in MBObjectManager.Instance.GetObjectTypeList<CultureObject>())
+            {
+                try
+                {
+                    if (culture == null || !culture.IsMainCulture) continue;
+                    WeighLine(culture, culture.EliteBasicTroop, "elite");
+                    WeighLine(culture, culture.BasicTroop, "basic");
+                }
+                catch
+                {
+                    // One unreadable culture must not cost the survey.
+                }
+            }
+
+            Dictionary<string, List<int>> byRole = new Dictionary<string, List<int>>();
+            foreach (Hero hero in Hero.AllAliveHeroes)
+            {
+                try
+                {
+                    if (!HeroFilter.IsEligible(hero) || hero.BattleEquipment == null) continue;
+
+                    string role = HeroAdapter.ReadRole(hero).ToString();
+                    List<int> list;
+                    if (!byRole.TryGetValue(role, out list))
+                    {
+                        list = new List<int>();
+                        byRole[role] = list;
+                    }
+                    list.Add((int)(ArmorWeightOf(hero.BattleEquipment) * 100f));
+                }
+                catch
+                {
+                    // One unreadable hero must not cost the survey.
+                }
+            }
+
+            foreach (KeyValuePair<string, List<int>> pair in byRole)
+            {
+                ModLog.Info("WEIGHT lords " + pair.Key + " armourKgx100 " + Percentiles(pair.Value));
+            }
+        }
+
+        /// <summary>Walks one line to its top and reports what that troop wears.</summary>
+        private static void WeighLine(CultureObject culture, CharacterObject root, string line)
+        {
+            CharacterObject troop = root;
+            for (int depth = 0; depth < 10 && troop != null; depth++)
+            {
+                CharacterObject next = null;
+                if (troop.UpgradeTargets != null && troop.UpgradeTargets.Length > 0) next = troop.UpgradeTargets[0];
+                if (next == null) break;
+                troop = next;
+            }
+
+            if (troop == null) return;
+
+            Equipment set = troop.FirstBattleEquipment;
+            if (set == null) return;
+
+            StringBuilder text = new StringBuilder("WEIGHT troop ");
+            text.Append(culture.StringId).Append('/').Append(line)
+                .Append(' ').Append(troop.StringId)
+                .Append(" tier=").Append(troop.Tier)
+                .Append(" formation=").Append(troop.DefaultFormationClass)
+                .Append(" totalKgx100=").Append((int)(ArmorWeightOf(set) * 100f));
+
+            foreach (EquipmentIndex slot in SlotMapping.ArmorSlots)
+            {
+                ItemObject item = set[slot].Item;
+                text.Append(' ').Append(SlotMapping.NameOf(slot)).Append('=')
+                    .Append(item == null ? 0 : (int)(item.Weight * 100f));
+            }
+
+            ModLog.Info(text.ToString());
+        }
+
+        /// <summary>Total weight of the five armour slots.</summary>
+        private static float ArmorWeightOf(Equipment set)
+        {
+            float total = 0f;
+            foreach (EquipmentIndex slot in SlotMapping.ArmorSlots)
+            {
+                ItemObject item = set[slot].Item;
+                if (item != null) total += item.Weight;
+            }
+            return total;
+        }
+
+        /// <summary>
+        /// How much room there is inside one integer tier.
+        ///
+        /// The market only ever buys a whole tier up, so a lord holding the
+        /// worst tier-4 sword in the game will never trade it for the best one.
+        /// ItemObject.Tierf carries the fractional tier the game computed before
+        /// rounding, so this says whether that refusal costs anything real: a
+        /// tight spread inside a tier means the coarse rule loses nothing, and a
+        /// wide one means it does.
+        /// </summary>
+        private static void ReportTierSpread()
+        {
+            Dictionary<string, List<int>> byTier = new Dictionary<string, List<int>>();
+
+            MBReadOnlyList<ItemObject> all = MBObjectManager.Instance.GetObjectTypeList<ItemObject>();
+            for (int i = 0; i < all.Count; i++)
+            {
+                ItemObject item = all[i];
+                if (item == null || item.NotMerchandise) continue;
+
+                int tier = (int)item.Tier + 1;
+                if (tier < 1) continue;
+
+                string key = "t" + tier;
+                List<int> list;
+                if (!byTier.TryGetValue(key, out list))
+                {
+                    list = new List<int>();
+                    byTier[key] = list;
+                }
+                list.Add((int)(item.Tierf * 100f));
+            }
+
+            foreach (KeyValuePair<string, List<int>> pair in byTier)
+            {
+                ModLog.Info("TIERF " + pair.Key + " tierfx100 " + Percentiles(pair.Value));
+            }
         }
 
         private static void ReportWornBySlot()
