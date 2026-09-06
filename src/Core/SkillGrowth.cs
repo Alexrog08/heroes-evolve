@@ -23,15 +23,21 @@ namespace HeroLoadoutFixer.Core
     {
         /// <summary>
         /// The peak a lord of average talent should reach by the end of his
-        /// life. Taken from the median best combat skill of campaign-born lords
-        /// past fifty-five, which the campaign measures at 134.
+        /// life.
         ///
-        /// The measurement deliberately excludes lords present when the campaign
-        /// began. Those were authored as veterans on day one and their spread
-        /// (p90 of 231 against 153 for the campaign-born) describes TaleWorlds'
-        /// starting roster, not what a campaign grows.
+        /// Set from the lords TaleWorlds authored, not from the ones a campaign
+        /// produces. The first version used 134, the median best combat skill of
+        /// campaign-born lords past fifty-five -- but that is the degraded
+        /// population this mod exists to repair, and aiming at it meant the map
+        /// drifted down as the authored generation died out. A fresh campaign's
+        /// own lords sit at 175 to 200, which is what the game considers a noble
+        /// worth the name.
+        ///
+        /// At 150 a lord of average talent finishes around 190, level with the
+        /// roster TaleWorlds shipped, so a generation born in play replaces the
+        /// one it buries rather than diminishing it.
         /// </summary>
-        public const int PeakNorm = 134;
+        public const int PeakNorm = 150;
 
         /// <summary>Age at which a hero is considered fully developed.</summary>
         public const int MatureAge = 60;
@@ -133,22 +139,27 @@ namespace HeroLoadoutFixer.Core
 
             int gap = target - current;
 
-            // The cap is applied BEFORE talent, not after. Capping the final
-            // figure let a prodigy and a dullard with the same large gap both
-            // sit on the limit and advance identically, which erases the one
-            // thing talent exists to express. Capping the base instead keeps
-            // them apart at every gap size.
-            float perCycle = (gap * CatchUpPerYear) / cyclesPerYear;
+            // Clamped per YEAR and divided afterwards, not clamped per cycle.
+            // Per-cycle limits smuggled the calendar back in through the side
+            // door: FastMode runs four cycles a year against twelve, so a
+            // ceiling of a third of a point per cycle allowed 1.4 points a year
+            // there and 4.2 in stock. Reading DaysInYear was not enough on its
+            // own -- every rate in this method has to be annual.
+            float perYear = gap * CatchUpPerYear;
 
             // A floor as well as a ceiling. Closing a fixed share of what
             // remains is geometric, so the last few points shrink toward nothing
             // and never actually land -- a hero would sit forever at
             // ninety-something percent of his target. The floor makes the tail
             // finite.
-            if (perCycle < MinimumBasePointsPerCycle) perCycle = MinimumBasePointsPerCycle;
-            if (perCycle > MaximumBasePointsPerCycle) perCycle = MaximumBasePointsPerCycle;
+            if (perYear < MinimumPointsPerYear) perYear = MinimumPointsPerYear;
+            if (perYear > MaximumPointsPerYear) perYear = MaximumPointsPerYear;
 
-            return perCycle * talent;
+            // Talent applies AFTER the clamp, not before. Clamping the final
+            // figure let a prodigy and a dullard with the same large gap both
+            // sit on the limit and advance identically, which erases the one
+            // thing talent exists to express.
+            return (perYear / cyclesPerYear) * talent;
         }
 
         /// <summary>
@@ -178,23 +189,23 @@ namespace HeroLoadoutFixer.Core
         public const float DefaultCyclesPerYear = 12f;
 
         /// <summary>
-        /// Ceiling on the pre-talent step, so no hero visibly jumps between two
-        /// weeks when the gap is enormous. Seeding exists for that case and
-        /// applies at once, deliberately.
+        /// Ceiling on the pre-talent annual gain, so no hero visibly rockets
+        /// when the gap is enormous. Seeding exists for that case and applies at
+        /// once, deliberately.
         ///
         /// Talent multiplies afterwards, so the true ceiling is this times
-        /// Talent.Maximum -- two points in a week for a prodigy who is badly
-        /// behind, half that for a slow learner in the same hole.
+        /// Talent.Maximum -- eight points a year for a prodigy who is badly
+        /// behind, a quarter of that for a slow learner in the same hole.
         /// </summary>
-        public const float MaximumBasePointsPerCycle = 0.35f;
+        public const float MaximumPointsPerYear = 4.2f;
 
         /// <summary>
-        /// Floor on the pre-talent step. Much lower than it was: with the target
-        /// climbing every week a hero's gap no longer shrinks toward nothing, so
-        /// the floor is a guard against stalling rather than the engine of the
-        /// tail. Left in because a hero already at his ceiling -- past sixty,
-        /// where maturity stops -- would otherwise have no gap at all.
+        /// Floor on the pre-talent annual gain. Small: with the target climbing
+        /// every week a hero's gap no longer shrinks toward nothing, so this
+        /// guards against stalling rather than driving the tail. Left in because
+        /// a hero already at his ceiling -- past sixty, where maturity stops --
+        /// would otherwise have no gap at all.
         /// </summary>
-        public const float MinimumBasePointsPerCycle = 0.02f;
+        public const float MinimumPointsPerYear = 0.24f;
     }
 }

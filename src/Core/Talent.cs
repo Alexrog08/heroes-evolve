@@ -22,19 +22,21 @@ namespace HeroLoadoutFixer.Core
         /// The most talented hero learns at this multiple of the norm.
         ///
         /// Calibrated against a real campaign rather than chosen. The founder,
-        /// played to eighty-one, topped out at Bow 288; the median campaign-born
-        /// lord past fifty-five sits at 134, and the strongest the game produces
-        /// on its own reached 230. At 2.0 the most gifted lord this system can
-        /// make lands at 268 -- ninety-three percent of a character played for
-        /// thirty years, and only a little past what the campaign already grows
-        /// unaided.
+        /// played to eighty-one, topped out at Bow 288, and the strongest lord
+        /// the game produces on its own reached 230.
+        ///
+        /// Trimmed from 2.0 when the peak norm rose to 150: the product is what
+        /// matters, and 150 x 2.0 would have put the most gifted lord in the
+        /// world at 300, above a character somebody played for thirty years. At
+        /// 1.9 he lands on 285 -- three points short of the founder, which is
+        /// the right side of the line.
         ///
         /// So an exceptional lord can stand nearly level with a played hero,
         /// which is the point, while the triangular distribution keeps him rare:
         /// reaching this multiplier at all takes both halves of the hash landing
         /// at their extreme.
         /// </summary>
-        public const float Maximum = 2.0f;
+        public const float Maximum = 1.9f;
 
         /// <summary>
         /// The three separate aptitudes a hero has. A man good with a lance is

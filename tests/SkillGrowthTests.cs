@@ -34,7 +34,10 @@ namespace HeroLoadoutFixer.Tests
             // twenty-year-old at 230 on his first day.
             int giftedYouth = SkillGrowth.PrimaryTarget(20, Talent.Maximum);
             int giftedOld = SkillGrowth.PrimaryTarget(60, Talent.Maximum);
-            Check.True(giftedYouth < 160, "a gifted youth is promising, not a veteran");
+                        // A gifted twenty-year-old lands near 162 -- above the 134 a
+            // campaign-born lord of that age reaches, well below the 250 the
+            // authored young lords are given, and far from his own peak of 285.
+            Check.True(giftedYouth < 175, "a gifted youth is promising, not a veteran");
             Check.True(giftedOld > giftedYouth + 80, "his peak arrives decades later");
 
             // And that peak stays below a founder played for thirty years (288)
@@ -75,7 +78,7 @@ namespace HeroLoadoutFixer.Tests
 
             // No single cycle is allowed to be dramatic.
             Check.True(SkillGrowth.PointsStep(0, 330, Talent.Maximum, 12f)
-                       <= SkillGrowth.MaximumBasePointsPerCycle * Talent.Maximum,
+                       <= (SkillGrowth.MaximumPointsPerYear / 12f) * Talent.Maximum,
                        "one cycle never moves more than the cap");
 
             // Sustained rather than bursty: a hero should settle short of his
