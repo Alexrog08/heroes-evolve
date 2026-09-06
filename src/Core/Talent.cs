@@ -21,15 +21,18 @@ namespace HeroLoadoutFixer.Core
         /// <summary>
         /// The most talented hero learns at this multiple of the norm.
         ///
-        /// Calibrated against a real campaign rather than chosen. The founder,
-        /// played to eighty-one, topped out at Bow 288, and the strongest lord
-        /// the game produces on its own reached 230.
+        /// Calibrated against a real campaign rather than chosen. With a peak
+        /// norm of 150 the most gifted lord in the world finishes on 285.
         ///
-        /// Trimmed from 2.0 when the peak norm rose to 150: the product is what
-        /// matters, and 150 x 2.0 would have put the most gifted lord in the
-        /// world at 300, above a character somebody played for thirty years. At
-        /// 1.9 he lands on 285 -- three points short of the founder, which is
-        /// the right side of the line.
+        /// The reference is the roster TaleWorlds authored, whose strongest lord
+        /// carries 309, and not the founder of the lab save who reached 288.
+        /// She was played under FastMode, where a year is twenty-eight campaign
+        /// days rather than eighty-four, so she lived a third of the days an
+        /// equally old character would have lived in stock -- fewer days, fewer
+        /// battles, less experience. Whether that made her weaker or stronger
+        /// than she would otherwise have been cannot be told from here, and the
+        /// authored maximum settles the question without needing to: it depends
+        /// on neither the calendar nor anyone's play.
         ///
         /// So an exceptional lord can stand nearly level with a played hero,
         /// which is the point, while the triangular distribution keeps him rare:

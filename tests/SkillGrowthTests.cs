@@ -42,8 +42,8 @@ namespace HeroLoadoutFixer.Tests
 
             // And that peak stays below a founder played for thirty years (288)
             // while sitting above what the campaign already grows unaided (230).
-            Check.True(giftedOld < 288, "even the most gifted lord stays under a played founder");
-            Check.True(giftedOld > 230, "...but above what the campaign already grows unaided");
+            Check.True(giftedOld < 309, "even the most gifted lord stays under the strongest TaleWorlds authored");
+            Check.True(giftedOld > 230, "...but above what a campaign grows unaided");
 
             // The average lord ends meaningfully above today's stagnant 134.
             Check.True(SkillGrowth.PrimaryTarget(60, 1.275f) > 150, "the median lord stops stagnating");
