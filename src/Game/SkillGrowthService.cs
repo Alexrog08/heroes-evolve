@@ -55,6 +55,71 @@ namespace HeroLoadoutFixer
             bool mounted = hero.BattleEquipment[EquipmentIndex.Horse].Item != null;
             SkillObject movement = mounted ? DefaultSkills.Riding : DefaultSkills.Athletics;
             Grant(hero, movement, SkillGrowth.TargetForRank(primaryTarget, MovementRank), talent);
+
+            GrowByFocus(hero);
+        }
+
+        /// <summary>
+        /// Everything that is not a weapon: stewardship, medicine, seamanship
+        /// and the rest, grown according to where the game has already spent
+        /// this lord's focus.
+        ///
+        /// Focus is the selector because it is the game's own statement of what
+        /// a lord is for, and the campaign shows the statement is real -- all
+        /// 507 lords hold between 26 and 40 points and spread them differently,
+        /// 81% into Scouting, 28% into Smithing, 6% into Shipmaster. A skill
+        /// with no focus gets no target and stays where it is, which is how 72%
+        /// of lords remain quite properly unable to forge anything.
+        ///
+        /// Civil and naval aptitude are drawn separately from combat, so a lord
+        /// may be a prodigy with a lance and an indifferent quartermaster.
+        /// </summary>
+        private static void GrowByFocus(Hero hero)
+        {
+            foreach (SkillObject skill in TaleWorlds.CampaignSystem.Extensions.Skills.All)
+            {
+                if (skill == null) continue;
+                if (IsWeaponSkill(skill)) continue;
+
+                int focus = hero.HeroDeveloper.GetFocus(skill);
+                if (focus <= 0) continue;
+
+                string domain = IsNavalSkill(skill) ? Talent.Naval : Talent.Civil;
+                float talent = Talent.For(hero.StringId, domain);
+
+                int target = FocusGrowth.TargetFor(hero.Age, talent, focus);
+                Grant(hero, skill, target, talent);
+            }
+        }
+
+        /// <summary>
+        /// The eight skills already handled by the weapon and movement passes.
+        /// Growing them a second time here would double their rate and ignore
+        /// what the hero actually carries.
+        /// </summary>
+        private static bool IsWeaponSkill(SkillObject skill)
+        {
+            return skill == DefaultSkills.OneHanded
+                   || skill == DefaultSkills.TwoHanded
+                   || skill == DefaultSkills.Polearm
+                   || skill == DefaultSkills.Bow
+                   || skill == DefaultSkills.Crossbow
+                   || skill == DefaultSkills.Throwing
+                   || skill == DefaultSkills.Riding
+                   || skill == DefaultSkills.Athletics;
+        }
+
+        /// <summary>
+        /// The War Sails skills, matched by string id so the mod still builds
+        /// and runs for anyone without that DLC installed -- referencing
+        /// DefaultSkills members that may not exist would not.
+        /// </summary>
+        private static bool IsNavalSkill(SkillObject skill)
+        {
+            string id = skill.StringId;
+            if (id == null) return false;
+
+            return id == "Mariner" || id == "Boatswain" || id == "Shipmaster";
         }
 
         private static void Grant(Hero hero, SkillObject skill, int target, float talent)
