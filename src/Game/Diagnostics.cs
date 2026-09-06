@@ -57,6 +57,7 @@ namespace HeroLoadoutFixer
             ReportGold();
             TroopSurvey.Report();
             ReportFormations();
+            ReportSuspectKits();
             List<Hero> broken = ReportHeroes();
             ReportDryRuns(broken, clanWeight, skillWeight, minimumTier, dominanceMargin);
             ModLog.Info("===== CENSUS END =====");
@@ -384,6 +385,118 @@ namespace HeroLoadoutFixer
                 if (text.Length > 0) text.Append(' ');
                 text.Append(pair.Key).Append('=').Append(pair.Value);
             }
+            return text.ToString();
+        }
+
+        /// <summary>
+        /// Hunts the come-of-age failure by its symptoms rather than by the
+        /// exact signature GrantService.NeedsGrant looks for.
+        ///
+        /// NeedsGrant only fires on empty weapon slots or on one specific item
+        /// id (the vanilla dummy spatha), and it never looks at armour at all.
+        /// An advanced save with 600 adult lords -- many of them born and grown
+        /// during the campaign -- reported zero heroes needing a grant, which
+        /// either means the bug does not occur in v1.4.8 or means the detector
+        /// is too narrow. The bug was reported as "civilian clothes and a single
+        /// one-handed sword", and a hero holding an ordinary sword in ordinary
+        /// clothes matches neither of NeedsGrant's two tests.
+        ///
+        /// So look for the symptoms instead: too few weapons, missing armour, or
+        /// body armour still at tier 1 -- which the tier census showed is
+        /// literally civilian clothing (aserai_civil_d, vlandian_woman_dress,
+        /// nord_casual_tunic). Reported, never acted on.
+        /// </summary>
+        private static void ReportSuspectKits()
+        {
+            int[] weaponCounts = new int[SlotSnapshot.WeaponSlotCount + 1];
+            int[] bodyTiers = new int[8];
+            int noBody = 0, examined = 0, suspects = 0, young = 0, youngSuspects = 0;
+
+            foreach (Hero hero in Hero.AllAliveHeroes)
+            {
+                try
+                {
+                    if (!HeroFilter.IsEligible(hero)) continue;
+                    if (hero.BattleEquipment == null) continue;
+
+                    examined++;
+
+                    int weapons = 0;
+                    for (int i = 0; i < SlotSnapshot.WeaponSlotCount; i++)
+                    {
+                        if (hero.BattleEquipment[SlotMapping.WeaponSlot(i)].Item != null) weapons++;
+                    }
+                    weaponCounts[weapons]++;
+
+                    ItemObject body = hero.BattleEquipment[EquipmentIndex.Body].Item;
+                    int bodyTier = 0;
+                    if (body == null) noBody++;
+                    else
+                    {
+                        bodyTier = (int)body.Tier + 1;
+                        if (bodyTier < 1) bodyTier = 1;
+                        if (bodyTier > 6) bodyTier = 6;
+                        bodyTiers[bodyTier]++;
+                    }
+
+                    // 18-25: the cohort that has come of age recently enough for
+                    // the failure to still be visible on them.
+                    bool isYoung = hero.Age < 26f;
+                    if (isYoung) young++;
+
+                    bool suspect = weapons <= 1 || body == null || bodyTier == 1;
+                    if (!suspect) continue;
+
+                    suspects++;
+                    if (isYoung) youngSuspects++;
+
+                    if (suspects <= 25)
+                    {
+                        ModLog.Info("SUSPECT hero=" + hero.Name
+                                    + " age=" + (int)hero.Age
+                                    + " weapons=" + weapons
+                                    + " body=" + (body == null ? "<none>" : body.StringId + " t" + bodyTier)
+                                    + " formation=" + (hero.CharacterObject != null
+                                        ? hero.CharacterObject.DefaultFormationClass.ToString() : "?")
+                                    + " charId=" + (hero.CharacterObject != null ? hero.CharacterObject.StringId : "?")
+                                    + " culture=" + CultureIdOf(hero)
+                                    + " | " + DescribeSlots(hero));
+                    }
+                }
+                catch
+                {
+                    // One unreadable hero must not cost the sweep.
+                }
+            }
+
+            StringBuilder counts = new StringBuilder("SUSPECT weaponCount");
+            for (int i = 0; i < weaponCounts.Length; i++) counts.Append(' ').Append(i).Append('=').Append(weaponCounts[i]);
+            ModLog.Info(counts.ToString());
+
+            StringBuilder tiers = new StringBuilder("SUSPECT bodyTier none=" + noBody);
+            for (int i = 1; i <= 6; i++) tiers.Append(" t").Append(i).Append('=').Append(bodyTiers[i]);
+            ModLog.Info(tiers.ToString());
+
+            ModLog.Info("SUSPECT examined=" + examined + " suspects=" + suspects
+                        + " under26=" + young + " suspectsUnder26=" + youngSuspects);
+        }
+
+        private static string DescribeSlots(Hero hero)
+        {
+            StringBuilder text = new StringBuilder();
+            for (int i = 0; i < SlotSnapshot.WeaponSlotCount; i++)
+            {
+                EquipmentIndex slot = SlotMapping.WeaponSlot(i);
+                ItemObject item = hero.BattleEquipment[slot].Item;
+                text.Append(SlotMapping.NameOf(slot)).Append('=').Append(item == null ? "-" : item.StringId).Append(' ');
+            }
+            foreach (EquipmentIndex slot in SlotMapping.ArmorSlots)
+            {
+                ItemObject item = hero.BattleEquipment[slot].Item;
+                text.Append(SlotMapping.NameOf(slot)).Append('=').Append(item == null ? "-" : item.StringId).Append(' ');
+            }
+            ItemObject horse = hero.BattleEquipment[EquipmentIndex.Horse].Item;
+            text.Append("Horse=").Append(horse == null ? "-" : horse.StringId);
             return text.ToString();
         }
 
