@@ -1610,6 +1610,7 @@ namespace HeroLoadoutFixer
 
             int shoppers = 0, atCeiling = 0;
             BudgetService budget = new BudgetService();
+            Dictionary<string, int> cap = BuildCatalogCap();
 
             foreach (Hero hero in Hero.AllAliveHeroes)
             {
@@ -1626,17 +1627,20 @@ namespace HeroLoadoutFixer
                     purses.Add(budget.Wallet(hero));
                     limits.Add(budget.Available(hero));
 
+                    CultureObject culture = hero.Culture;
+                    if (culture == null && hero.Clan != null) culture = hero.Clan.Culture;
+
                     int behind = 0;
                     for (int i = 0; i < SlotSnapshot.WeaponSlotCount; i++)
                     {
-                        behind += SlotShortfall(hero, SlotMapping.WeaponSlot(i), ceiling, shortBySlot);
+                        behind += SlotShortfall(hero, SlotMapping.WeaponSlot(i), ceiling, shortBySlot, cap, culture);
                     }
                     foreach (EquipmentIndex slot in SlotMapping.ArmorSlots)
                     {
-                        behind += SlotShortfall(hero, slot, ceiling, shortBySlot);
+                        behind += SlotShortfall(hero, slot, ceiling, shortBySlot, cap, culture);
                     }
-                    behind += SlotShortfall(hero, EquipmentIndex.Horse, ceiling, shortBySlot);
-                    behind += SlotShortfall(hero, EquipmentIndex.HorseHarness, ceiling, shortBySlot);
+                    behind += SlotShortfall(hero, EquipmentIndex.Horse, ceiling, shortBySlot, cap, culture);
+                    behind += SlotShortfall(hero, EquipmentIndex.HorseHarness, ceiling, shortBySlot, cap, culture);
 
                     headroom.Add(behind);
                     if (behind == 0) atCeiling++;
@@ -1650,6 +1654,7 @@ namespace HeroLoadoutFixer
             ModLog.Info("HEADROOM shoppers=" + shoppers + " alreadyAtCeiling=" + atCeiling);
             ModLog.Info("HEADROOM tiersBehind (summed over slots) " + Percentiles(headroom));
             ModLog.Info("HEADROOM ceiling " + Percentiles(ceilings));
+            ReportCatalogCap(cap);
             ModLog.Info("HEADROOM wallet " + Percentiles(purses));
             ModLog.Info("HEADROOM perPurchaseLimit " + Percentiles(limits));
 
@@ -1662,17 +1667,33 @@ namespace HeroLoadoutFixer
         }
 
         /// <summary>
-        /// Tiers this one slot is below the ceiling, counting the slot as behind
-        /// while it is at it. An empty slot contributes nothing: the market only
-        /// ever replaces what a hero already wears.
+        /// Tiers this one slot is below what the hero could actually reach.
+        ///
+        /// Two things are excluded, and both were inflating the number. An empty
+        /// slot contributes nothing, because the market only ever replaces what
+        /// a hero already wears. And an unranked item contributes nothing
+        /// either: the engine deliberately refuses to touch one, so counting it
+        /// as behind reports demand that will never be served by design.
+        ///
+        /// The ceiling is narrowed to the best tier that exists for this kind of
+        /// item in this hero's culture. His merit may say tier 6, but if the
+        /// game holds no leg armour above tier 3 then he is not behind on boots,
+        /// he is wearing the best boots there are.
         /// </summary>
         private static int SlotShortfall(Hero hero, EquipmentIndex slot, int ceiling,
-                                         Dictionary<string, int> shortBySlot)
+                                         Dictionary<string, int> shortBySlot,
+                                         Dictionary<string, int> cap, CultureObject culture)
         {
             ItemObject worn = hero.BattleEquipment[slot].Item;
             if (worn == null) return 0;
 
-            int behind = ceiling - ((int)worn.Tier + 1);
+            int wornTier = (int)worn.Tier + 1;
+            if (wornTier < 1) return 0;
+
+            int reachable = CapFor(cap, worn.ItemType, culture);
+            if (reachable < ceiling) ceiling = reachable;
+
+            int behind = ceiling - wornTier;
             if (behind <= 0) return 0;
 
             Bump(shortBySlot, SlotMapping.NameOf(slot));
@@ -1848,6 +1869,91 @@ namespace HeroLoadoutFixer
         /// lord, which is the only shape that can show a well-dressed lord in
         /// cheap boots.
         /// </summary>
+        /// <summary>
+        /// The best tier that exists, per item type and culture. Built once per
+        /// census from the whole catalogue.
+        ///
+        /// Without it the headroom report counts demand nobody can ever serve.
+        /// There is no leg armour above tier 3 in any culture but battania, and
+        /// no hand armour above tier 4 anywhere, while helmets run to tier 6 --
+        /// so a lord with a ceiling of 6 reads as three tiers behind on his
+        /// boots forever, and 445 lords "behind on legs" turns out to be mostly
+        /// a number about the catalogue rather than about him.
+        ///
+        /// That is the same trap as always in this project: a metric that cannot
+        /// tell "the engine is not working" from "there is nothing to do".
+        /// </summary>
+        /// <summary>
+        /// The best tier the catalogue holds for each armour slot, culture by
+        /// culture folded into one best. A slot whose cap is well below six is a
+        /// slot no lord can ever fill to his ceiling, however rich or skilled.
+        /// </summary>
+        private static void ReportCatalogCap(Dictionary<string, int> cap)
+        {
+            ItemObject.ItemTypeEnum[] kinds =
+            {
+                ItemObject.ItemTypeEnum.HeadArmor, ItemObject.ItemTypeEnum.BodyArmor,
+                ItemObject.ItemTypeEnum.LegArmor, ItemObject.ItemTypeEnum.HandArmor,
+                ItemObject.ItemTypeEnum.Cape, ItemObject.ItemTypeEnum.Horse,
+                ItemObject.ItemTypeEnum.HorseHarness
+            };
+
+            StringBuilder text = new StringBuilder("CATALOGCAP bestTierInGame");
+            for (int i = 0; i < kinds.Length; i++)
+            {
+                int best = 0;
+                foreach (KeyValuePair<string, int> pair in cap)
+                {
+                    if (!pair.Key.StartsWith(kinds[i] + "/")) continue;
+                    if (pair.Value > best) best = pair.Value;
+                }
+                text.Append(' ').Append(kinds[i]).Append('=').Append(best);
+            }
+            ModLog.Info(text.ToString());
+        }
+
+        private static Dictionary<string, int> BuildCatalogCap()
+        {
+            Dictionary<string, int> cap = new Dictionary<string, int>();
+
+            MBReadOnlyList<ItemObject> all = MBObjectManager.Instance.GetObjectTypeList<ItemObject>();
+            for (int i = 0; i < all.Count; i++)
+            {
+                ItemObject item = all[i];
+                if (item == null) continue;
+                if (item.NotMerchandise || item.IsCraftedByPlayer) continue;
+
+                int tier = (int)item.Tier + 1;
+                if (tier < 1) continue;
+
+                // Culture-less gear is available to everyone, so it is recorded
+                // under the wildcard as well as counting for no one culture.
+                string culture = item.Culture == null ? "*" : item.Culture.StringId;
+                Raise(cap, item.ItemType + "/" + culture, tier);
+            }
+
+            return cap;
+        }
+
+        private static void Raise(Dictionary<string, int> cap, string key, int tier)
+        {
+            int current;
+            if (cap.TryGetValue(key, out current) && current >= tier) return;
+            cap[key] = tier;
+        }
+
+        /// <summary>
+        /// The best tier of this kind a hero of this culture could ever obtain:
+        /// his own culture's best, or the best with no culture at all.
+        /// </summary>
+        private static int CapFor(Dictionary<string, int> cap, ItemObject.ItemTypeEnum type, CultureObject culture)
+        {
+            int neutral, own = 0;
+            cap.TryGetValue(type + "/*", out neutral);
+            if (culture != null) cap.TryGetValue(type + "/" + culture.StringId, out own);
+            return own > neutral ? own : neutral;
+        }
+
         private static void ReportWornBySlot()
         {
             Dictionary<string, List<int>> bySlot = new Dictionary<string, List<int>>();
