@@ -1455,6 +1455,85 @@ namespace HeroLoadoutFixer
             ModLog.Info("GAP combat behind=" + behind + " atOrAbove=" + atOrAbove
                         + " behindBy10+=" + behindByTen + " behindBy50+=" + behindByFifty);
             ModLog.Info("GAP combat sizes " + Percentiles(gaps));
+
+            ReportFocusGaps();
+        }
+
+        /// <summary>
+        /// The same count for everything that is not a weapon, per skill.
+        ///
+        /// Two years of campaign proved the combat side works by showing its gap
+        /// distribution shrink -- median shortfall 33 to 24 while the number of
+        /// lords behind grew -- and proved nothing at all about the rest of the
+        /// sheet, because percentiles of skill cannot separate "growing slowly"
+        /// from "not growing". Leadership sat at 146 both times. This says
+        /// whether there was anything to do.
+        /// </summary>
+        private static void ReportFocusGaps()
+        {
+            Dictionary<string, List<int>> gapsBySkill = new Dictionary<string, List<int>>();
+            Dictionary<string, int> atOrAboveBySkill = new Dictionary<string, int>();
+
+            foreach (Hero hero in Hero.AllAliveHeroes)
+            {
+                try
+                {
+                    if (!HeroFilter.IsEligible(hero)) continue;
+                    if (hero.HeroDeveloper == null) continue;
+
+                    foreach (SkillObject skill in TaleWorlds.CampaignSystem.Extensions.Skills.All)
+                    {
+                        if (skill == null || skill.Name == null) continue;
+
+                        int focus = hero.HeroDeveloper.GetFocus(skill);
+                        if (focus <= 0) continue;
+
+                        string domain = IsNaval(skill) ? Talent.Naval : Talent.Civil;
+                        int target = FocusGrowth.TargetFor(hero.Age,
+                                                           Talent.For(hero.StringId, domain), focus);
+                        if (target <= 0) continue;
+
+                        string name = skill.Name.ToString();
+                        int gap = target - hero.GetSkillValue(skill);
+
+                        if (gap <= 0) { Bump(atOrAboveBySkill, name); continue; }
+
+                        List<int> list;
+                        if (!gapsBySkill.TryGetValue(name, out list))
+                        {
+                            list = new List<int>();
+                            gapsBySkill[name] = list;
+                        }
+                        list.Add(gap);
+                    }
+                }
+                catch
+                {
+                    // One unreadable hero must not cost the sweep.
+                }
+            }
+
+            foreach (KeyValuePair<string, List<int>> pair in gapsBySkill)
+            {
+                int atOrAbove;
+                atOrAboveBySkill.TryGetValue(pair.Key, out atOrAbove);
+
+                ModLog.Info("GAPFOCUS " + pair.Key
+                            + " behind=" + pair.Value.Count
+                            + " atOrAbove=" + atOrAbove
+                            + " | " + Percentiles(pair.Value));
+            }
+        }
+
+        /// <summary>
+        /// War Sails skills, matched by string id so the report still runs for
+        /// anyone without that DLC. Mirrors SkillGrowthService deliberately: if
+        /// the two disagreed the diagnostic would describe a system nobody runs.
+        /// </summary>
+        private static bool IsNaval(SkillObject skill)
+        {
+            string id = skill.StringId;
+            return id == "Mariner" || id == "Boatswain" || id == "Shipmaster";
         }
 
         private static string DescribeSlots(Hero hero)
