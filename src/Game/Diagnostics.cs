@@ -61,6 +61,7 @@ namespace HeroLoadoutFixer
             ReportRiding();
             ReportCohorts();
             CultureProfile.Report();
+            ReportVariety(dominanceMargin);
             List<Hero> broken = ReportHeroes();
             ReportDryRuns(broken, clanWeight, skillWeight, minimumTier, dominanceMargin);
             ModLog.Info("===== CENSUS END =====");
@@ -702,6 +703,179 @@ namespace HeroLoadoutFixer
                 if (f > 0) text.Append(' ');
                 text.Append(floors[f]).Append("=>").Append(pct).Append('%');
             }
+            return text.ToString();
+        }
+
+        /// <summary>
+        /// How many different loadouts exist inside one culture and one role --
+        /// what the game actually fields, against what this mod would produce.
+        ///
+        /// The worry this answers is repaired lords turning into copies of each
+        /// other. Two levels of sameness are possible and only the first is
+        /// measured here: the shape of the loadout (spear+shield+sword+javelin
+        /// against spear+shield+mace+polearm). The second level -- which item
+        /// fills each category -- has no variety at all by construction, since
+        /// ItemCatalog.FindBest walks the catalogue in order and keeps the first
+        /// item of the highest tier, so two lords of one culture and ceiling
+        /// receive the identical sword.
+        ///
+        /// Signatures are sorted before comparison: slot order carries no
+        /// meaning, and leaving it in would invent variety that is not there.
+        /// Run this on a fresh campaign for the cleanest reference -- every lord
+        /// is then authored, undrifted and untouched by this mod.
+        /// </summary>
+        private static void ReportVariety(int dominanceMargin)
+        {
+            Dictionary<string, Dictionary<string, int>> actual =
+                new Dictionary<string, Dictionary<string, int>>();
+            Dictionary<string, Dictionary<string, int>> planned =
+                new Dictionary<string, Dictionary<string, int>>();
+
+            Survey(true, dominanceMargin, actual);
+            Survey(false, dominanceMargin, planned);
+
+            foreach (KeyValuePair<string, Dictionary<string, int>> pair in actual)
+            {
+                int heroes = 0;
+                foreach (KeyValuePair<string, int> sig in pair.Value) heroes += sig.Value;
+
+                // Groups of four or fewer cannot say anything about variety.
+                if (heroes < 5) continue;
+
+                Dictionary<string, int> plannedCounts;
+                planned.TryGetValue(pair.Key, out plannedCounts);
+
+                ModLog.Info("VARIETY " + pair.Key + " n=" + heroes
+                            + " gameDistinct=" + pair.Value.Count
+                            + " oursDistinct=" + (plannedCounts == null ? 0 : plannedCounts.Count));
+
+                DumpTop("VARIETY   game", pair.Key, pair.Value);
+                if (plannedCounts != null) DumpTop("VARIETY   ours", pair.Key, plannedCounts);
+            }
+        }
+
+        private static void Survey(bool actual, int dominanceMargin,
+                                   Dictionary<string, Dictionary<string, int>> into)
+        {
+            foreach (Hero hero in Hero.AllAliveHeroes)
+            {
+                try
+                {
+                    if (!HeroFilter.IsEligible(hero)) continue;
+                    if (hero.BattleEquipment == null) continue;
+
+                    BattleRole role = HeroAdapter.ReadRole(hero);
+                    string group = CultureIdOf(hero) + " " + role;
+
+                    string signature = actual
+                        ? ActualSignature(hero)
+                        : PlannedSignature(hero, role, dominanceMargin);
+                    if (signature == null) continue;
+
+                    Dictionary<string, int> counts;
+                    if (!into.TryGetValue(group, out counts))
+                    {
+                        counts = new Dictionary<string, int>();
+                        into[group] = counts;
+                    }
+
+                    int n;
+                    counts.TryGetValue(signature, out n);
+                    counts[signature] = n + 1;
+                }
+                catch
+                {
+                    // One unreadable hero must not cost the survey.
+                }
+            }
+        }
+
+        /// <summary>The five commonest signatures of a group, most frequent first.</summary>
+        private static void DumpTop(string prefix, string group, Dictionary<string, int> counts)
+        {
+            for (int printed = 0; printed < 5; printed++)
+            {
+                string best = null;
+                int bestCount = 0;
+
+                foreach (KeyValuePair<string, int> pair in counts)
+                {
+                    if (pair.Value <= bestCount) continue;
+                    best = pair.Key;
+                    bestCount = pair.Value;
+                }
+
+                if (best == null) break;
+                ModLog.Info(prefix + " " + group + " x" + bestCount + " " + best);
+
+                // Removing the winner is what makes the next pass find the
+                // runner-up; these dictionaries are local to this report.
+                counts.Remove(best);
+            }
+        }
+
+        private static string ActualSignature(Hero hero)
+        {
+            List<WeaponCategory> categories = new List<WeaponCategory>();
+            for (int i = 0; i < SlotSnapshot.WeaponSlotCount; i++)
+            {
+                ItemObject item = hero.BattleEquipment[SlotMapping.WeaponSlot(i)].Item;
+                if (item == null) continue;
+
+                WeaponCategory category = ItemClassifier.Classify(item);
+                if (category == WeaponCategory.None) continue;
+                categories.Add(category);
+            }
+            return Render(categories, hero.BattleEquipment[EquipmentIndex.Horse].Item != null);
+        }
+
+        private static string PlannedSignature(Hero hero, BattleRole role, int dominanceMargin)
+        {
+            CultureObject culture = hero.Culture;
+            if (culture == null && hero.Clan != null) culture = hero.Clan.Culture;
+
+            SkillProfile skills = HeroAdapter.ReadSkills(hero);
+            int clanTier = hero.Clan != null ? hero.Clan.Tier : 0;
+            int ceiling = TierCeiling.Compute(clanTier, skills.MaxCombatSkill,
+                                              HeroLoadoutBehavior.ClanWeight,
+                                              HeroLoadoutBehavior.SkillWeight,
+                                              HeroLoadoutBehavior.MinimumTier);
+
+            if (!CultureProfile.MountsItsLords(culture)) role = BattleRoleRules.Dismounted(role);
+
+            WeaponCategory[] none = new WeaponCategory[SlotSnapshot.WeaponSlotCount];
+            for (int i = 0; i < none.Length; i++) none[i] = WeaponCategory.None;
+            SlotSnapshot empty = new SlotSnapshot(none, false, false, false, false, false, false, false);
+
+            bool cultureMounted = HeroAdapter.CultureFieldsMountedElites(hero);
+            MountedRangedAvailability availability = ItemCatalog.RangedAvailability(hero, culture, ceiling);
+
+            LoadoutTarget target = LoadoutPlanner.PlanTarget(skills, empty, availability,
+                                                             dominanceMargin, cultureMounted, role);
+            List<PlannedSlot> plan = LoadoutPlanner.Plan(skills, empty, availability,
+                                                         dominanceMargin, cultureMounted, role);
+
+            List<WeaponCategory> categories = new List<WeaponCategory>();
+            for (int i = 0; i < plan.Count; i++) categories.Add(plan[i].Category);
+            return Render(categories, target.WantsMount);
+        }
+
+        /// <summary>Sorted, so slot order cannot masquerade as variety.</summary>
+        private static string Render(List<WeaponCategory> categories, bool mounted)
+        {
+            if (categories.Count == 0) return mounted ? "<empty>+horse" : "<empty>";
+
+            string[] names = new string[categories.Count];
+            for (int i = 0; i < categories.Count; i++) names[i] = categories[i].ToString();
+            System.Array.Sort(names, System.StringComparer.Ordinal);
+
+            StringBuilder text = new StringBuilder();
+            for (int i = 0; i < names.Length; i++)
+            {
+                if (i > 0) text.Append('+');
+                text.Append(names[i]);
+            }
+            if (mounted) text.Append("+horse");
             return text.ToString();
         }
 
