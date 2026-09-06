@@ -38,11 +38,18 @@ namespace HeroLoadoutFixer
             public EquipmentIndex Slot;
             public MarketOffer Offer;
             public int WornTier;
+            public int WornFine;
 
-            /// <summary>Tiers gained. The reason this slot beats another.</summary>
+            /// <summary>Whole tiers gained. The reason this slot beats another.</summary>
             public int Gain
             {
                 get { return Offer.Tier - WornTier; }
+            }
+
+            /// <summary>The same gain in hundredths, which breaks ties.</summary>
+            public int FineGain
+            {
+                get { return Offer.FineTier - WornFine; }
             }
         }
 
@@ -96,8 +103,8 @@ namespace HeroLoadoutFixer
                 }
 
                 List<MarketOffer> offers = MarketScanner.Weapons(stock, settlement, hero, category, culture,
-                                                                 ceiling, TierOf(worn), skills, mounted, partner);
-                best = Better(best, slot, offers, TierOf(worn), limit);
+                                                                 ceiling, FineOf(worn), skills, mounted, partner);
+                best = Better(best, slot, offers, worn, limit);
             }
 
             foreach (EquipmentIndex slot in SlotMapping.ArmorSlots)
@@ -107,23 +114,23 @@ namespace HeroLoadoutFixer
                 if (worn.IsUniqueItem) continue;
 
                 List<MarketOffer> offers = MarketScanner.Armor(stock, settlement, hero, worn.ItemType,
-                                                               culture, ceiling, TierOf(worn));
-                best = Better(best, slot, offers, TierOf(worn), limit);
+                                                               culture, ceiling, FineOf(worn));
+                best = Better(best, slot, offers, worn, limit);
             }
 
             ItemObject mount = hero.BattleEquipment[EquipmentIndex.Horse].Item;
             if (mount != null && !mount.IsUniqueItem)
             {
                 List<MarketOffer> mounts = MarketScanner.Mounts(stock, settlement, hero, culture,
-                                                                ceiling, TierOf(mount), skills);
-                best = Better(best, EquipmentIndex.Horse, mounts, TierOf(mount), limit);
+                                                                ceiling, FineOf(mount), skills);
+                best = Better(best, EquipmentIndex.Horse, mounts, mount, limit);
 
                 ItemObject harness = hero.BattleEquipment[EquipmentIndex.HorseHarness].Item;
                 if (harness != null && !harness.IsUniqueItem)
                 {
                     List<MarketOffer> harnesses = MarketScanner.Harnesses(stock, settlement, hero, mount,
-                                                                          culture, ceiling, TierOf(harness));
-                    best = Better(best, EquipmentIndex.HorseHarness, harnesses, TierOf(harness), limit);
+                                                                          culture, ceiling, FineOf(harness));
+                    best = Better(best, EquipmentIndex.HorseHarness, harnesses, harness, limit);
                 }
             }
 
@@ -183,7 +190,7 @@ namespace HeroLoadoutFixer
         /// perfectly good cheaper upgrade sat on the same shelf.
         /// </summary>
         private static Candidate Better(Candidate best, EquipmentIndex slot,
-                                        List<MarketOffer> offers, int wornTier, int limit)
+                                        List<MarketOffer> offers, ItemObject worn, int limit)
         {
             if (offers == null || offers.Count == 0) return best;
 
@@ -194,10 +201,14 @@ namespace HeroLoadoutFixer
             }
             if (chosen < 0) return best;
 
+            int wornTier = TierOf(worn);
+            int wornFine = FineOf(worn);
+
             MarketOffer offer = offers[chosen];
             if (best != null
-                && MarketRules.Compare(offer.Tier - wornTier, offer.OwnClass, offer.Price,
-                                       best.Gain, best.Offer.OwnClass, best.Offer.Price) >= 0)
+                && MarketRules.Compare(offer.Tier - wornTier, offer.OwnClass,
+                                       offer.FineTier - wornFine, offer.Price,
+                                       best.Gain, best.Offer.OwnClass, best.FineGain, best.Offer.Price) >= 0)
             {
                 return best;
             }
@@ -206,13 +217,20 @@ namespace HeroLoadoutFixer
             candidate.Slot = slot;
             candidate.Offer = offer;
             candidate.WornTier = wornTier;
+            candidate.WornFine = wornFine;
             return candidate;
         }
 
         /// <summary>1-based tier, as the ceiling speaks it.</summary>
         private static int TierOf(ItemObject item)
         {
-            return (int)item.Tier + 1;
+            return MarketScanner.TierOf(item);
+        }
+
+        /// <summary>The same tier in hundredths, as the upgrade rule speaks it.</summary>
+        private static int FineOf(ItemObject item)
+        {
+            return MarketScanner.FineTierOf(item);
         }
     }
 }

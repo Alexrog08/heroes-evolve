@@ -63,7 +63,7 @@ namespace HeroLoadoutFixer
         /// </summary>
         public static List<MarketOffer> Weapons(List<ItemRosterElement> stock, Settlement settlement, Hero hero,
                                                 WeaponCategory category, CultureObject culture,
-                                                int ceiling, int wornTier, SkillProfile skills, bool mounted,
+                                                int ceiling, int wornFine, SkillProfile skills, bool mounted,
                                                 WeaponCategory avoidAlsoServing)
         {
             List<MarketOffer> offers = new List<MarketOffer>();
@@ -72,7 +72,7 @@ namespace HeroLoadoutFixer
             for (int i = 0; i < stock.Count; i++)
             {
                 ItemObject item = stock[i].EquipmentElement.Item;
-                if (!MarketRules.IsUpgrade(wornTier, TierOf(item), ceiling)) continue;
+                if (!MarketRules.IsUpgrade(wornFine, FineTierOf(item), TierOf(item), ceiling)) continue;
                 if (!ItemCatalog.IsEligible(item, category, culture, ceiling, skills, hero, mounted)) continue;
                 if (avoidAlsoServing != WeaponCategory.None
                     && ItemClassifier.AlsoServesTwoHanded(item, avoidAlsoServing)) continue;
@@ -87,7 +87,7 @@ namespace HeroLoadoutFixer
         /// <summary>Offers that would upgrade one armour slot.</summary>
         public static List<MarketOffer> Armor(List<ItemRosterElement> stock, Settlement settlement, Hero hero,
                                               ItemObject.ItemTypeEnum wanted, CultureObject culture,
-                                              int ceiling, int wornTier)
+                                              int ceiling, int wornFine)
         {
             List<MarketOffer> offers = new List<MarketOffer>();
             if (stock == null) return offers;
@@ -96,7 +96,7 @@ namespace HeroLoadoutFixer
             {
                 ItemObject item = stock[i].EquipmentElement.Item;
                 if (item.ItemType != wanted) continue;
-                if (!MarketRules.IsUpgrade(wornTier, TierOf(item), ceiling)) continue;
+                if (!MarketRules.IsUpgrade(wornFine, FineTierOf(item), TierOf(item), ceiling)) continue;
                 if (!ItemCatalog.PassesCommonFilters(item, culture, ceiling)) continue;
 
                 Offer(offers, settlement, hero, stock[i], true);
@@ -112,7 +112,7 @@ namespace HeroLoadoutFixer
         /// not be sold a mule, however high its tier.
         /// </summary>
         public static List<MarketOffer> Mounts(List<ItemRosterElement> stock, Settlement settlement, Hero hero,
-                                               CultureObject culture, int ceiling, int wornTier, SkillProfile skills)
+                                               CultureObject culture, int ceiling, int wornFine, SkillProfile skills)
         {
             List<MarketOffer> offers = new List<MarketOffer>();
             if (stock == null) return offers;
@@ -121,7 +121,7 @@ namespace HeroLoadoutFixer
             {
                 ItemObject item = stock[i].EquipmentElement.Item;
                 if (item.ItemType != ItemObject.ItemTypeEnum.Horse) continue;
-                if (!MarketRules.IsUpgrade(wornTier, TierOf(item), ceiling)) continue;
+                if (!MarketRules.IsUpgrade(wornFine, FineTierOf(item), TierOf(item), ceiling)) continue;
                 if (!ItemCatalog.IsWarMount(item)) continue;
                 if (!ItemCatalog.PassesCommonFilters(item, culture, ceiling)) continue;
                 if (!ItemClassifier.MeetsDifficulty(item, skills)) continue;
@@ -139,7 +139,7 @@ namespace HeroLoadoutFixer
         /// cannot dress a camel.
         /// </summary>
         public static List<MarketOffer> Harnesses(List<ItemRosterElement> stock, Settlement settlement, Hero hero,
-                                                  ItemObject mount, CultureObject culture, int ceiling, int wornTier)
+                                                  ItemObject mount, CultureObject culture, int ceiling, int wornFine)
         {
             List<MarketOffer> offers = new List<MarketOffer>();
             if (stock == null) return offers;
@@ -151,7 +151,7 @@ namespace HeroLoadoutFixer
             {
                 ItemObject item = stock[i].EquipmentElement.Item;
                 if (item.ItemType != ItemObject.ItemTypeEnum.HorseHarness) continue;
-                if (!MarketRules.IsUpgrade(wornTier, TierOf(item), ceiling)) continue;
+                if (!MarketRules.IsUpgrade(wornFine, FineTierOf(item), TierOf(item), ceiling)) continue;
                 if (!item.HasArmorComponent || item.ArmorComponent.FamilyType != family) continue;
                 if (!ItemCatalog.PassesCommonFilters(item, culture, ceiling)) continue;
 
@@ -182,7 +182,8 @@ namespace HeroLoadoutFixer
             if (price <= 0) return;
 
             offers.Add(new MarketOffer(element.EquipmentElement, price,
-                                       TierOf(element.EquipmentElement.Item), ownClass));
+                                       TierOf(element.EquipmentElement.Item),
+                                       FineTierOf(element.EquipmentElement.Item), ownClass));
         }
 
         /// <summary>
@@ -190,9 +191,26 @@ namespace HeroLoadoutFixer
         /// ceiling speaks 1..6; converting here keeps the two vocabularies from
         /// meeting raw, exactly as ItemCatalog does.
         /// </summary>
-        private static int TierOf(ItemObject item)
+        internal static int TierOf(ItemObject item)
         {
             return (int)item.Tier + 1;
+        }
+
+        /// <summary>
+        /// The game's fractional tier in hundredths, on the same 1-based scale:
+        /// disassembled, Tier is Clamp(Round(Tierf), 0, 6) - 1, so the 1-based
+        /// whole tier is exactly round(Tierf).
+        ///
+        /// Zero for anything the game scores below tier 1 -- consumables like
+        /// naphtha pots -- so the callers' "below the scale" guard keeps working
+        /// off a single number.
+        /// </summary>
+        internal static int FineTierOf(ItemObject item)
+        {
+            if (TierOf(item) < 1) return 0;
+
+            int fine = (int)(item.Tierf * 100f + 0.5f);
+            return fine < 1 ? 1 : fine;
         }
     }
 }

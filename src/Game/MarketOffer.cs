@@ -24,6 +24,14 @@ namespace HeroLoadoutFixer
         public int Tier;
 
         /// <summary>
+        /// The game's own fractional tier in hundredths, on the same 1-based
+        /// scale (the whole tier is round(Tierf)). This is what decides whether
+        /// an offer is a real improvement; Tier above is the coarse bucket that
+        /// keeps the ordering's character rule working.
+        /// </summary>
+        public int FineTier;
+
+        /// <summary>
         /// True when the item is the same weapon class the hero already
         /// carries, rather than merely the same family. Only the ordering reads
         /// it -- see MarketRules.Compare. Always true for armour, mounts and
@@ -31,11 +39,12 @@ namespace HeroLoadoutFixer
         /// </summary>
         public bool OwnClass;
 
-        public MarketOffer(EquipmentElement element, int price, int tier, bool ownClass)
+        public MarketOffer(EquipmentElement element, int price, int tier, int fineTier, bool ownClass)
         {
             Element = element;
             Price = price;
             Tier = tier;
+            FineTier = fineTier;
             OwnClass = ownClass;
         }
 
@@ -56,7 +65,8 @@ namespace HeroLoadoutFixer
 
         public int Compare(MarketOffer a, MarketOffer b)
         {
-            return MarketRules.Compare(a.Tier, a.OwnClass, a.Price, b.Tier, b.OwnClass, b.Price);
+            return MarketRules.Compare(a.Tier, a.OwnClass, a.FineTier, a.Price,
+                                       b.Tier, b.OwnClass, b.FineTier, b.Price);
         }
     }
 }

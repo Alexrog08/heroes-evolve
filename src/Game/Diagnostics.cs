@@ -2468,7 +2468,8 @@ namespace HeroLoadoutFixer
                 return;
             }
 
-            int wornTier = (int)worn.Tier + 1;
+            int wornTier = MarketScanner.TierOf(worn);
+            int wornFine = MarketScanner.FineTierOf(worn);
             if (wornTier >= ceiling)
             {
                 // Above is not the same as at, and reading "t6 at ceiling" on a
@@ -2487,18 +2488,18 @@ namespace HeroLoadoutFixer
             List<MarketOffer> offers;
             if (slot == EquipmentIndex.Horse)
             {
-                offers = MarketScanner.Mounts(stock, settlement, hero, culture, ceiling, wornTier, skills);
+                offers = MarketScanner.Mounts(stock, settlement, hero, culture, ceiling, wornFine, skills);
             }
             else if (slot == EquipmentIndex.HorseHarness)
             {
                 offers = MarketScanner.Harnesses(stock, settlement, hero,
                                                  hero.BattleEquipment[EquipmentIndex.Horse].Item,
-                                                 culture, ceiling, wornTier);
+                                                 culture, ceiling, wornFine);
             }
             else if (slot == EquipmentIndex.Head || slot == EquipmentIndex.Body || slot == EquipmentIndex.Leg
                      || slot == EquipmentIndex.Gloves || slot == EquipmentIndex.Cape)
             {
-                offers = MarketScanner.Armor(stock, settlement, hero, worn.ItemType, culture, ceiling, wornTier);
+                offers = MarketScanner.Armor(stock, settlement, hero, worn.ItemType, culture, ceiling, wornFine);
             }
             else
             {
@@ -2508,14 +2509,14 @@ namespace HeroLoadoutFixer
                 if (partner != WeaponCategory.None && !current.Contains(partner)) partner = WeaponCategory.None;
 
                 offers = MarketScanner.Weapons(stock, settlement, hero, category, culture,
-                                               ceiling, wornTier, skills, mounted, partner);
+                                               ceiling, wornFine, skills, mounted, partner);
             }
 
             if (offers.Count == 0)
             {
                 report.AppendLine("  " + name + ": " + worn.StringId + " t" + wornTier
                                   + " room to t" + ceiling + ", nothing in stock -- "
-                                  + WhyNothing(stock, worn, culture, ceiling, wornTier));
+                                  + WhyNothing(stock, worn, culture, ceiling, wornFine));
                 return;
             }
 
@@ -2542,10 +2543,10 @@ namespace HeroLoadoutFixer
         /// so this attributes the real refusal rather than a second opinion.
         /// </summary>
         private static string WhyNothing(List<ItemRosterElement> stock, ItemObject worn,
-                                         CultureObject culture, int ceiling, int wornTier)
+                                         CultureObject culture, int ceiling, int wornFine)
         {
             int sameKind, rightTier, wrongCulture;
-            string reason = Blocker(stock, worn, culture, ceiling, wornTier,
+            string reason = Blocker(stock, worn, culture, ceiling, wornFine,
                                     out sameKind, out rightTier, out wrongCulture);
 
             if (reason == "emptyShelf") return "the town stocks none of that kind at all";
@@ -2565,7 +2566,7 @@ namespace HeroLoadoutFixer
         /// into the tally and read back out of the log.
         /// </summary>
         private static string Blocker(List<ItemRosterElement> stock, ItemObject worn, CultureObject culture,
-                                      int ceiling, int wornTier,
+                                      int ceiling, int wornFine,
                                       out int sameKind, out int rightTier, out int wrongCulture)
         {
             sameKind = 0;
@@ -2578,7 +2579,8 @@ namespace HeroLoadoutFixer
                 if (item.ItemType != worn.ItemType) continue;
                 sameKind++;
 
-                if (!MarketRules.IsUpgrade(wornTier, (int)item.Tier + 1, ceiling)) continue;
+                if (!MarketRules.IsUpgrade(wornFine, MarketScanner.FineTierOf(item),
+                                           MarketScanner.TierOf(item), ceiling)) continue;
                 rightTier++;
 
                 if (item.Culture != null && culture != null && item.Culture.StringId != culture.StringId)
@@ -2713,11 +2715,11 @@ namespace HeroLoadoutFixer
             ItemObject worn = hero.BattleEquipment[slot].Item;
             if (worn == null) return false;
 
-            int wornTier = (int)worn.Tier + 1;
+            int wornTier = MarketScanner.TierOf(worn);
             if (wornTier >= ceiling) return false;
 
             int sameKind, rightTier, wrongCulture;
-            Bump(blockedBy, Blocker(stock, worn, culture, ceiling, wornTier,
+            Bump(blockedBy, Blocker(stock, worn, culture, ceiling, MarketScanner.FineTierOf(worn),
                                     out sameKind, out rightTier, out wrongCulture));
             return true;
         }

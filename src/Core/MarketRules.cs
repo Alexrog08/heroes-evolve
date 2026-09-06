@@ -14,63 +14,82 @@ namespace HeroLoadoutFixer.Core
     public static class MarketRules
     {
         /// <summary>
-        /// True when an offered tier is worth buying over what is worn.
+        /// Half a tier, in hundredths: the smallest improvement worth a
+        /// purchase.
         ///
-        /// The step is a whole tier, not a better statline, and that is
-        /// deliberate. Ranking by item value instead would have lords trading up
-        /// by a few points every visit -- five hundred heroes churning their kit
-        /// across the map, spending real gold for no visible change. A tier is
-        /// the coarse unit the rest of the mod already speaks in, and it makes a
-        /// purchase a rare, visible event.
+        /// This number comes out of an inconsistency in the rule it replaces.
+        /// The integer tier is a rounding of a continuous quantity -- the game
+        /// computes Tierf and takes round(Tierf) -- so demanding a whole integer
+        /// tier let through an item 0.02 better that happened to straddle a
+        /// rounding boundary, while refusing one 0.98 better that did not. The
+        /// gate was letting the insignificant past and blocking the large.
         ///
-        /// wornTier is 1-based like everything user-facing here; an empty slot
-        /// has no tier and callers must not ask about one. Filling empty slots
-        /// is the repair's job, and letting the market do it would let a lord
-        /// buy his way into a role nobody planned for him.
-        ///
-        /// A tier below 1 on either side means the game never ranked that item,
-        /// and an unranked item is left alone rather than assumed to be the
-        /// worst thing in the world. A campaign caught this: three lords
-        /// carrying naphtha pots -- which the game does not tier -- read as tier
-        /// zero, so a 141-denar tier-1 javelin counted as an upgrade and
-        /// replaced them. The rule the whole mod rests on is that gear is only
-        /// taken off a lord when the replacement is provably better, and
-        /// "provably" cannot survive comparing against a number that is not
-        /// there.
+        /// Half a tier is the midpoint of what the old rule already permitted
+        /// (arbitrarily small, at a boundary) and what it already refused (just
+        /// under a whole tier, inside one). It is strictly stricter than today
+        /// on the marginal cases and strictly looser on the big ones, which is
+        /// the right direction on both counts: fewer purchases, each of them
+        /// worth making.
         /// </summary>
-        public static bool IsUpgrade(int wornTier, int offeredTier, int ceiling)
+        public const int MinimumGain = 50;
+
+        /// <summary>
+        /// True when an offer is enough better than what is worn to be worth
+        /// buying.
+        ///
+        /// Tiers arrive in hundredths of the game's own fractional Tierf, so a
+        /// lord can trade the worst sword of a tier for the best one without
+        /// waiting for the next integer step -- but only when the gap is real.
+        /// Comparing raw item value instead would have five hundred heroes
+        /// churning their kit for a few points at every gate; MinimumGain is
+        /// what stops that, and one purchase per lord per day is what stops it
+        /// twice.
+        ///
+        /// The ceiling stays in integer tiers because that is what merit and
+        /// the rest of the mod speak in, and it is a cap rather than a
+        /// measurement.
+        ///
+        /// A worn or offered tier below the bottom of the scale means the game
+        /// scored the item beneath tier 1 -- naphtha pots do this, being
+        /// consumables the value model has no opinion about. Those sit outside
+        /// the 1-to-6 scale this whole engine speaks in, so they are left alone
+        /// rather than traded on a comparison the scale cannot carry. Three
+        /// lords lost their naphtha pots to a 141-denar javelin before this
+        /// existed.
+        /// </summary>
+        public static bool IsUpgrade(int wornFine, int offeredFine, int offeredTier, int ceiling)
         {
-            if (wornTier < 1 || offeredTier < 1) return false;
-            if (offeredTier > ceiling) return false;
-            return offeredTier > wornTier;
+            if (wornFine < 1 || offeredFine < 1) return false;
+            if (offeredTier < 1 || offeredTier > ceiling) return false;
+            return offeredFine - wornFine >= MinimumGain;
         }
 
         /// <summary>
-        /// Orders two offers best-first, on three terms in this order: the
-        /// higher rank, then the one that keeps the hero's own weapon class,
-        /// then the cheaper. Negative when the first comes first, in the shape
-        /// List.Sort expects.
+        /// Orders two offers best-first, on four terms in this order: the higher
+        /// whole tier, then the one that keeps the hero's own weapon class, then
+        /// the finer tier, then the cheaper. Negative when the first comes
+        /// first, in the shape List.Sort expects.
         ///
-        /// Rank is the item's tier when ranking offers for one slot, and the
-        /// tier gained when ranking across slots -- the same comparison serves
-        /// both, since both mean "how much better".
+        /// Rank is the item's whole tier when ranking offers for one slot, and
+        /// the whole tiers gained when ranking across slots -- the same
+        /// comparison serves both, since both mean "how much better".
         ///
-        /// The class term is what stops a lord's sword quietly becoming a mace.
-        /// The catalogue matches a whole weapon family, because a culture may
-        /// not stock the exact class a hero carries, and the tier gate already
-        /// forbids sidegrades -- so a swap can only happen on a real upgrade. It
-        /// still leaves one case: two items of the same better tier, one his own
-        /// class and one not. Preferring his own costs nothing and keeps the
-        /// character the repair gave him.
+        /// The whole tier leads, deliberately, even though the fine tier is the
+        /// more accurate number. It is what creates the ties the class term
+        /// needs: ranking on the fine tier alone, a sword at 4.20 and an axe at
+        /// 4.35 never tie, the axe always wins, and a lord's sword quietly
+        /// becomes a mace -- which is exactly what the class term exists to
+        /// prevent. Coarse first, then character, then precision.
         ///
-        /// Cheapest last, because taking the dearest item that clears the tier
-        /// burns a clan's purse on a difference the tier says does not exist.
+        /// Cheapest last, because taking the dearest of two items the fine tier
+        /// calls equal burns a clan's purse for nothing.
         /// </summary>
-        public static int Compare(int rankA, bool ownClassA, int priceA,
-                                  int rankB, bool ownClassB, int priceB)
+        public static int Compare(int rankA, bool ownClassA, int fineA, int priceA,
+                                  int rankB, bool ownClassB, int fineB, int priceB)
         {
             if (rankA != rankB) return rankB - rankA;
             if (ownClassA != ownClassB) return ownClassA ? -1 : 1;
+            if (fineA != fineB) return fineB - fineA;
             return priceA - priceB;
         }
     }
