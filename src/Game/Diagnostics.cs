@@ -1017,6 +1017,27 @@ namespace HeroLoadoutFixer
             int[] bounds = { 18, 25, 35, 45, 55, 200 };
             string[] labels = { "18-24", "25-34", "35-44", "45-54", "55+" };
 
+            // Split by cohort. The 55+ bucket is otherwise half authored lords,
+            // seeded as veterans on day one, and reading their percentiles as a
+            // progression target would import TaleWorlds' starting roster rather
+            // than what a campaign actually grows.
+            double latestAuthoredBirthYear = double.MinValue;
+            foreach (Hero probe in Hero.AllAliveHeroes)
+            {
+                try
+                {
+                    if (probe == null || probe.CharacterObject == null) continue;
+                    if (probe.CharacterObject.StringId == null) continue;
+                    if (!probe.CharacterObject.StringId.StartsWith("lord_")) continue;
+                    double born = probe.BirthDay.ToYears;
+                    if (born > latestAuthoredBirthYear) latestAuthoredBirthYear = born;
+                }
+                catch { }
+            }
+
+            List<int>[] authoredByBucket = new List<int>[labels.Length];
+            for (int i = 0; i < labels.Length; i++) authoredByBucket[i] = new List<int>();
+
             List<int>[] maxByBucket = new List<int>[labels.Length];
             for (int i = 0; i < labels.Length; i++) maxByBucket[i] = new List<int>();
 
@@ -1049,12 +1070,16 @@ namespace HeroLoadoutFixer
 
                     for (int i = 0; i < 6; i++) shape[i].Add((weapon[i] * 100) / best);
 
+                    bool bornInPlay = latestAuthoredBirthYear > double.MinValue
+                                      && hero.BirthDay.ToYears > latestAuthoredBirthYear;
+
                     int age = (int)hero.Age;
                     for (int b = 0; b < labels.Length; b++)
                     {
                         if (age >= bounds[b] && age < bounds[b + 1])
                         {
-                            maxByBucket[b].Add(best);
+                            if (bornInPlay) maxByBucket[b].Add(best);
+                            else authoredByBucket[b].Add(best);
                             break;
                         }
                     }
@@ -1067,7 +1092,8 @@ namespace HeroLoadoutFixer
 
             for (int b = 0; b < labels.Length; b++)
             {
-                ModLog.Info("SKILLAGE " + labels[b] + " " + Percentiles(maxByBucket[b]));
+                ModLog.Info("SKILLAGE born     " + labels[b] + " " + Percentiles(maxByBucket[b]));
+                ModLog.Info("SKILLAGE authored " + labels[b] + " " + Percentiles(authoredByBucket[b]));
             }
 
             StringBuilder text = new StringBuilder("SKILLSHAPE medianRatioToBest");

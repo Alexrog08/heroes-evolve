@@ -51,6 +51,7 @@ namespace HeroLoadoutFixer.Tests
             WeaponCategoryTests.RunAll();
             MountHarnessTests.RunAll();
             BattleRoleTests.RunAll();
+            TalentTests.RunAll();
 
             Console.WriteLine();
             Console.WriteLine(Check.Passes + " passed, " + Check.Failures + " failed");
