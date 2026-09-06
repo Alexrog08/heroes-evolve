@@ -42,6 +42,11 @@ namespace HeroLoadoutFixer
             // the dead subscription is removed rather than fought.
             CampaignEvents.DailyTickHeroEvent.AddNonSerializedListener(this, OnDailyTickHero);
 
+            // Weekly, not daily. The peak a lord grows toward takes forty years
+            // to arrive, so running seven times as often multiplies the work
+            // without changing anything anyone could notice.
+            CampaignEvents.WeeklyTickEvent.AddNonSerializedListener(this, OnWeeklyTick);
+
             // Deliberately NOT subscribed to DailyTickEvent to run the census.
             // Measured at 480ms on a 600-lord campaign -- two thousand seven
             // hundred full sweeps of a 3500-item catalogue -- and it changes
@@ -88,6 +93,31 @@ namespace HeroLoadoutFixer
         private void OnDailyTickHero(Hero hero)
         {
             TryRepair(hero, "daily_tick");
+        }
+
+        private void OnWeeklyTick()
+        {
+            int grown = 0;
+
+            foreach (Hero hero in Hero.AllAliveHeroes)
+            {
+                try
+                {
+                    SkillGrowthService.GrowWeekly(hero);
+                    grown++;
+                }
+                catch (System.Exception ex)
+                {
+                    // Guarded per hero, as everywhere: one bad hero must not
+                    // take the tick down with it.
+                    ModLog.Error("skill growth failed for " + hero.Name
+                                 + ": " + ex.GetType().Name + " " + ex.Message);
+                }
+            }
+
+            // Logged once a week rather than per hero: six hundred lines every
+            // seven days would bury everything else in the file.
+            ModLog.Info("GROWTH weekly pass over " + grown + " heroes");
         }
 
         private void TryRepair(Hero hero, string reason)

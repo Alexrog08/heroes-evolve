@@ -1,0 +1,132 @@
+using System.Collections.Generic;
+using TaleWorlds.CampaignSystem;
+using TaleWorlds.Core;
+using HeroLoadoutFixer.Core;
+
+namespace HeroLoadoutFixer
+{
+    /// <summary>
+    /// Nudges a lord's combat skills toward what his years and his aptitude say
+    /// they should be, in the skills his own equipment says he uses.
+    ///
+    /// Runs weekly. The peak takes forty years to arrive, so running seven times
+    /// as often would multiply the work without changing anything anyone could
+    /// notice.
+    ///
+    /// Nothing is ever reduced and growth stops on arrival, so a lord the game
+    /// developed properly is never touched at all.
+    /// </summary>
+    public static class SkillGrowthService
+    {
+        /// <summary>
+        /// The rank the movement skill is held to -- Riding for a mounted lord,
+        /// Athletics for one on foot. Second place rather than first: the
+        /// founder of the lab save finished with Athletics 274 against Bow 288,
+        /// and the current heir with Riding 236 against One Handed 167, so a
+        /// lord's legs or his horse are worth about as much as his weapon.
+        /// </summary>
+        private const int MovementRank = 1;
+
+        public static void GrowWeekly(Hero hero)
+        {
+            if (!HeroFilter.IsEligible(hero)) return;
+            if (hero.HeroDeveloper == null || hero.BattleEquipment == null) return;
+
+            float talent = Talent.For(hero.StringId);
+            int primaryTarget = SkillGrowth.PrimaryTarget((int)hero.Age, talent);
+            if (primaryTarget <= 0) return;
+
+            // Ranked by slot, not by current value. The game itself reads the
+            // lowest-numbered weapon slot to decide which skill a hero trains in
+            // simulated combat (Helpers.CharacterHelper.GetDefaultWeapon walks
+            // slots 0 to 4 and takes the first real weapon), so slot order is
+            // already the game's own statement of what this lord fights with.
+            // Ranking by current value instead would entrench whatever the
+            // generator happened to give him and never let a repaired hero grow
+            // into the loadout he was actually handed.
+            List<SkillObject> ranked = RankedWeaponSkills(hero);
+
+            for (int rank = 0; rank < ranked.Count; rank++)
+            {
+                Grant(hero, ranked[rank], SkillGrowth.TargetForRank(primaryTarget, rank), talent);
+            }
+
+            bool mounted = hero.BattleEquipment[EquipmentIndex.Horse].Item != null;
+            SkillObject movement = mounted ? DefaultSkills.Riding : DefaultSkills.Athletics;
+            Grant(hero, movement, SkillGrowth.TargetForRank(primaryTarget, MovementRank), talent);
+        }
+
+        private static void Grant(Hero hero, SkillObject skill, int target, float talent)
+        {
+            if (skill == null || target <= 0) return;
+
+            int current = hero.GetSkillValue(skill);
+            int xp = SkillGrowth.XpStep(current, target, talent);
+            if (xp <= 0) return;
+
+            // Hero.AddSkillXp routes through HeroDeveloper with the focus factor
+            // applied, so this composes with the game's own progression rather
+            // than bypassing it: a hero the AI has invested focus in learns
+            // faster from the same grant. And because the AI allocates focus to
+            // whichever skill most exceeds its learning limit, pushing a skill
+            // here makes the game itself follow.
+            hero.AddSkillXp(skill, xp);
+        }
+
+        /// <summary>
+        /// The distinct skills this hero's weapons call on, in slot order.
+        /// Shields and ammunition contribute none and are skipped without
+        /// consuming a rank -- a lord carrying bow, arrows, sword and shield
+        /// trains two skills, not four.
+        /// </summary>
+        private static List<SkillObject> RankedWeaponSkills(Hero hero)
+        {
+            List<SkillObject> ranked = new List<SkillObject>();
+
+            for (int i = 0; i < SlotSnapshot.WeaponSlotCount; i++)
+            {
+                ItemObject item = hero.BattleEquipment[SlotMapping.WeaponSlot(i)].Item;
+                if (item == null) continue;
+
+                WeaponCategory category = ItemClassifier.Classify(item);
+                SkillObject skill = SkillFor(category);
+                if (skill == null) continue;
+                if (ranked.Contains(skill)) continue;
+
+                ranked.Add(skill);
+            }
+
+            return ranked;
+        }
+
+        /// <summary>
+        /// The skill a weapon category trains, or null for the categories that
+        /// train nothing: shields, both kinds of ammunition, and anything the
+        /// classifier could not place.
+        /// </summary>
+        private static SkillObject SkillFor(WeaponCategory category)
+        {
+            switch (category)
+            {
+                case WeaponCategory.OneHandedSword:
+                case WeaponCategory.OneHandedAxe:
+                case WeaponCategory.Mace:
+                    return DefaultSkills.OneHanded;
+
+                case WeaponCategory.TwoHandedSword:
+                case WeaponCategory.TwoHandedAxe:
+                    return DefaultSkills.TwoHanded;
+
+                case WeaponCategory.Spear:
+                case WeaponCategory.Polearm:
+                    return DefaultSkills.Polearm;
+
+                case WeaponCategory.Bow: return DefaultSkills.Bow;
+                case WeaponCategory.Crossbow: return DefaultSkills.Crossbow;
+                case WeaponCategory.Throwing: return DefaultSkills.Throwing;
+
+                default: return null;
+            }
+        }
+    }
+}
