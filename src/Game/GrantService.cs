@@ -15,27 +15,66 @@ namespace HeroLoadoutFixer
         /// <summary>The one-handed sword vanilla's dummy fallback hands out.</summary>
         internal const string DummySwordId = "iron_spatha_sword_t2";
 
+        /// <summary>A lord fielding fewer than this many weapons cannot fight.</summary>
+        private const int MinimumWeapons = 2;
+
         /// <summary>
-        /// True when the hero's battle equipment is empty, or is the vanilla
-        /// dummy set: a lone spatha and nothing else in the weapon slots.
+        /// Armour at or below this tier is civilian clothing, not kit. The tier
+        /// census named what lives down there: aserai_civil_d, cloth_tunic,
+        /// vlandian_woman_dress, nord_casual_tunic, layered_robe.
+        /// </summary>
+        private const int CivilianArmorTier = 1;
+
+        /// <summary>
+        /// True when the hero's battle equipment shows the come-of-age failure.
+        ///
+        /// This used to test for empty weapon slots or the exact dummy spatha,
+        /// and a 600-lord campaign proved that far too narrow: it caught none of
+        /// the fifteen genuinely broken heroes in it. The failure does not leave
+        /// a hero naked. It leaves them partly equipped, in one of two shapes:
+        ///
+        ///   Fourteen lords -- every one of them Cavalry, every one generated
+        ///   during the campaign -- wore tier-6 armour, a helmet and a horse,
+        ///   and carried a single weapon: one javelin, one lance, one sword. No
+        ///   shield, no sidearm. Ages 18 to 58, so they had been like that for
+        ///   decades.
+        ///
+        ///   One 21-year-old carried a full and coherent set of four weapons
+        ///   while wearing layered_robe and a civilian cape.
+        ///
+        /// Neither shape has an empty weapon slot or a dummy spatha. So the test
+        /// is now for the symptoms: too few weapons to fight with, or armour
+        /// that is still civilian clothing.
         /// </summary>
         public static bool NeedsGrant(Hero hero)
         {
             if (hero == null || hero.BattleEquipment == null) return false;
 
             int weapons = 0;
-            bool onlyDummySword = true;
-
             for (int i = 0; i < SlotSnapshot.WeaponSlotCount; i++)
             {
                 ItemObject item = hero.BattleEquipment[SlotMapping.WeaponSlot(i)].Item;
                 if (item == null) continue;
+                if (HeroAdapter.IsVanillaDummySword(item)) continue;
                 weapons++;
-                if (item.StringId != DummySwordId) onlyDummySword = false;
             }
 
-            if (weapons == 0) return true;
-            return weapons == 1 && onlyDummySword;
+            if (weapons < MinimumWeapons) return true;
+
+            return IsCivilian(hero.BattleEquipment[EquipmentIndex.Body].Item)
+                   || IsCivilian(hero.BattleEquipment[EquipmentIndex.Head].Item);
+        }
+
+        /// <summary>
+        /// True for an armour slot holding civilian clothing. An empty slot is
+        /// not civilian -- it is a gap, and gaps are filled by the armour pass
+        /// without needing to trigger a repair on their own. Only Body and Head
+        /// are judged: an empty cape or glove slot is ordinary on a lord and
+        /// treating it as a defect would put most of the map through a repair.
+        /// </summary>
+        private static bool IsCivilian(ItemObject item)
+        {
+            return item != null && (int)item.Tier + 1 <= CivilianArmorTier;
         }
 
         /// <summary>
@@ -59,6 +98,7 @@ namespace HeroLoadoutFixer
             if (culture == null && hero.Clan != null) culture = hero.Clan.Culture;
 
             bool cultureMounted = HeroAdapter.CultureFieldsMountedElites(hero);
+            BattleRole role = HeroAdapter.ReadRole(hero);
             MountedRangedAvailability availability = ItemCatalog.RangedAvailability(hero, culture, ceiling);
 
             // PlanTarget is called here as well as inside Plan (which calls it
@@ -68,8 +108,8 @@ namespace HeroLoadoutFixer
             // assumed about this hero's mount state. PlanTarget is pure and
             // cheap (no game calls), so computing it twice costs nothing and
             // avoids changing Plan's public signature for every existing caller.
-            LoadoutTarget target = LoadoutPlanner.PlanTarget(skills, current, availability, dominanceMargin, cultureMounted);
-            List<PlannedSlot> plan = LoadoutPlanner.Plan(skills, current, availability, dominanceMargin, cultureMounted);
+            LoadoutTarget target = LoadoutPlanner.PlanTarget(skills, current, availability, dominanceMargin, cultureMounted, role);
+            List<PlannedSlot> plan = LoadoutPlanner.Plan(skills, current, availability, dominanceMargin, cultureMounted, role);
 
             // Must agree with the planner's own assumption (HasMount ||
             // WantsMount, see LoadoutPlanner.Plan): the plan already
@@ -89,6 +129,7 @@ namespace HeroLoadoutFixer
             resolved.MaxCombatSkill = skills.MaxCombatSkill;
             resolved.Ceiling = ceiling;
             resolved.CultureFieldsMountedElites = cultureMounted;
+            resolved.Role = role.ToString();
             resolved.WantsMount = target.WantsMount;
             resolved.Mounted = mounted;
             resolved.Availability = availability;
@@ -217,7 +258,17 @@ namespace HeroLoadoutFixer
                 entry.Slot = slot;
                 entry.Existing = NameOf(hero.BattleEquipment[slot].Item);
 
-                if (hero.BattleEquipment[slot].Item != null)
+                ItemObject worn = hero.BattleEquipment[slot].Item;
+
+                // Civilian clothing is the defect, not a choice the hero made,
+                // so it is the one case where equipped gear is replaced. Only
+                // when the ceiling can actually do better -- swapping one tier-1
+                // robe for another would be churn, and a hero capped at tier 1
+                // has nothing better available to him anyway.
+                bool civilian = worn != null && (int)worn.Tier + 1 <= CivilianArmorTier
+                                && ceiling > CivilianArmorTier;
+
+                if (worn != null && !civilian)
                 {
                     entry.SkipReason = "already worn";
                 }

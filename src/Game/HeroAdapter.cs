@@ -66,6 +66,46 @@ namespace HeroLoadoutFixer
         }
 
         /// <summary>
+        /// The hero's battlefield role, as the game itself labels it.
+        ///
+        /// Mapped rather than passed through because the core must stay free of
+        /// TaleWorlds types, and because FormationClass carries entries that say
+        /// nothing about equipment (General, Bodyguard) or that are weight
+        /// variants of a role we treat identically (HeavyInfantry, LightCavalry,
+        /// HeavyCavalry). Anything unrecognised becomes Unset, which puts the
+        /// hero back on the skill-only path rather than guessing.
+        /// </summary>
+        public static BattleRole ReadRole(Hero hero)
+        {
+            if (hero == null) return BattleRole.Unset;
+
+            CharacterObject character = hero.CharacterObject;
+            if (character == null) return BattleRole.Unset;
+
+            switch (character.DefaultFormationClass)
+            {
+                case FormationClass.Infantry:
+                case FormationClass.HeavyInfantry:
+                    return BattleRole.Infantry;
+
+                case FormationClass.Ranged:
+                case FormationClass.Skirmisher:
+                    return BattleRole.Ranged;
+
+                case FormationClass.Cavalry:
+                case FormationClass.LightCavalry:
+                case FormationClass.HeavyCavalry:
+                    return BattleRole.Cavalry;
+
+                case FormationClass.HorseArcher:
+                    return BattleRole.HorseArcher;
+
+                default:
+                    return BattleRole.Unset;
+            }
+        }
+
+        /// <summary>
         /// The one-handed sword vanilla's dummy fallback hands out when a hero
         /// comes of age with no usable equipment template. Kept in step with
         /// GrantService.DummySwordId, which is what detects the same state.

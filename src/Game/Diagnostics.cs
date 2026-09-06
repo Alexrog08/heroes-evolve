@@ -640,6 +640,7 @@ namespace HeroLoadoutFixer
                     + " plannedWeapons=" + resolved.PlannedWeaponCount
                     + " wouldGrant=" + resolved.WouldGrantCount
                     + " needsGrant=" + GrantService.NeedsGrant(hero)
+                    + " role=" + resolved.Role
                     + " formation=" + (hero.CharacterObject != null
                                             ? hero.CharacterObject.DefaultFormationClass.ToString() : "<none>")
                     + " charId=" + (hero.CharacterObject != null ? hero.CharacterObject.StringId : "<none>")

@@ -15,8 +15,36 @@ namespace HeroLoadoutFixer.Core
                                                MountedRangedAvailability availability,
                                                int dominanceMargin, bool cultureIsMounted)
         {
+            return PlanTarget(skills, current, availability, dominanceMargin, cultureIsMounted,
+                              BattleRole.Unset);
+        }
+
+        /// <summary>
+        /// As above, but honouring the role the game itself assigns the hero.
+        ///
+        /// The role decides two things and only two: whether the hero belongs on
+        /// a horse, and whether the primary weapon is ranged or melee. Skills
+        /// still choose everything else -- bow or crossbow, which melee family,
+        /// which sidearm -- because the role says a hero is Ranged, not that he
+        /// is an archer rather than a crossbowman.
+        ///
+        /// With BattleRole.Unset the old skill-only behaviour is used unchanged,
+        /// which is what a hero carrying no usable label falls back to.
+        /// </summary>
+        public static LoadoutTarget PlanTarget(SkillProfile skills, SlotSnapshot current,
+                                               MountedRangedAvailability availability,
+                                               int dominanceMargin, bool cultureIsMounted,
+                                               BattleRole role)
+        {
             LoadoutTarget target = new LoadoutTarget();
-            target.WantsMount = skills.RidingInTopTwo() || cultureIsMounted;
+
+            // A labelled role settles the mount outright. Riding skill and
+            // culture only decide it for an unlabelled hero: a Cavalry lord with
+            // mediocre Riding is still cavalry, and an Infantry lord of a
+            // horse-fielding culture is still on foot.
+            target.WantsMount = role == BattleRole.Unset
+                ? (skills.RidingInTopTwo() || cultureIsMounted)
+                : BattleRoleRules.IsMounted(role);
 
             bool mounted = current.HasMount || target.WantsMount;
 
@@ -32,7 +60,22 @@ namespace HeroLoadoutFixer.Core
             WeaponCategory sidearm = ArcherSidearm(skills);
             int sidearmSkill = skills.Get(SkillForCategory(sidearm));
 
-            if (ranged != WeaponCategory.None && rangedSkill >= sidearmSkill)
+            bool wantsRanged;
+            if (role == BattleRole.Unset)
+            {
+                wantsRanged = rangedSkill >= sidearmSkill;
+            }
+            else
+            {
+                // The label decides. A Ranged hero with no usable ranged weapon
+                // still falls through to melee rather than being left holding
+                // nothing -- BestViableRanged returns None when the catalogue
+                // has no bow or crossbow this hero can use from where he fights,
+                // and an empty hand is worse than the wrong weapon.
+                wantsRanged = BattleRoleRules.IsRanged(role);
+            }
+
+            if (ranged != WeaponCategory.None && wantsRanged)
             {
                 BuildRangedArchetype(target, ranged, sidearm, rangedSkill, sidearmSkill, dominanceMargin);
             }
@@ -54,12 +97,20 @@ namespace HeroLoadoutFixer.Core
                                              MountedRangedAvailability availability,
                                              int dominanceMargin, bool cultureIsMounted)
         {
+            return Plan(skills, current, availability, dominanceMargin, cultureIsMounted, BattleRole.Unset);
+        }
+
+        public static List<PlannedSlot> Plan(SkillProfile skills, SlotSnapshot current,
+                                             MountedRangedAvailability availability,
+                                             int dominanceMargin, bool cultureIsMounted,
+                                             BattleRole role)
+        {
             List<PlannedSlot> plan = new List<PlannedSlot>();
 
             int[] freeSlots = current.EmptySlotIndices();
             if (freeSlots.Length == 0) return plan;
 
-            LoadoutTarget target = PlanTarget(skills, current, availability, dominanceMargin, cultureIsMounted);
+            LoadoutTarget target = PlanTarget(skills, current, availability, dominanceMargin, cultureIsMounted, role);
             List<WeaponCategory> wanted = Reconcile(target, current);
 
             int nextFree = 0;

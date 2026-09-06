@@ -22,6 +22,9 @@ namespace HeroLoadoutFixer
         public int MaxCombatSkill;
         public int Ceiling;
         public bool CultureFieldsMountedElites;
+
+        /// <summary>The role the game assigned, as text.</summary>
+        public string Role;
         public bool WantsMount;
 
         /// <summary>What the planner assumed: already mounted, or about to be.</summary>
