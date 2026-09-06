@@ -58,6 +58,7 @@ namespace HeroLoadoutFixer
             TroopSurvey.Report();
             ReportFormations();
             ReportSuspectKits();
+            ReportRiding();
             List<Hero> broken = ReportHeroes();
             ReportDryRuns(broken, clanWeight, skillWeight, minimumTier, dominanceMargin);
             ModLog.Info("===== CENSUS END =====");
@@ -479,6 +480,97 @@ namespace HeroLoadoutFixer
 
             ModLog.Info("SUSPECT examined=" + examined + " suspects=" + suspects
                         + " under26=" + young + " suspectsUnder26=" + youngSuspects);
+        }
+
+        /// <summary>
+        /// The Riding distribution across the lords the mod acts on, split by
+        /// the role the game gave them.
+        ///
+        /// The question this answers is where to put the floor below which a
+        /// Cavalry-labelled lord should be left on foot. Picking that number by
+        /// intuition would be guessing; picking it from the percentiles of the
+        /// real population is not. The reference points that matter are the
+        /// game's own: every merchandise war horse requires Riding 10 or more,
+        /// the culture basics sit at 10-20, tier-2 mounts at 30-45 and tier-3 at
+        /// 50-65, so a threshold only has meaning relative to those rungs.
+        /// </summary>
+        private static void ReportRiding()
+        {
+            List<int> mountedRoles = new List<int>();
+            List<int> footRoles = new List<int>();
+            List<int> everyone = new List<int>();
+
+            foreach (Hero hero in Hero.AllAliveHeroes)
+            {
+                try
+                {
+                    if (!HeroFilter.IsEligible(hero)) continue;
+
+                    int riding = HeroAdapter.ReadSkills(hero).Get(SkillKind.Riding);
+                    everyone.Add(riding);
+
+                    if (BattleRoleRules.IsMounted(HeroAdapter.ReadRole(hero))) mountedRoles.Add(riding);
+                    else footRoles.Add(riding);
+                }
+                catch
+                {
+                    // One unreadable hero must not cost the distribution.
+                }
+            }
+
+            ModLog.Info("RIDING all       " + Percentiles(everyone));
+            ModLog.Info("RIDING mountedRole " + Percentiles(mountedRoles));
+            ModLog.Info("RIDING footRole  " + Percentiles(footRoles));
+            ModLog.Info("RIDING mountedRole below: " + BelowCounts(mountedRoles));
+        }
+
+        private static string Percentiles(List<int> values)
+        {
+            if (values.Count == 0) return "n=0";
+
+            int[] sorted = values.ToArray();
+            System.Array.Sort(sorted);
+
+            return "n=" + sorted.Length
+                   + " min=" + sorted[0]
+                   + " p5=" + At(sorted, 0.05f)
+                   + " p10=" + At(sorted, 0.10f)
+                   + " p25=" + At(sorted, 0.25f)
+                   + " p50=" + At(sorted, 0.50f)
+                   + " p75=" + At(sorted, 0.75f)
+                   + " p90=" + At(sorted, 0.90f)
+                   + " max=" + sorted[sorted.Length - 1];
+        }
+
+        private static int At(int[] sorted, float fraction)
+        {
+            int index = (int)(fraction * (sorted.Length - 1));
+            if (index < 0) index = 0;
+            if (index >= sorted.Length) index = sorted.Length - 1;
+            return sorted[index];
+        }
+
+        /// <summary>
+        /// How many mounted-role lords fall under each rung of the game's own
+        /// horse difficulty ladder. A threshold is only worth setting where it
+        /// actually separates people.
+        /// </summary>
+        private static string BelowCounts(List<int> values)
+        {
+            int[] rungs = { 5, 10, 15, 20, 30, 40, 50 };
+            StringBuilder text = new StringBuilder();
+
+            for (int r = 0; r < rungs.Length; r++)
+            {
+                int n = 0;
+                for (int i = 0; i < values.Count; i++)
+                {
+                    if (values[i] < rungs[r]) n++;
+                }
+                if (r > 0) text.Append(' ');
+                text.Append('<').Append(rungs[r]).Append('=').Append(n);
+            }
+            return text.ToString();
         }
 
         private static string DescribeSlots(Hero hero)

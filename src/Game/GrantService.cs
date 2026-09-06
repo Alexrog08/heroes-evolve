@@ -187,7 +187,9 @@ namespace HeroLoadoutFixer
 
             int granted = Apply(hero, resolved);
 
-            ModLog.Info("GRANT hero=" + hero.Name + " tier=" + resolved.Ceiling
+            ModLog.Info("GRANT hero=" + hero.Name
+                        + " id=" + (hero.CharacterObject != null ? hero.CharacterObject.StringId : "?")
+                        + " tier=" + resolved.Ceiling
                         + " planned=" + resolved.PlannedWeaponCount + " granted=" + granted);
         }
 

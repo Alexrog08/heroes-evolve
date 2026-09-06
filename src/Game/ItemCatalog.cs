@@ -142,6 +142,7 @@ namespace HeroLoadoutFixer
             {
                 ItemObject item = all[i];
                 if (item == null || item.ItemType != ItemObject.ItemTypeEnum.Horse) continue;
+                if (!IsWarMount(item)) continue;
                 if (!PassesCommonFilters(item, culture, maxTier)) continue;
                 if (!ItemClassifier.MeetsDifficulty(item, skills)) continue;
 
@@ -164,6 +165,30 @@ namespace HeroLoadoutFixer
         /// the family match apply. Returns null for a null mount or when
         /// nothing qualifies; callers must tolerate that.
         /// </summary>
+        /// <summary>
+        /// A mount fit to fight from, as opposed to a beast of burden.
+        ///
+        /// Mules, sumpter horses and pack camels are all ItemTypeEnum.Horse and
+        /// all is_mountable="true", so the item type alone lets them through.
+        /// What separates them is is_pack_animal, and the reason it matters is
+        /// that every real war horse in the game requires Riding 10 or more
+        /// while the pack animals require nothing at all: a hero with Riding 0
+        /// fails the difficulty gate on every horse and qualifies for exactly
+        /// the mules. That is not a hypothetical -- the heroes this mod repairs
+        /// are the ones whose skills never generated, and two of them in a live
+        /// campaign had 0 in all seven skills. Without this check they would
+        /// have ridden to war on a mule with 3 charge damage.
+        /// </summary>
+        private static bool IsWarMount(ItemObject item)
+        {
+            if (!item.HasHorseComponent) return false;
+
+            HorseComponent horse = item.HorseComponent;
+            if (horse == null) return false;
+
+            return horse.IsMount && !horse.IsPackAnimal;
+        }
+
         public static ItemObject FindBestHarness(ItemObject mount, CultureObject culture, int maxTier)
         {
             if (mount == null || !mount.HasHorseComponent || mount.HorseComponent.Monster == null) return null;
