@@ -1,90 +1,98 @@
-# Estado al cerrar la sesión
+# Estado
 
 Rama: `feat/diagnostics` (sale de `feat/core-and-grant`, que sale de `master`).
-Nada fusionado. 263 tests del núcleo en verde, build desplegado, API verificada
+Nada fusionado. 291 tests del núcleo en verde, build desplegado, API verificada
 contra v1.4.8 con control negativo.
 
-## Lo siguiente que hay que hacer
+La fase 1 —reparar al noble que el juego generó mal— **funciona y está
+verificada en campaña real**. La fase 2, el motor de compra, no está empezada.
 
-Arrancar Bannerlord y ejecutar **`hlf.census`**. Requiere `cheat_mode = 1` en
-`%USERPROFILE%\OneDrive\Documents\Mount and Blade II Bannerlord\Configs\engine_config.txt`.
+## Lo que hace hoy
 
-El log sale en `%LocalAppData%\Mount and Blade II Bannerlord\logs\hlf.log`.
+Un tick diario por héroe busca lores con el equipo degenerado y les rellena los
+huecos. Detecta por **síntoma**, no por firma:
 
-### Las tres líneas que deciden el diseño
+- menos de dos armas usables, o
+- coraza o casco de tier 1, que es ropa de civil
 
-```
-FORMATION authored   ...
-FORMATION generated  ...
-FORMATION children   ...
-```
+El arquetipo sale de `DefaultFormationClass`, la etiqueta que TaleWorlds pone a
+mano a cada lord. El rol decide dos cosas: si va montado y si su arma principal
+es a distancia. Las skills eligen todo lo demás.
 
-`DefaultFormationClass` es la etiqueta de rol que TaleWorlds pone a mano a cada
-lord. En `lords.xml`, 326 de 391 son `Cavalry`, Battania está invertida (37 de 40
-`Ranged`), y no hay **ni un** lord vlandiano a distancia ni **ningún** ballestero.
+Nunca quita equipo puesto, con **una excepción**: la ropa de civil, que es el
+bug y no una decisión.
 
-- Si `children` sale con un reparto sensato, el arquetipo se resuelve leyendo esa
-  etiqueta y las skills pasan a ser desempate.
-- Si sale todo un valor por defecto, la etiqueta no sirve para los héroes que el
-  mod repara —que son justo los nacidos en campaña— y hay que volver a las skills
-  o al árbol de tropas.
+## Verificado en la partida de laboratorio (61 años de campaña, 600 lores)
 
-### Lo demás que trae ese censo
+- 16 lores rotos detectados y reparados por el tick diario, sin errores.
+- `Aran` y `Echa` cumplieron 18 durante la prueba y se repararon solos. El bug
+  ocurriendo en vivo.
+- Los reparados reciben 1 o 2 piezas, no un equipo nuevo. Intervención mínima.
+- La regla cultural desmonta 16 batanios y 10 nords, y **cero** de las otras
+  cinco culturas.
 
-- `CATALOG weapons` (identidad primaria) frente a `CATALOG accepted` (lo que el
-  catálogo acepta de verdad). La diferencia entre ambos **es** el efecto del
-  comodín de una-y-dos-manos. `TwoHandedSword` valía 8 sobre 3500 por uso
-  primario; `accepted` debería ser mucho mayor.
-- `TROOP` — firma de loadout de cada tropa tier 3+ por cultura. Sirve para saber
-  qué armas usa cada rol en cada cultura, no para elegir el rol.
-- `GOLD` — ya sin el doble conteo (ver abajo).
-- `TIER` / `TIERSAMPLE` — ya volcados una vez; tier 1 es ropa de civil, tier 2 es
-  militar ligero, tier 3 es armadura seria.
+## Decisiones tomadas y NO implementadas
 
-## Decisiones tomadas y no implementadas todavía
+1. **La concesión debe dar equipo básico, no el mejor del techo.** Si la fase 1
+   regala el tope, la fase 2 se queda sin nada que hacer. Sortear entre **tier
+   2 y 3**, aleatorio dentro de la cultura. Piezas t2+t3: aserai 30, empire 29,
+   vlandia 23, khuzait 21, battania 16, sturgia 14, **nord solo 5**.
+   Tier 1 está descartado: es literalmente la ropa de civil del bug.
+2. **Separar maza de una y de dos manos** en el enum del núcleo. Hoy están
+   colapsadas en `Mace`, y por eso la regla de redundancia de armas bastardas no
+   se les puede aplicar.
+3. **Battania deriva y se deja derivar.** Sus lores nacidos son 48% caballería
+   contra 2,5% de los escritos a mano. Decisión del usuario: es evolución
+   generacional y da variedad. Solo se corrige la montura, no el rol de arma.
 
-1. **La concesión gratuita debe dar equipo básico, no el mejor del techo.**
-   Motivo: si la parte 1 regala el tope, la parte 2 (motor de compra) se queda
-   sin nada que hacer. Sortear entre **tier 2 y 3**, aleatorio dentro de la
-   cultura. Piezas disponibles sumando t2+t3: aserai 30, empire 29, vlandia 23,
-   khuzait 21, battania 16, sturgia 14, **nord solo 5**.
-   El techo de tier calculado pasa a ser exclusivamente el tope de compra.
+## Hechos del juego verificados, con su prueba
 
-2. **El arquetipo sale del rol del héroe, no de las tropas.** Pendiente de que
-   `FORMATION children` lo confirme.
-
-3. **Maza de una y de dos manos están colapsadas** en una sola categoría
-   `Mace` del enum del núcleo. Por eso la regla de redundancia no se les puede
-   aplicar. Habría que separarlas.
-
-## Hechos del juego verificados esta sesión
-
-- `Clan.Gold` **es** `Leader.Gold`. Desensamblado de v1.4.8:
-  `get_Gold` → `get_Leader` → `Hero::get_Gold`, o 0 sin líder. No existe un bote
-  de clan separado.
-- El lord más pobre del mapa dispone de ~64.000 denares en partida nueva. Ninguno
-  de los 462 baja de 10.000. **El dinero no va a ser la restricción**; lo será el
-  techo de tier.
-- Los tiers de objeto **no están en ningún XML**; los calcula el juego al cargar.
+- `Clan.Gold` **es** `Leader.Gold`. Desensamblado: `get_Gold` → `get_Leader` →
+  `Hero::get_Gold`. No hay bote de clan; es el bolsillo del líder.
+- El lord más pobre dispone de ~64.000 denares. **El dinero no será la
+  restricción en la fase 2; lo será el techo de tier.** Las skills de los lores
+  son bajas (80-150), así que los techos caen en tier 3-4.
+- Los tiers de objeto no están en ningún XML: los calcula el juego al cargar.
 - `ItemObject.PrimaryWeapon` es solo el uso cero. La plantilla de forja
-  `TwoHandedSword` ordena sus usos `OneHandedBastardSword, TwoHandedSword,
-  OneHandedBastardSwordAlternative`, así que toda espada bastarda crafteada se
-  archiva como de una mano.
-- Los arcos largos no se pueden usar montado, y el juego lo dice vía
-  `item_usage="long_bow"` (`ItemUsageSetFlags.RequiresNoMount`), no vía
-  `WeaponFlags`.
-- `EquipmentIndex.Head` comparte valor numérico con `NumAllWeaponSlots`;
-  `ToString()` devuelve el alias. Usar `SlotMapping.NameOf`.
-- Las culturas de mods (`nord`, de NavalDLC) atraviesan todo el sistema sin nada
-  cableado.
+  `TwoHandedSword` ordena sus usos `OneHandedBastardSword, TwoHandedSword, ...`,
+  así que toda bastarda crafteada se archivaba como de una mano: 8 espadas a dos
+  manos de 3500 objetos. Resuelto leyendo todos los usos.
+- Los arcos largos no se usan montado, y el juego lo dice por
+  `item_usage="long_bow"`, no por `WeaponFlags`.
+- `mule`, `sumpter_horse` y `pack_camel` son `Type="Horse"` y montables. Los
+  distingue `is_pack_animal`. Importa porque todo caballo de guerra exige
+  Equitación 10 y ellos no exigen nada: un lord con 0 solo calificaba para mula.
+- **Equitación 10** es el suelo de todo caballo de guerra, y la población tiene
+  ahí su acantilado: ~18% en cero, nadie entre 5 y 15, el resto desde 20.
+- `EquipmentIndex.Head` comparte valor con `NumAllWeaponSlots`. Usar
+  `SlotMapping.NameOf`.
+- **La élite de `nord` apunta a los druzhinniks esturgios** (NavalDLC), así que
+  nord parece cultura de caballería desde ese ángulo. Por eso el árbol de tropas
+  no sirve para decidir el perfil de los lores.
+- `CultureFieldsMountedElites` recorre **una sola rama** del árbol. Sus
+  respuestas son arbitrarias. No fiarse de él para nada nuevo.
+- Perfil de montura por cultura, de los lores escritos a mano: khuzait 100%,
+  empire 99%, vlandia 98%, aserai 94%, sturgia 94%, **battania 2%, nord 0%**.
 
 ## Bugs encontrados en campaña real, no leyendo código
 
-1. La espada dummy de vanilla sobrevivía a la reparación: se clasificaba como
-   espada legítima y el planificador planificaba a su alrededor.
-2. Se concedía un arco largo a un héroe montado, junto con el caballo, en la
-   misma pasada.
-3. Etiquetas de ranura ilegibles en el log por el alias del enum.
+1. La espada dummy sobrevivía a la reparación: se clasificaba como espada
+   legítima y el planificador planificaba a su alrededor.
+2. Espada a dos manos y escudo a la vez — resultó ser una bastarda, y destapó
+   que solo leíamos el uso primario.
+3. Arco largo concedido a un héroe montado, junto con el caballo, en la misma
+   pasada.
 4. `ReportGold` contaba dos veces el dinero de los líderes de clan.
+5. El arquetipo por skills estaba **invertido**: lanza al arquero batanio y arco
+   al jinete imperial.
+6. `NeedsGrant` no detectaba ninguno de los 16 rotos de una partida real.
+7. Lores montados en culturas sin caballería.
 
-Ninguno era visible leyendo el código.
+Ninguno era visible leyendo el código. Tres de ellos contradecían razonamientos
+míos que parecían sólidos.
+
+## Método que ha funcionado
+
+Instrumentar antes de decidir. Cuando la lectura del código y el
+comportamiento observado se contradicen, la lectura está mal: medir, no razonar.
+Cada regla de este mod sale de un número del log, no de una intuición.
