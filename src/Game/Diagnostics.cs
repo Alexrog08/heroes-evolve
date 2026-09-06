@@ -724,37 +724,54 @@ namespace HeroLoadoutFixer
         /// Run this on a fresh campaign for the cleanest reference -- every lord
         /// is then authored, undrifted and untouched by this mod.
         /// </summary>
+        /// <summary>
+        /// Heroes above this age are veterans and are not the reference. This
+        /// mod only ever equips lords who came of age with the generation bug,
+        /// so measuring our variety against lords who have been accumulating
+        /// gear and skills for forty years compares the wrong two things.
+        /// </summary>
+        private const float YoungLordAge = 25f;
+
         private static void ReportVariety(int dominanceMargin)
+        {
+            // Whole population first: useful context, and the only sample large
+            // enough per culture to see the game's full range of shapes.
+            RunVariety("VARIETY", dominanceMargin, float.MaxValue, 5);
+
+            // Then the cohort that actually matters. Samples are far smaller, so
+            // the floor drops to three -- below that a distinct-count is noise.
+            RunVariety("YOUNG", dominanceMargin, YoungLordAge, 3);
+        }
+
+        private static void RunVariety(string tag, int dominanceMargin, float maximumAge, int minimumGroup)
         {
             Dictionary<string, Dictionary<string, int>> actual =
                 new Dictionary<string, Dictionary<string, int>>();
             Dictionary<string, Dictionary<string, int>> planned =
                 new Dictionary<string, Dictionary<string, int>>();
 
-            Survey(true, dominanceMargin, actual);
-            Survey(false, dominanceMargin, planned);
+            Survey(true, dominanceMargin, maximumAge, actual);
+            Survey(false, dominanceMargin, maximumAge, planned);
 
             foreach (KeyValuePair<string, Dictionary<string, int>> pair in actual)
             {
                 int heroes = 0;
                 foreach (KeyValuePair<string, int> sig in pair.Value) heroes += sig.Value;
-
-                // Groups of four or fewer cannot say anything about variety.
-                if (heroes < 5) continue;
+                if (heroes < minimumGroup) continue;
 
                 Dictionary<string, int> plannedCounts;
                 planned.TryGetValue(pair.Key, out plannedCounts);
 
-                ModLog.Info("VARIETY " + pair.Key + " n=" + heroes
+                ModLog.Info(tag + " " + pair.Key + " n=" + heroes
                             + " gameDistinct=" + pair.Value.Count
                             + " oursDistinct=" + (plannedCounts == null ? 0 : plannedCounts.Count));
 
-                DumpTop("VARIETY   game", pair.Key, pair.Value);
-                if (plannedCounts != null) DumpTop("VARIETY   ours", pair.Key, plannedCounts);
+                DumpTop(tag + "   game", pair.Key, pair.Value);
+                if (plannedCounts != null) DumpTop(tag + "   ours", pair.Key, plannedCounts);
             }
         }
 
-        private static void Survey(bool actual, int dominanceMargin,
+        private static void Survey(bool actual, int dominanceMargin, float maximumAge,
                                    Dictionary<string, Dictionary<string, int>> into)
         {
             foreach (Hero hero in Hero.AllAliveHeroes)
@@ -763,6 +780,7 @@ namespace HeroLoadoutFixer
                 {
                     if (!HeroFilter.IsEligible(hero)) continue;
                     if (hero.BattleEquipment == null) continue;
+                    if (hero.Age > maximumAge) continue;
 
                     BattleRole role = HeroAdapter.ReadRole(hero);
                     string group = CultureIdOf(hero) + " " + role;
