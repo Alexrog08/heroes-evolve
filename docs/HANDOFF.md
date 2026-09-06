@@ -146,7 +146,8 @@ motor.
 
 ## El motor de compra, verificado en campaña
 
-**316 compras reales, 0 transacciones fallidas.**
+**460 compras reales, 0 transacciones fallidas**, repartidas entre una campaña
+madura y una joven.
 
 **La economía no se resiente.** Dos ensayos independientes desde el mismo guardado
 (se recargó entre medias, así que las lecturas de partida son idénticas al denar):
@@ -174,6 +175,45 @@ una pieza real y la devolvió al estante.
 **El dinero manda en el extremo alto, como se diseñó.** La compra más cara
 registrada fue de 49.031; en la partida joven ningún precio pasó de 7.266 contra
 un límite mediano de 9.138.
+
+### La puerta del dinero, confirmada en una campaña pobre
+
+La misma pregunta en una partida joven, donde ningún clan llega a los 433.000 que
+hacen falta para una pieza de tier 6 al 10%:
+
+| Compras por tier | Laboratorio (rica) | Partida joven |
+|---|---|---|
+| tier 6 | 17 | **0** |
+| tier 5 | 118 | 7 |
+| tier 4 | 133 | 40 |
+| tier 3 | 39 | 49 |
+| tier 2 | 6 | 41 |
+
+**Cero piezas de tier 6 donde nadie puede pagarlas.** Es la progresión entera
+funcionando: la campaña joven viste tier 2-4, la madura llega a tier 6, y la
+diferencia la pone la cartera y no una regla escrita a mano.
+
+El límite muerde de verdad y con suavidad: `boughtCheaperBecauseOfShare` 3,
+`pricedOutByShare` 1-4, y un lord que renunció a una pieza 33.194 más cara. Casi
+nadie se queda sin comprar; bajan a algo más barato, que es lo que se buscaba.
+
+Tampoco drena aquí: **452.238 denares gastados en total** mientras la riqueza de
+los clanes casi se dobla (`CLANGOLD p50` 88.776 a 161.716). El gasto en equipo es
+ruido frente al crecimiento de la economía.
+
+### Munición: el 36% de las compras de una campaña pobre
+
+49 de 137 compras fueron flechas, y **todas** sustituían `default_arrows`. No es
+un fallo: todo arquero empieza con flechas de tier 1, así que la munición es la
+mejora más barata y más universalmente disponible que existe, y con la armadura
+cara fuera de su alcance es lo que un lord pobre puede permitirse. Las
+`bodkin_arrows_a` a tier 4 son además una mejora real y grande.
+
+Anotado sin arreglar: entre ellas se cuelan `stealth_arrow` y `burning_arrows`,
+munición de truco que el juego puntúa a tier 2 y que en combate probablemente sea
+peor que la normal. Distinguirlas exigiría un modelo propio de calidad de arma
+que contradijese el tier del propio juego, y esa es exactamente la clase de
+criterio inventado que este proyecto evita.
 
 ## Lo que hay que seguir vigilando
 
