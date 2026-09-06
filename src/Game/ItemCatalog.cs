@@ -91,8 +91,12 @@ namespace HeroLoadoutFixer
             // the primary usage alone left the two-handed pool at 8 items out of
             // 3500, because every crafted bastard sword files itself as
             // one-handed (see ItemClassifier.AllUsages).
+            // MeetsDifficulty first: it returns immediately for the many items
+            // with no difficulty at all, while Supports allocates an iterator
+            // and walks every usage. Both must pass, so the order is ours to
+            // choose and the cheap test belongs in front.
+            if (!ItemClassifier.MeetsDifficulty(item, skills, category)) return false;
             if (!ItemClassifier.Supports(item, category)) return false;
-            if (!ItemClassifier.MeetsDifficulty(item, skills)) return false;
             if (mounted && !ItemClassifier.IsUsableMounted(item, hero)) return false;
             return true;
         }
@@ -154,18 +158,6 @@ namespace HeroLoadoutFixer
         }
 
         /// <summary>
-        /// The best harness compatible with a specific mount: within the
-        /// tier ceiling, culture-appropriate, and matching the mount's
-        /// family (a harness modelled for a horse cannot dress a camel).
-        /// Confirmed by reflecting the installed TaleWorlds.Core.dll: both
-        /// ItemObject.ArmorComponent.FamilyType and
-        /// ItemObject.HorseComponent.Monster.FamilyType exist exactly as
-        /// named (both System.Int32) -- see the fix report. Like armour,
-        /// a harness has no difficulty gate, so only the common filters and
-        /// the family match apply. Returns null for a null mount or when
-        /// nothing qualifies; callers must tolerate that.
-        /// </summary>
-        /// <summary>
         /// A mount fit to fight from, as opposed to a beast of burden.
         ///
         /// Mules, sumpter horses and pack camels are all ItemTypeEnum.Horse and
@@ -189,6 +181,14 @@ namespace HeroLoadoutFixer
             return horse.IsMount && !horse.IsPackAnimal;
         }
 
+        /// <summary>
+        /// The best harness compatible with a specific mount: within the tier
+        /// ceiling, culture-appropriate, and matching the mount's family (a
+        /// harness modelled for a horse cannot dress a camel). Like armour, a
+        /// harness has no difficulty gate, so only the common filters and the
+        /// family match apply. Returns null for a null mount or when nothing
+        /// qualifies; callers must tolerate that.
+        /// </summary>
         public static ItemObject FindBestHarness(ItemObject mount, CultureObject culture, int maxTier)
         {
             if (mount == null || !mount.HasHorseComponent || mount.HorseComponent.Monster == null) return null;

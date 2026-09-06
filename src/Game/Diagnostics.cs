@@ -865,7 +865,7 @@ namespace HeroLoadoutFixer
             for (int i = 0; i < none.Length; i++) none[i] = WeaponCategory.None;
             SlotSnapshot empty = new SlotSnapshot(none, false, false, false, false, false, false, false);
 
-            bool cultureMounted = HeroAdapter.CultureFieldsMountedElites(hero);
+            bool cultureMounted = CultureProfile.MountsItsLords(culture);
             MountedRangedAvailability availability = ItemCatalog.RangedAvailability(hero, culture, ceiling);
 
             LoadoutTarget target = LoadoutPlanner.PlanTarget(skills, empty, availability,
@@ -1050,7 +1050,7 @@ namespace HeroLoadoutFixer
                     + " culture=" + CultureIdOf(hero)
                     + " wantsMount=" + resolved.WantsMount
                     + " mounted=" + resolved.Mounted
-                    + " cultureMounted=" + resolved.CultureFieldsMountedElites
+                    + " cultureMountsLords=" + resolved.CultureMountsLords
                     + " bowViable=" + resolved.Availability.BowViable
                     + " xbowViable=" + resolved.Availability.CrossbowViable
                     + " plannedWeapons=" + resolved.PlannedWeaponCount
@@ -1138,7 +1138,7 @@ namespace HeroLoadoutFixer
             List<PlannedSlot> plan = LoadoutPlanner.Plan(HeroAdapter.ReadSkills(hero), empty,
                                                          resolved.Availability,
                                                          HeroLoadoutBehavior.DominanceMargin,
-                                                         resolved.CultureFieldsMountedElites,
+                                                         resolved.CultureMountsLords,
                                                          HeroAdapter.ReadRole(hero));
 
             if (plan.Count == 0) return "<none>";

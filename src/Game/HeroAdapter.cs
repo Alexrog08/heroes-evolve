@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.Core;
 using HeroLoadoutFixer.Core;
@@ -115,44 +114,5 @@ namespace HeroLoadoutFixer
             return item != null && item.StringId == GrantService.DummySwordId;
         }
 
-        /// <summary>
-        /// True when the hero's culture fields mounted elite troops, walking the
-        /// elite line's upgrade targets. Works with modded cultures because it
-        /// reads the troop tree rather than hardcoding faction names.
-        /// </summary>
-        public static bool CultureFieldsMountedElites(Hero hero)
-        {
-            if (hero == null) return false;
-
-            CultureObject culture = hero.Culture;
-            if (culture == null && hero.Clan != null) culture = hero.Clan.Culture;
-            if (culture == null) return false;
-
-            CharacterObject troop = culture.EliteBasicTroop;
-            int guard = 0;
-
-            while (troop != null && guard < 8)
-            {
-                guard++;
-
-                // BattleEquipments is IEnumerable<Equipment> in v1.4.8, not
-                // MBReadOnlyList<Equipment> -- confirmed by reflecting the
-                // installed TaleWorlds.Core.dll rather than assuming.
-                IEnumerable<Equipment> sets = troop.BattleEquipments;
-                if (sets != null)
-                {
-                    foreach (Equipment set in sets)
-                    {
-                        if (set != null && set[EquipmentIndex.Horse].Item != null) return true;
-                    }
-                }
-
-                CharacterObject[] upgrades = troop.UpgradeTargets;
-                if (upgrades == null || upgrades.Length == 0) break;
-                troop = upgrades[upgrades.Length - 1];
-            }
-
-            return false;
-        }
     }
 }

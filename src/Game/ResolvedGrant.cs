@@ -21,7 +21,7 @@ namespace HeroLoadoutFixer
         public int ClanTier;
         public int MaxCombatSkill;
         public int Ceiling;
-        public bool CultureFieldsMountedElites;
+        public bool CultureMountsLords;
 
         /// <summary>The role the game assigned, as text.</summary>
         public string Role;
@@ -31,7 +31,6 @@ namespace HeroLoadoutFixer
         public bool Mounted;
 
         public MountedRangedAvailability Availability;
-        public CultureObject Culture;
 
         /// <summary>How many weapon placements the planner produced.</summary>
         public int PlannedWeaponCount;

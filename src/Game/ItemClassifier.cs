@@ -186,16 +186,43 @@ namespace HeroLoadoutFixer
             return false;
         }
 
-        /// <summary>The skill that gates using this item at all, via its difficulty.</summary>
+        /// <summary>
+        /// The skill that gates using this item at all, via its difficulty,
+        /// where the caller has no particular category in mind (armour, mounts).
+        /// </summary>
         public static bool MeetsDifficulty(ItemObject item, SkillProfile skills)
+        {
+            return MeetsDifficulty(item, skills, WeaponCategory.None);
+        }
+
+        /// <summary>
+        /// As above, but gated on the skill for the category actually being
+        /// requested.
+        ///
+        /// Deriving the skill from Classify(item) reads the item's PRIMARY
+        /// usage, and that is wrong for anything wieldable more than one way: a
+        /// bastard sword classifies as OneHandedSword, so a hero asking for a
+        /// two-hander had the item gated on his One Handed skill instead of his
+        /// Two Handed one. A hero strong in one and weak in the other was
+        /// denied, or allowed, on the wrong number. This is the same mistake
+        /// already fixed in Supports, which survived next door.
+        ///
+        /// Passing None keeps the old behaviour, which is what armour and mounts
+        /// want -- neither belongs to a weapon category, and Horse routes to
+        /// Riding explicitly below.
+        /// </summary>
+        public static bool MeetsDifficulty(ItemObject item, SkillProfile skills, WeaponCategory requested)
         {
             if (item == null) return false;
             if (item.Difficulty <= 0f) return true;
 
-            WeaponCategory category = Classify(item);
-            SkillKind skill = LoadoutPlanner.SkillForCategory(category);
+            if (item.ItemType == ItemObject.ItemTypeEnum.Horse)
+            {
+                return skills.Get(SkillKind.Riding) >= (int)item.Difficulty;
+            }
 
-            if (item.ItemType == ItemObject.ItemTypeEnum.Horse) skill = SkillKind.Riding;
+            WeaponCategory category = requested == WeaponCategory.None ? Classify(item) : requested;
+            SkillKind skill = LoadoutPlanner.SkillForCategory(category);
 
             return skills.Get(skill) >= (int)item.Difficulty;
         }

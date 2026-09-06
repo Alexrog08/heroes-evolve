@@ -97,7 +97,18 @@ namespace HeroLoadoutFixer
             CultureObject culture = hero.Culture;
             if (culture == null && hero.Clan != null) culture = hero.Clan.Culture;
 
-            bool cultureMounted = HeroAdapter.CultureFieldsMountedElites(hero);
+            // One question, one answer: does this culture put its lords on
+            // horses. It decides both the dismount below and the fallback for a
+            // hero carrying no usable role label.
+            //
+            // This used to be HeroAdapter.CultureMountsLords, which
+            // walked a single upgrade branch of the elite line and so returned
+            // whatever that one path happened to hold -- it reported False for
+            // nord even though nord's elite line, borrowed wholesale from
+            // Sturgia, is mounted. It also cost a troop-tree walk on every
+            // resolve to feed a value only an Unset role ever reads.
+            bool cultureMounted = CultureProfile.MountsItsLords(culture);
+
             BattleRole role = HeroAdapter.ReadRole(hero);
 
             // A culture that does not put its lords on horses does not get one
@@ -107,7 +118,7 @@ namespace HeroLoadoutFixer
             // and Nord fields no cavalry for such a lord to lead. Only the mount
             // is dropped; the weapon archetype is untouched, since Cavalry and
             // Infantry build the same melee target.
-            if (!CultureProfile.MountsItsLords(culture)) role = BattleRoleRules.Dismounted(role);
+            if (!cultureMounted) role = BattleRoleRules.Dismounted(role);
             MountedRangedAvailability availability = ItemCatalog.RangedAvailability(hero, culture, ceiling);
 
             // PlanTarget is called here as well as inside Plan (which calls it
@@ -137,12 +148,11 @@ namespace HeroLoadoutFixer
             resolved.ClanTier = clanTier;
             resolved.MaxCombatSkill = skills.MaxCombatSkill;
             resolved.Ceiling = ceiling;
-            resolved.CultureFieldsMountedElites = cultureMounted;
+            resolved.CultureMountsLords = cultureMounted;
             resolved.Role = role.ToString();
             resolved.WantsMount = target.WantsMount;
             resolved.Mounted = mounted;
             resolved.Availability = availability;
-            resolved.Culture = culture;
             resolved.PlannedWeaponCount = plan.Count;
             resolved.TargetWeapons = Join(target.Weapons);
             resolved.CurrentWeapons = Describe(current);
@@ -188,11 +198,16 @@ namespace HeroLoadoutFixer
             return granted;
         }
 
-        public static void Grant(Hero hero, float clanWeight, float skillWeight,
-                                 int minimumTier, int dominanceMargin)
+        /// <summary>
+        /// Repairs the hero and returns how many slots were filled. Zero means
+        /// the catalogue had nothing this hero could be given -- see
+        /// HeroLoadoutBehavior.TryRepair, which uses that to stop retrying.
+        /// </summary>
+        public static int Grant(Hero hero, float clanWeight, float skillWeight,
+                                int minimumTier, int dominanceMargin)
         {
             ResolvedGrant resolved = Resolve(hero, clanWeight, skillWeight, minimumTier, dominanceMargin);
-            if (resolved == null) return;
+            if (resolved == null) return 0;
 
             int granted = Apply(hero, resolved);
 
@@ -200,6 +215,8 @@ namespace HeroLoadoutFixer
                         + " id=" + (hero.CharacterObject != null ? hero.CharacterObject.StringId : "?")
                         + " tier=" + resolved.Ceiling
                         + " planned=" + resolved.PlannedWeaponCount + " granted=" + granted);
+
+            return granted;
         }
 
         /// <summary>

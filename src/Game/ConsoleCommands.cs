@@ -44,7 +44,8 @@ namespace HeroLoadoutFixer
         /// Reproduces the vanilla come-of-age failure on a named hero and then
         /// runs the real repair over it. This MODIFIES the hero: strips every
         /// weapon, armour and mount slot, leaves the dummy spatha vanilla would
-        /// have left, and calls the same GrantService.Grant the daily tick uses.
+        /// have left, and runs the same GrantService.Resolve/Apply pair the daily
+        /// tick uses, logging the plan slot by slot on the way through.
         /// Meant for a throwaway save.
         /// </summary>
         [CommandLineFunctionality.CommandLineArgumentFunction("test_repair", "hlf")]

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using TaleWorlds.CampaignSystem;
 
 namespace HeroLoadoutFixer
@@ -40,33 +41,46 @@ namespace HeroLoadoutFixer
             // heroes one in-game day later instead, which actually works, so
             // the dead subscription is removed rather than fought.
             CampaignEvents.DailyTickHeroEvent.AddNonSerializedListener(this, OnDailyTickHero);
-            CampaignEvents.DailyTickEvent.AddNonSerializedListener(this, OnDailyTick);
-        }
 
-        /// <summary>
-        /// Runs the diagnostic census exactly once per session, on the first
-        /// daily tick rather than at load: by the time a day ticks, every
-        /// campaign object and the item catalogue are fully initialised.
-        /// </summary>
-        private bool _censusDone;
-
-        private void OnDailyTick()
-        {
-            if (_censusDone) return;
-            _censusDone = true;
-
-            try
-            {
-                Diagnostics.RunCensus(ClanWeight, SkillWeight, MinimumTier, DominanceMargin);
-            }
-            catch (System.Exception ex)
-            {
-                ModLog.Error("census failed: " + ex.GetType().Name + " " + ex.Message);
-            }
+            // Deliberately NOT subscribed to DailyTickEvent to run the census.
+            // Measured at 480ms on a 600-lord campaign -- two thousand seven
+            // hundred full sweeps of a 3500-item catalogue -- and it changes
+            // nothing in the game. Half a second of freeze on the first day of
+            // every load, to write a log file nobody is reading at the time, is
+            // not a trade worth making. "hlf.census" runs it on demand.
         }
 
         /// <summary>Nothing is stored in the save. Deliberately empty.</summary>
         public override void SyncData(IDataStore dataStore) { }
+
+        /// <summary>
+        /// Heroes a repair could not help. NeedsGrant asks whether a hero looks
+        /// wrong; it cannot know whether anything can be done about it, and the
+        /// two disagree in real cases. A lord whose ceiling is tier 1 and whose
+        /// body armour is tier 1 is reported broken -- tier 1 is the civilian
+        /// clothing the bug leaves -- while the armour pass refuses to swap one
+        /// tier-1 robe for another, so nothing changes. Likewise a hero whose
+        /// culture and tier leave the catalogue with nothing to offer.
+        ///
+        /// Without this, such a hero is re-resolved every single in-game day for
+        /// the rest of the campaign: thirteen full sweeps of a 3500-item
+        /// catalogue, daily, to achieve nothing, and a REPAIR line in the log
+        /// each time. Recording the failure and not trying again is the general
+        /// fix; special-casing the armour tier would leave every other
+        /// unsatisfiable combination looping.
+        ///
+        /// Not serialised: a fresh attempt on the next load is harmless and
+        /// costs one resolve, and the alternative is save data this mod has so
+        /// far avoided entirely.
+        /// </summary>
+        private readonly HashSet<string> _beyondRepair = new HashSet<string>();
+
+        private static string IdOf(Hero hero)
+        {
+            return hero.CharacterObject != null && hero.CharacterObject.StringId != null
+                ? hero.CharacterObject.StringId
+                : hero.StringId;
+        }
 
         private void OnDailyTickHero(Hero hero)
         {
@@ -80,9 +94,20 @@ namespace HeroLoadoutFixer
                 if (!HeroFilter.IsEligible(hero)) return;
                 if (!GrantService.NeedsGrant(hero)) return;
 
+                string id = IdOf(hero);
+                if (id != null && _beyondRepair.Contains(id)) return;
+
                 ModLog.Info("REPAIR hero=" + hero.Name + " reason=" + reason);
-                GrantService.Grant(hero, ClanWeight, SkillWeight, MinimumTier, DominanceMargin);
+                int granted = GrantService.Grant(hero, ClanWeight, SkillWeight,
+                                                 MinimumTier, DominanceMargin);
                 Diagnostics.NoteRepair();
+
+                if (granted == 0 && id != null)
+                {
+                    _beyondRepair.Add(id);
+                    ModLog.Info("GIVEUP hero=" + hero.Name + " id=" + id
+                                + " (nothing could be granted; not retried this session)");
+                }
             }
             catch (System.Exception ex)
             {
