@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.Core;
 using TaleWorlds.Library;
@@ -56,6 +57,143 @@ namespace HeroLoadoutFixer
             }
 
             return best;
+        }
+
+        /// <summary>
+        /// An item for the free repair: one of those acceptable in the grant
+        /// band, not the best in the catalogue.
+        ///
+        /// FindBest exists to answer "what is the finest thing this lord could
+        /// own", which is the right question for a purchase cap and the wrong
+        /// one for clothing a naked noble. Granting the best left the purchase
+        /// engine nothing to sell, and issued every lord of a culture and tier
+        /// the identical sword because the scan is deterministic.
+        ///
+        /// Falls back to FindBest when the band is empty. A culture with nothing
+        /// at tier 2 or 3 should still dress its lords.
+        /// </summary>
+        public static ItemObject FindForGrant(WeaponCategory category, CultureObject culture,
+                                              int ceiling, SkillProfile skills, Hero hero, bool mounted,
+                                              WeaponCategory avoidAlsoServing, string slotKey)
+        {
+            if (category == WeaponCategory.None) return null;
+
+            int lowest, highest;
+            GrantTier.Band(ceiling, out lowest, out highest);
+
+            List<ItemObject> candidates = new List<ItemObject>();
+
+            MBReadOnlyList<ItemObject> all = MBObjectManager.Instance.GetObjectTypeList<ItemObject>();
+            for (int i = 0; i < all.Count; i++)
+            {
+                ItemObject item = all[i];
+                if (!IsEligible(item, category, culture, highest, skills, hero, mounted)) continue;
+                if ((int)item.Tier + 1 < lowest) continue;
+                if (avoidAlsoServing != WeaponCategory.None
+                    && ItemClassifier.AlsoServesTwoHanded(item, avoidAlsoServing)) continue;
+
+                candidates.Add(item);
+            }
+
+            if (candidates.Count == 0)
+            {
+                return FindBest(category, culture, ceiling, skills, hero, mounted, avoidAlsoServing);
+            }
+
+            return candidates[GrantTier.Choose(HeroIdOf(hero), slotKey, candidates.Count)];
+        }
+
+        /// <summary>Armour for the free repair, chosen the same way.</summary>
+        public static ItemObject FindArmorForGrant(ItemObject.ItemTypeEnum wanted, CultureObject culture,
+                                                   int ceiling, Hero hero, string slotKey)
+        {
+            int lowest, highest;
+            GrantTier.Band(ceiling, out lowest, out highest);
+
+            List<ItemObject> candidates = new List<ItemObject>();
+
+            MBReadOnlyList<ItemObject> all = MBObjectManager.Instance.GetObjectTypeList<ItemObject>();
+            for (int i = 0; i < all.Count; i++)
+            {
+                ItemObject item = all[i];
+                if (item == null || item.ItemType != wanted) continue;
+                if (!PassesCommonFilters(item, culture, highest)) continue;
+                if ((int)item.Tier + 1 < lowest) continue;
+
+                candidates.Add(item);
+            }
+
+            if (candidates.Count == 0) return FindBestArmor(wanted, culture, ceiling);
+
+            return candidates[GrantTier.Choose(HeroIdOf(hero), slotKey, candidates.Count)];
+        }
+
+        /// <summary>
+        /// A mount for the free repair, chosen the same way.
+        ///
+        /// This matters more than the weapon: a top-tier warhorse is among the
+        /// costliest things in the game, so granting the best undoes T0 through
+        /// the one slot it did not cover. The difficulty gate stays -- every war
+        /// mount asks Riding 10, band or no band.
+        /// </summary>
+        public static ItemObject FindMountForGrant(CultureObject culture, int ceiling,
+                                                   SkillProfile skills, Hero hero, string slotKey)
+        {
+            int lowest, highest;
+            GrantTier.Band(ceiling, out lowest, out highest);
+
+            List<ItemObject> candidates = new List<ItemObject>();
+
+            MBReadOnlyList<ItemObject> all = MBObjectManager.Instance.GetObjectTypeList<ItemObject>();
+            for (int i = 0; i < all.Count; i++)
+            {
+                ItemObject item = all[i];
+                if (item == null || item.ItemType != ItemObject.ItemTypeEnum.Horse) continue;
+                if (!IsWarMount(item)) continue;
+                if (!PassesCommonFilters(item, culture, highest)) continue;
+                if ((int)item.Tier + 1 < lowest) continue;
+                if (!ItemClassifier.MeetsDifficulty(item, skills)) continue;
+
+                candidates.Add(item);
+            }
+
+            if (candidates.Count == 0) return FindBestMount(culture, ceiling, skills);
+
+            return candidates[GrantTier.Choose(HeroIdOf(hero), slotKey, candidates.Count)];
+        }
+
+        /// <summary>A harness for the free repair, matching the granted mount.</summary>
+        public static ItemObject FindHarnessForGrant(ItemObject mount, CultureObject culture,
+                                                     int ceiling, Hero hero, string slotKey)
+        {
+            if (mount == null || !mount.HasHorseComponent || mount.HorseComponent.Monster == null) return null;
+            int mountFamily = mount.HorseComponent.Monster.FamilyType;
+
+            int lowest, highest;
+            GrantTier.Band(ceiling, out lowest, out highest);
+
+            List<ItemObject> candidates = new List<ItemObject>();
+
+            MBReadOnlyList<ItemObject> all = MBObjectManager.Instance.GetObjectTypeList<ItemObject>();
+            for (int i = 0; i < all.Count; i++)
+            {
+                ItemObject item = all[i];
+                if (item == null || item.ItemType != ItemObject.ItemTypeEnum.HorseHarness) continue;
+                if (!item.HasArmorComponent || item.ArmorComponent.FamilyType != mountFamily) continue;
+                if (!PassesCommonFilters(item, culture, highest)) continue;
+                if ((int)item.Tier + 1 < lowest) continue;
+
+                candidates.Add(item);
+            }
+
+            if (candidates.Count == 0) return FindBestHarness(mount, culture, ceiling);
+
+            return candidates[GrantTier.Choose(HeroIdOf(hero), slotKey, candidates.Count)];
+        }
+
+        private static string HeroIdOf(Hero hero)
+        {
+            return hero == null ? null : hero.StringId;
         }
 
         /// <summary>

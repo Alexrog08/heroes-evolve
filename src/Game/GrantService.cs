@@ -174,8 +174,9 @@ namespace HeroLoadoutFixer
                 entry.Want = slot.Category.ToString();
                 entry.Slot = index;
                 entry.Existing = NameOf(hero.BattleEquipment[index].Item);
-                entry.Item = ItemCatalog.FindBest(slot.Category, culture, ceiling, skills, hero, mounted,
-                                                  RedundantTwoHander(slot.Category, current, plan));
+                entry.Item = ItemCatalog.FindForGrant(slot.Category, culture, ceiling, skills, hero, mounted,
+                                                      RedundantTwoHander(slot.Category, current, plan),
+                                                      entry.Label);
                 resolved.Slots.Add(entry);
             }
 
@@ -260,7 +261,7 @@ namespace HeroLoadoutFixer
                 return;
             }
 
-            ItemObject mount = ItemCatalog.FindBestMount(culture, ceiling, skills);
+            ItemObject mount = ItemCatalog.FindMountForGrant(culture, ceiling, skills, hero, horse.Label);
             horse.Item = mount;
             resolved.Slots.Add(horse);
 
@@ -278,7 +279,7 @@ namespace HeroLoadoutFixer
             }
             else
             {
-                harness.Item = ItemCatalog.FindBestHarness(mount, culture, ceiling);
+                harness.Item = ItemCatalog.FindHarnessForGrant(mount, culture, ceiling, hero, harness.Label);
             }
 
             resolved.Slots.Add(harness);
@@ -310,7 +311,8 @@ namespace HeroLoadoutFixer
                 }
                 else
                 {
-                    entry.Item = ItemCatalog.FindBestArmor(ArmorTypeFor(slot), culture, ceiling);
+                    entry.Item = ItemCatalog.FindArmorForGrant(ArmorTypeFor(slot), culture, ceiling,
+                                                                hero, entry.Label);
                 }
 
                 resolved.Slots.Add(entry);

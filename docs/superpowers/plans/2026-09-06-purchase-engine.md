@@ -21,16 +21,23 @@ el `ItemRoster` de la ciudad concreta. Si se reutiliza el escaneo global, dos
 lores de la misma cultura y techo compran la idéntica espada y se pierde la
 variedad que justifica todo el motor.
 
-## Prerrequisito bloqueante
+## Prerrequisito bloqueante — HECHO
 
 **T0. La concesión gratuita debe dar equipo básico, no el mejor del techo.**
 
-Hoy `GrantService` concede el mejor ítem dentro del techo. Para un lord de techo 6
-eso es un equipo de ~476.000 denares regalado, y **el motor de compra se queda sin
-nada que hacer**. Sortear entre tier 2 y 3 dentro de la cultura, que el censo
-mostró que es equipo militar de verdad y no ropa de civil.
+`GrantService` concedía el mejor ítem dentro del techo. Para un lord de techo 6
+eso es un equipo de ~476.000 denares regalado, y **el motor de compra se quedaba
+sin nada que hacer**.
 
-Sin esto, la fase 2 no tiene efecto observable en los héroes reparados.
+Implementado en `Core/GrantTier`: banda tier 2-3 acotada por el techo, y sorteo
+estable derivado de `heroId + ranura` vía FNV-1a. Cubre armas, armadura,
+**montura y guarnición** — la montura es la pieza más cara, y dejarla en
+`FindBest` habría abierto por la puerta de al lado el agujero que T0 cierra.
+Cuando la banda sale vacía cae a `FindBest`: una cultura sin nada en tier 2-3
+debe seguir vistiendo a sus lores.
+
+Efecto secundario buscado: dos lores de la misma cultura y techo ya no reciben la
+idéntica espada.
 
 ## Tareas
 

@@ -1,7 +1,7 @@
 # Estado
 
 Rama: `feat/diagnostics` (sale de `feat/core-and-grant`, que sale de `master`).
-Nada fusionado. 352 tests del núcleo en verde, build desplegado, API verificada
+Nada fusionado. 373 tests del núcleo en verde, build desplegado, API verificada
 contra v1.4.8 con control negativo.
 
 Dos sistemas terminados y verificados en campaña: **reparación de equipo** y
@@ -25,6 +25,14 @@ El arquetipo sale de tres cosas, en este orden:
 3. **`DefaultFormationClass`** como respaldo cuando no hay skill que leer.
 
 Nunca quita equipo puesto salvo la ropa de civil, que es el bug.
+
+**Lo que concede es equipo basico, no el mejor de su techo.** Sortea entre tier
+2 y 3 dentro de la cultura, con el sorteo derivado del id del heroe y de la
+ranura: estable entre cargas, distinto entre lores. El techo es un limite de
+*compra*; la reparacion solo tiene que vestir a un noble desnudo. Si concediera
+el tope, un lord de techo 6 recibiria 476.000 denares de regalo y el motor de
+compra se quedaria sin nada que hacer. Vale igual para la montura, que es la
+pieza mas cara de todas.
 
 ### Desarrollar skills
 
@@ -95,17 +103,16 @@ No volver a plantearlo sin datos nuevos.
 
 ## Decisiones tomadas y NO implementadas
 
-1. **La concesión debe dar equipo básico, no el mejor del techo.** Si la fase 1
-   regala el tope, la fase 2 se queda sin nada que hacer. Sortear entre tier 2 y
-   3. Tier 1 descartado: es literalmente la ropa de civil del bug.
-2. **Separar maza de una y de dos manos** en el enum del núcleo.
-3. **Battania deriva y se deja derivar** (decisión del usuario). Solo se corrige
+1. **Separar maza de una y de dos manos** en el enum del núcleo.
+2. **Battania deriva y se deja derivar** (decisión del usuario). Solo se corrige
    la montura, no el rol de arma.
-4. **La variedad de objeto la da el mercado.** Condición: el motor de compra debe
-   mirar el inventario de la ciudad concreta, no el catálogo global. Hoy
-   `FindBest` escanea el catálogo entero y devuelve el primero del tier más alto,
-   así que dos lores de la misma cultura y techo reciben la idéntica espada.
-5. **El foco de un roto puede ser arbitrario.** `GetNextSkillToAddFocus` elige por
+3. **La variedad de objeto la da el mercado.** Condición: el motor de compra debe
+   mirar el inventario de la ciudad concreta, no el catálogo global. `FindBest`
+   escanea el catálogo entero y devuelve el primero del tier más alto, así que
+   dos lores de la misma cultura y techo comprarían la idéntica espada. La
+   concesión ya no tiene ese problema —sortea dentro de la banda— pero la compra
+   sí lo tendría si reutilizase el escaneo global.
+4. **El foco de un roto puede ser arbitrario.** `GetNextSkillToAddFocus` elige por
    límite de aprendizaje, y con las skills a cero eso es casi azar. Si aparecen
    reparados con especialidades absurdas, habría que sembrar también un reparto
    de foco coherente con su arquetipo.

@@ -54,6 +54,7 @@ namespace HeroLoadoutFixer.Tests
             TalentTests.RunAll();
             SkillGrowthTests.RunAll();
             FocusGrowthTests.RunAll();
+            GrantTierTests.RunAll();
 
             Console.WriteLine();
             Console.WriteLine(Check.Passes + " passed, " + Check.Failures + " failed");
