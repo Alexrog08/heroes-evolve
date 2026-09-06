@@ -69,6 +69,7 @@ namespace HeroLoadoutFixer
             ReportAttributes();
             ReportTalentSpread();
             ReportAllSkills();
+            ReportGaps();
             List<Hero> broken = ReportHeroes();
             ReportDryRuns(broken, clanWeight, skillWeight, minimumTier, dominanceMargin);
             ModLog.Info("===== CENSUS END =====");
@@ -1402,6 +1403,58 @@ namespace HeroLoadoutFixer
                             + " | focus " + (fs == null ? "n=0" : Percentiles(fs))
                             + " | lordsWithFocus=" + withFocus + " (" + pct + "%)");
             }
+        }
+
+        /// <summary>
+        /// How many lords the growth system currently has anything to do, and
+        /// how far behind they are.
+        ///
+        /// A year of live campaign moved nothing at all, and there are two
+        /// entirely different reasons that could happen: the system is broken,
+        /// or there is nobody below their target to lift. Percentiles of skill
+        /// cannot tell those apart. This can.
+        ///
+        /// It turned out to be the second -- in a fresh campaign TaleWorlds'
+        /// authored lords sit at 175 to 200 against a target of 170, so the
+        /// system correctly does nothing -- but that was a guess until it was
+        /// counted, and the next time it will not be.
+        /// </summary>
+        private static void ReportGaps()
+        {
+            List<int> gaps = new List<int>();
+            int behind = 0, atOrAbove = 0;
+            int behindByTen = 0, behindByFifty = 0;
+
+            foreach (Hero hero in Hero.AllAliveHeroes)
+            {
+                try
+                {
+                    if (!HeroFilter.IsEligible(hero)) continue;
+                    if (hero.BattleEquipment == null) continue;
+
+                    float talent = Talent.For(hero.StringId, Talent.Combat);
+                    int target = SkillGrowth.PrimaryTarget(hero.Age, talent);
+                    if (target <= 0) continue;
+
+                    int best = HeroAdapter.ReadSkills(hero).MaxCombatSkill;
+                    int gap = target - best;
+
+                    if (gap <= 0) { atOrAbove++; continue; }
+
+                    behind++;
+                    gaps.Add(gap);
+                    if (gap >= 10) behindByTen++;
+                    if (gap >= 50) behindByFifty++;
+                }
+                catch
+                {
+                    // One unreadable hero must not cost the count.
+                }
+            }
+
+            ModLog.Info("GAP combat behind=" + behind + " atOrAbove=" + atOrAbove
+                        + " behindBy10+=" + behindByTen + " behindBy50+=" + behindByFifty);
+            ModLog.Info("GAP combat sizes " + Percentiles(gaps));
         }
 
         private static string DescribeSlots(Hero hero)
