@@ -13,8 +13,13 @@ namespace HeroLoadoutFixer
     /// </summary>
     public class HeroLoadoutBehavior : CampaignBehaviorBase
     {
-        // Defaults from the design spec, section 6 and 11.
-        internal const float ClanWeight = 0.5f;
+        // Defaults from the design spec, section 6 and 11, except ClanWeight.
+        //
+        // Clan standing is worth nothing as a predictor of a lord's gear and
+        // stops separating anything by midgame, measured across a young and a
+        // mature campaign -- see TierCeiling. A clan's wealth still decides how
+        // good its lords get, through BudgetService, where a purse belongs.
+        internal const float ClanWeight = 0.0f;
         internal const float SkillWeight = 1.0f;
         internal const int MinimumTier = 1;
         internal const int DominanceMargin = 30;
