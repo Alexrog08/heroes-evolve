@@ -1210,16 +1210,25 @@ namespace HeroLoadoutFixer
                 try
                 {
                     if (hero == null || hero.IsDead) continue;
-                    if (hero.Age > 25f) continue;
                     if (hero == Hero.MainHero) continue;
 
-                    // Lords only. The first cut of this compared the player's
-                    // children against every hero under twenty-five --
-                    // wanderers, notables and villagers included -- which
-                    // dragged the comparison group down and flattered the
-                    // clan. Templates are excluded for the usual reason.
+                    // Adult lords between eighteen and twenty-five, and nothing
+                    // else. This comparison has now been wrong twice, both times
+                    // by admitting a population that does not belong: first every
+                    // hero under twenty-five, wanderers and notables included,
+                    // and then every noble CHILD, who has no attributes assigned
+                    // yet and reads as six -- one per attribute, the floor. In a
+                    // fresh campaign that put nearly four hundred heroes in a
+                    // bucket lords.xml only has three hundred and ninety-one
+                    // entries for in total, and drove the median to the minimum.
+                    //
+                    // The window is narrow on purpose: old enough to have
+                    // attributes, young enough that the player cannot have spent
+                    // points on them.
                     if (hero.IsTemplate) continue;
+                    if (hero.IsChild) continue;
                     if (!hero.IsLord) continue;
+                    if (hero.Age < 18f || hero.Age > 25f) continue;
 
                     int total = 0;
                     StringBuilder detail = new StringBuilder();
@@ -1249,8 +1258,8 @@ namespace HeroLoadoutFixer
                 }
             }
 
-            ModLog.Info("ATTR playerClan under25 " + Percentiles(clanTotals));
-            ModLog.Info("ATTR otherLords under25 " + Percentiles(otherTotals));
+            ModLog.Info("ATTR playerClan adults18to25 " + Percentiles(clanTotals));
+            ModLog.Info("ATTR otherLords adults18to25 " + Percentiles(otherTotals));
         }
 
         /// <summary>
