@@ -25,7 +25,7 @@ namespace HeroLoadoutFixer
         /// and the current heir with Riding 236 against One Handed 167, so a
         /// lord's legs or his horse are worth about as much as his weapon.
         /// </summary>
-        private const int MovementRank = 1;
+        internal const int MovementRank = 1;
 
         public static void GrowWeekly(Hero hero)
         {
@@ -79,7 +79,7 @@ namespace HeroLoadoutFixer
         /// consuming a rank -- a lord carrying bow, arrows, sword and shield
         /// trains two skills, not four.
         /// </summary>
-        private static List<SkillObject> RankedWeaponSkills(Hero hero)
+        internal static List<SkillObject> RankedWeaponSkills(Hero hero)
         {
             List<SkillObject> ranked = new List<SkillObject>();
 

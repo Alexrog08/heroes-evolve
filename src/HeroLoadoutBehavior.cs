@@ -139,6 +139,20 @@ namespace HeroLoadoutFixer
                 // changed nothing is not one.
                 if (granted > 0) Diagnostics.NoteRepair();
 
+                if (granted > 0)
+                {
+                    // Skills as well as kit. The failure that leaves a hero
+                    // without weapons leaves him without skills too, and a
+                    // well-dressed lord with zero in everything is still useless
+                    // and still capped at tier 1 for life.
+                    int seeded = SkillSeeding.Seed(hero);
+                    if (seeded > 0)
+                    {
+                        ModLog.Info("SEED hero=" + hero.Name + " skills=" + seeded
+                                    + " talent=" + (int)(Core.Talent.For(hero.StringId) * 100));
+                    }
+                }
+
                 if (granted == 0 && id != null)
                 {
                     _beyondRepair.Add(id);
