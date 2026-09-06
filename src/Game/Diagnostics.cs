@@ -62,6 +62,7 @@ namespace HeroLoadoutFixer
             ReportCohorts();
             CultureProfile.Report();
             ReportVariety(dominanceMargin);
+            ReportDefectRate();
             List<Hero> broken = ReportHeroes();
             ReportDryRuns(broken, clanWeight, skillWeight, minimumTier, dominanceMargin);
             ModLog.Info("===== CENSUS END =====");
@@ -895,6 +896,97 @@ namespace HeroLoadoutFixer
             }
             if (mounted) text.Append("+horse");
             return text.ToString();
+        }
+
+        /// <summary>
+        /// How many campaign-born lords the game generated badly, per culture.
+        ///
+        /// This sets the ceiling on any population built out of repaired heroes.
+        /// The equipment symptom is the narrow measure -- sixteen lords in the
+        /// lab save, three percent of those born in play -- but the underlying
+        /// failure showed itself in the skills: the broken heroes had one combat
+        /// skill or none at all, while healthy ones carried a spread of six.
+        /// A hero generated with no skills but two weapons passes NeedsGrant and
+        /// is invisible to it, so the true defect rate can only be higher than
+        /// the repair rate, and by how much is the number this reports.
+        ///
+        /// Counts campaign-born lords only. Those present at the start were
+        /// authored by hand and are not generated at all.
+        /// </summary>
+        private static void ReportDefectRate()
+        {
+            double latestAuthoredBirthYear = double.MinValue;
+            foreach (Hero probe in Hero.AllAliveHeroes)
+            {
+                try
+                {
+                    if (probe == null || probe.CharacterObject == null) continue;
+                    if (probe.CharacterObject.StringId == null) continue;
+                    if (!probe.CharacterObject.StringId.StartsWith("lord_")) continue;
+
+                    double born = probe.BirthDay.ToYears;
+                    if (born > latestAuthoredBirthYear) latestAuthoredBirthYear = born;
+                }
+                catch
+                {
+                    // The marker only needs the bulk of the authored roster.
+                }
+            }
+            if (latestAuthoredBirthYear <= double.MinValue) return;
+
+            Dictionary<string, int> bornPerCulture = new Dictionary<string, int>();
+            Dictionary<string, int> noSkills = new Dictionary<string, int>();
+            Dictionary<string, int> oneSkill = new Dictionary<string, int>();
+            Dictionary<string, int> brokenKit = new Dictionary<string, int>();
+
+            foreach (Hero hero in Hero.AllAliveHeroes)
+            {
+                try
+                {
+                    if (!HeroFilter.IsEligible(hero)) continue;
+                    if (hero.BirthDay.ToYears <= latestAuthoredBirthYear) continue;
+
+                    string culture = CultureIdOf(hero);
+                    Bump(bornPerCulture, culture);
+
+                    SkillProfile skills = HeroAdapter.ReadSkills(hero);
+
+                    // The six weapon skills; Riding is excluded, as everywhere.
+                    int nonZero = 0;
+                    for (int i = 0; i < 6; i++)
+                    {
+                        if (skills.Get((SkillKind)i) > 0) nonZero++;
+                    }
+
+                    if (nonZero == 0) Bump(noSkills, culture);
+                    else if (nonZero == 1) Bump(oneSkill, culture);
+
+                    if (GrantService.NeedsGrant(hero)) Bump(brokenKit, culture);
+                }
+                catch
+                {
+                    // One unreadable hero must not cost the rate.
+                }
+            }
+
+            foreach (KeyValuePair<string, int> pair in bornPerCulture)
+            {
+                int zero, one, kit;
+                noSkills.TryGetValue(pair.Key, out zero);
+                oneSkill.TryGetValue(pair.Key, out one);
+                brokenKit.TryGetValue(pair.Key, out kit);
+
+                int degenerate = zero + one;
+                int pct = pair.Value == 0 ? 0 : (degenerate * 100) / pair.Value;
+                int kitPct = pair.Value == 0 ? 0 : (kit * 100) / pair.Value;
+
+                ModLog.Info("DEFECT " + pair.Key
+                            + " bornInPlay=" + pair.Value
+                            + " zeroSkills=" + zero
+                            + " oneSkillOnly=" + one
+                            + " degenerate=" + degenerate + " (" + pct + "%)"
+                            + " brokenKit=" + kit + " (" + kitPct + "%)");
+            }
         }
 
         private static string DescribeSlots(Hero hero)
