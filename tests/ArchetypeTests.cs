@@ -84,9 +84,18 @@ namespace HeroLoadoutFixer.Tests
             Check.True(t7.WantsMount, "high Riding wants a mount");
             Check.False(t8.WantsMount, "low Riding does not want a mount");
 
-            // Mount is also wanted when the culture fields mounted elites.
-            LoadoutTarget t10 = LoadoutPlanner.PlanTarget(infantry, Naked(false), all, 30, true);
+            // Mount is also wanted when the culture fields mounted elites --
+            // provided the hero can actually ride. The `infantry` fixture has
+            // Riding 0, which is below every war horse in the game, so culture
+            // alone no longer puts him on one; this fixture is him with just
+            // enough riding to be carried.
+            SkillProfile infantryWhoRides = new SkillProfile(220, 40, 60, 20, 0, 100,
+                                                             LoadoutPlanner.MinimumRidingForWarMount);
+            LoadoutTarget t10 = LoadoutPlanner.PlanTarget(infantryWhoRides, Naked(false), all, 30, true);
             Check.True(t10.WantsMount, "mounted culture wants a mount");
+
+            LoadoutTarget t10b = LoadoutPlanner.PlanTarget(infantry, Naked(false), all, 30, true);
+            Check.False(t10b.WantsMount, "...but not for a hero who cannot ride at all");
 
             // The target never exceeds the four weapon slots.
             Check.True(t1.Weapons.Count <= 4, "target fits in four slots");

@@ -8,6 +8,21 @@ namespace HeroLoadoutFixer.Core
     public static class LoadoutPlanner
     {
         /// <summary>
+        /// The Riding a hero needs before any war horse in the game will carry
+        /// him. Every merchandise mount that is not a pack animal requires at
+        /// least this: the culture basics sit at 10-20, tier-2 mounts at 30-45,
+        /// tier-3 at 50-65, and below 10 there is nothing but mules.
+        ///
+        /// The live population agrees with the mechanic, which is why this is a
+        /// fact rather than a preference. Of 436 lords the game labelled with a
+        /// mounted role, 47 have Riding under 5 and only one more sits between
+        /// 5 and 10; the next nine are spread from 10 to 20 and the rest climb
+        /// smoothly to 240. The distribution has a cliff exactly where the item
+        /// data puts one.
+        /// </summary>
+        public const int MinimumRidingForWarMount = 10;
+
+        /// <summary>
         /// Step one of the algorithm: the ideal loadout for this hero, computed
         /// from skills alone and independent of what they currently carry.
         /// </summary>
@@ -42,9 +57,22 @@ namespace HeroLoadoutFixer.Core
             // culture only decide it for an unlabelled hero: a Cavalry lord with
             // mediocre Riding is still cavalry, and an Infantry lord of a
             // horse-fielding culture is still on foot.
-            target.WantsMount = role == BattleRole.Unset
+            bool roleWantsMount = role == BattleRole.Unset
                 ? (skills.RidingInTopTwo() || cultureIsMounted)
                 : BattleRoleRules.IsMounted(role);
+
+            // A hero who cannot ride does not get planned as a rider, whatever
+            // his label says. This is not a judgement about whether he *should*
+            // be cavalry -- it is that no war horse in the game will take him,
+            // so planning him mounted only removes options he could have used.
+            // Concretely: WantsMount makes the planner treat him as mounted,
+            // which excludes long bows, and he then never receives the horse
+            // that exclusion was protecting him from.
+            //
+            // An already-equipped mount overrides this: if he is somehow on a
+            // horse, the mounted rules genuinely apply to him.
+            target.WantsMount = roleWantsMount
+                                && skills.Get(SkillKind.Riding) >= MinimumRidingForWarMount;
 
             bool mounted = current.HasMount || target.WantsMount;
 

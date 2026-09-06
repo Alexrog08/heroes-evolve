@@ -63,14 +63,41 @@ namespace HeroLoadoutFixer.Tests
             Check.False(StartsRanged(infantry), "Infantry role plans melee");
             Check.False(infantry.WantsMount, "Infantry role stays on foot");
 
-            // The mount decision is the role's alone once a role is known: a
-            // Cavalry lord with poor Riding still rides, and an Infantry lord of
-            // a horse-fielding culture still walks.
+            // The role decides the mount, but only above the floor where a war
+            // horse will actually carry the hero. Riding 15 is poor and still
+            // rides; Riding 5 is below every mount in the game.
             SkillProfile poorRider = new SkillProfile(120, 60, 60, 40, 0, 0, 15);
             Check.True(Plan(poorRider, BattleRole.Cavalry, false).WantsMount,
-                     "Cavalry role overrides weak riding skill");
+                     "Cavalry role overrides merely weak riding skill");
             Check.False(Plan(poorRider, BattleRole.Infantry, true).WantsMount,
                      "Infantry role overrides a mounted culture");
+
+            // The 47 lords in the live campaign carrying a mounted label and
+            // Riding 0. No war horse requires less than 10, so planning them
+            // mounted only strips options -- long bows above all -- in exchange
+            // for a horse they never receive.
+            SkillProfile cannotRide = new SkillProfile(0, 0, 0, 0, 0, 0, 0);
+            Check.False(Plan(cannotRide, BattleRole.Cavalry, true).WantsMount,
+                        "a lord who cannot ride is not planned mounted, whatever his label");
+            Check.False(Plan(cannotRide, BattleRole.HorseArcher, true).WantsMount,
+                        "...the same for a horse archer");
+            Check.False(Plan(cannotRide, BattleRole.Unset, true).WantsMount,
+                        "...and for an unlabelled hero of a mounted culture");
+
+            SkillProfile justAbove = new SkillProfile(0, 0, 0, 0, 0, 0,
+                                                      LoadoutPlanner.MinimumRidingForWarMount);
+            Check.True(Plan(justAbove, BattleRole.Cavalry, false).WantsMount,
+                       "exactly at the floor is enough to be planned mounted");
+
+            // An already-equipped mount means the mounted rules genuinely apply,
+            // regardless of skill.
+            WeaponCategory[] emptySlots = new WeaponCategory[SlotSnapshot.WeaponSlotCount];
+            for (int i = 0; i < emptySlots.Length; i++) emptySlots[i] = WeaponCategory.None;
+            SlotSnapshot horsed = new SlotSnapshot(emptySlots, true, false, false, false, false, false, false);
+            LoadoutTarget onHorse = LoadoutPlanner.PlanTarget(cannotRide, horsed,
+                                                              MountedRangedAvailability.All(), 30, false,
+                                                              BattleRole.Cavalry);
+            Check.False(onHorse.WantsMount, "a mount is not planned for a hero who already has one");
 
             // MountedRangedAvailability describes mounted usability only -- on
             // foot every ranged weapon is viable, which is why a Ranged role is
