@@ -37,6 +37,19 @@ namespace HeroLoadoutFixer
         /// </summary>
         private readonly BudgetService _budget = new BudgetService();
 
+        /// <summary>
+        /// Who has already been shopping today.
+        ///
+        /// A lord crossing three towns in a day would otherwise get three rolls
+        /// and could buy three times. Lords Gear caps the same way -- it polls
+        /// hourly and clears a set of hero ids each morning -- and the cap is
+        /// what actually sets the pace, since the probability alone only decides
+        /// which visit counts.
+        ///
+        /// Cleared with the budget ledger and, like it, never saved.
+        /// </summary>
+        private readonly HashSet<string> _shoppedToday = new HashSet<string>();
+
         public override void RegisterEvents()
         {
             // A fresh behaviour instance is built per campaign load, but the
@@ -126,10 +139,11 @@ namespace HeroLoadoutFixer
             TryRepair(hero, "daily_tick");
         }
 
-        /// <summary>Forgets what every clan spent yesterday.</summary>
+        /// <summary>Forgets what every clan spent yesterday, and who shopped.</summary>
         private void OnDailyTick()
         {
             _budget.StartDay();
+            _shoppedToday.Clear();
         }
 
         /// <summary>
@@ -137,16 +151,35 @@ namespace HeroLoadoutFixer
         ///
         /// Villages are skipped: their roster is food and trade goods, and the
         /// scan would find nothing while running for every party on the map.
+        ///
+        /// The shopper is the party's leader when there is one, not the hero the
+        /// event happens to name: a caravan's leader is the companion assigned
+        /// to it, and he is who spends. Falls back to the named hero for a party
+        /// with no leader hero of its own.
         /// </summary>
         private void OnAfterSettlementEntered(MobileParty party, Settlement settlement, Hero hero)
         {
             try
             {
                 if (settlement == null || !settlement.IsTown) return;
-                if (!HeroFilter.IsEligibleToShop(hero)) return;
+                if (party != null && party == MobileParty.MainParty) return;
+
+                Hero shopper = hero;
+                if (shopper == null && party != null) shopper = party.LeaderHero;
+
+                if (!HeroFilter.IsEligibleToShop(shopper)) return;
+
+                string id = shopper.StringId;
+                if (id != null && _shoppedToday.Contains(id)) return;
+
                 if (MBRandom.RandomFloat > ShopChancePerVisit) return;
 
-                ShoppingTrip.Shop(hero, settlement, _budget, ClanWeight, SkillWeight, MinimumTier);
+                // Marked whether or not anything is bought. The roll is the
+                // shopping trip; walking out empty-handed still used it up, and
+                // re-rolling at the next gate would quietly multiply the rate.
+                if (id != null) _shoppedToday.Add(id);
+
+                ShoppingTrip.Shop(shopper, settlement, _budget, ClanWeight, SkillWeight, MinimumTier);
             }
             catch (System.Exception ex)
             {

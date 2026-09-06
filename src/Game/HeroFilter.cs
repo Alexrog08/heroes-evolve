@@ -1,4 +1,5 @@
 using TaleWorlds.CampaignSystem;
+using TaleWorlds.CampaignSystem.Party;
 
 namespace HeroLoadoutFixer
 {
@@ -56,12 +57,17 @@ namespace HeroLoadoutFixer
         /// it has earned, and the Jawwal getting richer over a campaign is the
         /// game working.
         ///
-        /// The player's own clan is OUT, which is section 11's stated scope --
-        /// AI lords only -- and matters more than a setting. Clan.Gold IS the
-        /// leader's gold, so for the player's house that is the player's own
-        /// purse: companions buying armour would spend his money without asking
-        /// him. Losing control of your own companions is the complaint that
-        /// started this mod; the purchase engine must not reproduce it.
+        /// The line for the player's own house is not the clan, it is the
+        /// party. A hero riding inside the player's party is under his hand:
+        /// he outfits them from his own inventory, and gear changing without
+        /// him asking is the exact complaint that started this mod. A hero
+        /// leading a party of his own is not -- a lord sent off with troops, a
+        /// companion running a caravan. Those are away doing their own job and
+        /// buying their own kit, and their gold is spent as the clan's, which
+        /// is what a party leader's gold is for.
+        ///
+        /// So a player-clan hero must lead a party that is not the main one.
+        /// Anyone at all inside the main party is out, whatever his clan.
         ///
         /// Bandits stay out for the same reason as always: they are not lords
         /// with houses and purses.
@@ -77,8 +83,16 @@ namespace HeroLoadoutFixer
             if (hero.IsTemplate) return false;
 
             if (hero.Clan == null) return false;
-            if (hero.Clan == Clan.PlayerClan) return false;
             if (hero.Clan.IsBanditFaction || hero.Clan.IsOutlaw) return false;
+
+            MobileParty party = hero.PartyBelongedTo;
+            if (party != null && party == MobileParty.MainParty) return false;
+
+            if (hero.Clan == Clan.PlayerClan)
+            {
+                if (party == null) return false;
+                if (party.LeaderHero != hero) return false;
+            }
 
             return true;
         }
