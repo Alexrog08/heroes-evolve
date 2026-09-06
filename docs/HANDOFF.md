@@ -77,11 +77,13 @@ bug y no una decisión.
   ahí su acantilado: ~18% en cero, nadie entre 5 y 15, el resto desde 20.
 - `EquipmentIndex.Head` comparte valor con `NumAllWeaponSlots`. Usar
   `SlotMapping.NameOf`.
-- **La élite de `nord` apunta a los druzhinniks esturgios** (NavalDLC), así que
-  nord parece cultura de caballería desde ese ángulo. Por eso el árbol de tropas
-  no sirve para decidir el perfil de los lores.
-- `CultureFieldsMountedElites` recorre **una sola rama** del árbol. Sus
-  respuestas son arbitrarias. No fiarse de él para nada nuevo.
+- El árbol de tropas **no predice** el perfil de los lores: empire fielda 28% de
+  tropas montadas y monta al 97% de sus lores; battania 17% y monta al 2,5%.
+  Por eso el perfil sale de los lores escritos a mano, no de las tropas.
+- **Cuidado con `SandBoxCore/ModuleData/spcultures.xml`**: define `nord` con
+  `elite_basic_troop = sturgian_warrior_son`. Es un marcador del juego base que
+  NavalDLC sobrescribe en ejecución. El árbol real de nord son quince tropas y
+  ninguna montada. Leer el XML dio la respuesta contraria a la del juego.
 - Perfil de montura por cultura, de los lores escritos a mano: khuzait 100%,
   empire 99%, vlandia 98%, aserai 94%, sturgia 94%, **battania 2%, nord 0%**.
 

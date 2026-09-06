@@ -18,11 +18,17 @@ namespace HeroLoadoutFixer
     /// on a borrowed Khuzait horse -- so a mounted Nord lord leads an army with
     /// nothing to lead.
     ///
-    /// The obvious sources are both wrong. The troop tree does not predict lord
-    /// composition: Empire fields 28% mounted troops and mounts 97% of its
-    /// lords, Battania fields 17% and mounts 2.5%. And the elite line is worse
-    /// still, because NavalDLC points Nord's elite_basic_troop at the Sturgian
-    /// druzhinniks, so Nord reads as a cavalry culture from that angle.
+    /// The obvious source is wrong: the troop tree does not predict lord
+    /// composition. Empire fields 28% mounted troops and mounts 97% of its
+    /// lords; Battania fields 17% and mounts 2.5%. Nothing about how a culture
+    /// arms its soldiers says how it mounts its nobles.
+    ///
+    /// (An earlier version of this comment claimed Nord's elite line is mounted
+    /// because SandBoxCore's spcultures.xml points nord at sturgian_warrior_son.
+    /// That is the base game's placeholder, overridden by NavalDLC at runtime:
+    /// the live troop survey walks nord's elite line and finds nord_thegn
+    /// through nord_huscarl, fifteen troops and every one on foot. The XML was
+    /// read; the game was not.)
     ///
     /// What does hold is the authored lord roster itself, and it is close to
     /// binary: among the surviving authored lords of this save, Vlandia, Empire,
