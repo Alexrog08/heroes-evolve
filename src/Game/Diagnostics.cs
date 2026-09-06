@@ -1898,7 +1898,11 @@ namespace HeroLoadoutFixer
                 ItemObject.ItemTypeEnum.HorseHarness
             };
 
-            StringBuilder text = new StringBuilder("CATALOGCAP bestTierInGame");
+            // Buyable, not merely existing: the cap excludes quest and
+            // non-merchandise gear exactly as the market does. That is why
+            // horses cap at 5 here while lords are seen riding tier 6 -- those
+            // mounts are not for sale, to us or to anyone.
+            StringBuilder text = new StringBuilder("CATALOGCAP bestBuyableTier");
             for (int i = 0; i < kinds.Length; i++)
             {
                 int best = 0;
