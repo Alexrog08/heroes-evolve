@@ -75,6 +75,7 @@ namespace HeroLoadoutFixer
             ReportNaval();
             ReportMarkets();
             ReportHeadroom(clanWeight, skillWeight, minimumTier);
+            ReportShopping(clanWeight, skillWeight, minimumTier);
             List<Hero> broken = ReportHeroes();
             ReportDryRuns(broken, clanWeight, skillWeight, minimumTier, dominanceMargin);
             ModLog.Info("===== CENSUS END =====");
@@ -1891,7 +1892,33 @@ namespace HeroLoadoutFixer
         private static string WhyNothing(List<ItemRosterElement> stock, ItemObject worn,
                                          CultureObject culture, int ceiling, int wornTier)
         {
-            int sameKind = 0, rightTier = 0, wrongCulture = 0;
+            int sameKind, rightTier, wrongCulture;
+            string reason = Blocker(stock, worn, culture, ceiling, wornTier,
+                                    out sameKind, out rightTier, out wrongCulture);
+
+            if (reason == "emptyShelf") return "the town stocks none of that kind at all";
+            if (reason == "wrongTier") return sameKind + " of that kind, none in the tier band";
+            if (wrongCulture == rightTier) return rightTier + " at the right tier, ALL rejected on culture";
+            if (wrongCulture > 0)
+            {
+                return rightTier + " at the right tier, " + wrongCulture
+                       + " rejected on culture, the rest on skill or usage";
+            }
+            return rightTier + " at the right tier, rejected on skill or usage";
+        }
+
+        /// <summary>
+        /// Which gate stopped a slot, as one short key, plus the counts behind
+        /// it. Named keys rather than an enum because they are printed straight
+        /// into the tally and read back out of the log.
+        /// </summary>
+        private static string Blocker(List<ItemRosterElement> stock, ItemObject worn, CultureObject culture,
+                                      int ceiling, int wornTier,
+                                      out int sameKind, out int rightTier, out int wrongCulture)
+        {
+            sameKind = 0;
+            rightTier = 0;
+            wrongCulture = 0;
 
             for (int i = 0; i < stock.Count; i++)
             {
@@ -1908,15 +1935,125 @@ namespace HeroLoadoutFixer
                 }
             }
 
-            if (sameKind == 0) return "the town stocks none of that kind at all";
-            if (rightTier == 0) return sameKind + " of that kind, none in the tier band";
-            if (wrongCulture == rightTier) return rightTier + " at the right tier, ALL rejected on culture";
-            if (wrongCulture > 0)
+            if (sameKind == 0) return "emptyShelf";
+            if (rightTier == 0) return "wrongTier";
+            if (wrongCulture == rightTier) return "culture";
+            return "skillOrUsage";
+        }
+
+        /// <summary>
+        /// What the engine would actually do, right now, for every lord who is
+        /// standing in a town.
+        ///
+        /// This is the report that predicts the campaign. HEADROOM says whether
+        /// there is anything to buy in principle and MARKET says what shelves
+        /// hold; only this one puts a real lord in a real town and runs the real
+        /// decision code. It is also the population the engine acts on -- lords
+        /// entering towns -- rather than the whole map.
+        ///
+        /// The blocked tally is the point. Each key leads somewhere different:
+        /// emptyShelf and wrongTier mean the engine is right and the lord waits
+        /// for a better market, while culture means the one policy chosen by
+        /// argument is what is stopping him, and that is the number worth
+        /// arguing about.
+        /// </summary>
+        private static void ReportShopping(float clanWeight, float skillWeight, int minimumTier)
+        {
+            int inTowns = 0, wouldBuy = 0, nothingWanted = 0;
+            Dictionary<string, int> blockedBy = new Dictionary<string, int>();
+            Dictionary<string, int> buySlots = new Dictionary<string, int>();
+            List<int> prices = new List<int>();
+
+            foreach (Hero hero in Hero.AllAliveHeroes)
             {
-                return rightTier + " at the right tier, " + wrongCulture
-                       + " rejected on culture, the rest on skill or usage";
+                try
+                {
+                    if (!HeroFilter.IsEligibleToShop(hero)) continue;
+                    if (hero.BattleEquipment == null) continue;
+
+                    Settlement settlement = hero.CurrentSettlement;
+                    if (settlement == null || !settlement.IsTown) continue;
+
+                    inTowns++;
+
+                    SkillProfile skills = HeroAdapter.ReadSkills(hero);
+                    int ceiling = HeroAdapter.ReadCeiling(hero, skills, clanWeight, skillWeight, minimumTier);
+
+                    ShoppingTrip.Candidate best = ShoppingTrip.Best(hero, settlement, ceiling);
+                    if (best != null)
+                    {
+                        wouldBuy++;
+                        Bump(buySlots, SlotMapping.NameOf(best.Slot));
+                        prices.Add(best.Offer.Price);
+                        continue;
+                    }
+
+                    // Nothing on offer: say what stopped every slot that had
+                    // room, so a quiet engine can be read.
+                    CultureObject culture = hero.Culture;
+                    if (culture == null && hero.Clan != null) culture = hero.Clan.Culture;
+
+                    List<ItemRosterElement> stock = MarketScanner.Stock(settlement);
+                    bool anyRoom = false;
+
+                    for (int i = 0; i < SlotSnapshot.WeaponSlotCount; i++)
+                    {
+                        anyRoom |= TallyBlock(hero, SlotMapping.WeaponSlot(i), stock, culture, ceiling, blockedBy);
+                    }
+                    foreach (EquipmentIndex slot in SlotMapping.ArmorSlots)
+                    {
+                        anyRoom |= TallyBlock(hero, slot, stock, culture, ceiling, blockedBy);
+                    }
+                    anyRoom |= TallyBlock(hero, EquipmentIndex.Horse, stock, culture, ceiling, blockedBy);
+                    anyRoom |= TallyBlock(hero, EquipmentIndex.HorseHarness, stock, culture, ceiling, blockedBy);
+
+                    if (!anyRoom) nothingWanted++;
+                }
+                catch
+                {
+                    // One unreadable hero must not cost the survey.
+                }
             }
-            return rightTier + " at the right tier, rejected on skill or usage";
+
+            ModLog.Info("SHOPPING lordsInTowns=" + inTowns
+                        + " wouldBuyNow=" + wouldBuy
+                        + " alreadyAtCeilingEverywhere=" + nothingWanted);
+            ModLog.Info("SHOPPING " + Tally("blockedSlotsBy", blockedBy));
+            ModLog.Info("SHOPPING " + Tally("wouldBuySlot", buySlots));
+            ModLog.Info("SHOPPING price " + Percentiles(prices));
+        }
+
+        /// <summary>
+        /// Records why one slot with room found nothing. Returns whether the
+        /// slot had room at all, so the caller can tell "at his ceiling
+        /// everywhere" from "blocked in every slot".
+        /// </summary>
+        private static bool TallyBlock(Hero hero, EquipmentIndex slot, List<ItemRosterElement> stock,
+                                       CultureObject culture, int ceiling, Dictionary<string, int> blockedBy)
+        {
+            ItemObject worn = hero.BattleEquipment[slot].Item;
+            if (worn == null) return false;
+
+            int wornTier = (int)worn.Tier + 1;
+            if (wornTier >= ceiling) return false;
+
+            int sameKind, rightTier, wrongCulture;
+            Bump(blockedBy, Blocker(stock, worn, culture, ceiling, wornTier,
+                                    out sameKind, out rightTier, out wrongCulture));
+            return true;
+        }
+
+        /// <summary>A dictionary as one readable log line.</summary>
+        private static string Tally(string label, Dictionary<string, int> counts)
+        {
+            StringBuilder text = new StringBuilder(label);
+            if (counts.Count == 0) return text.Append(" <none>").ToString();
+
+            foreach (KeyValuePair<string, int> pair in counts)
+            {
+                text.Append(' ').Append(pair.Key).Append('=').Append(pair.Value);
+            }
+            return text.ToString();
         }
 
         private static void ReportNaval()
