@@ -74,6 +74,7 @@ namespace HeroLoadoutFixer
             ReportGaps();
             ReportNaval();
             ReportClanWealth();
+            ReportGearVsClan();
             ReportMarkets();
             ReportHeadroom(clanWeight, skillWeight, minimumTier);
             ReportShopping(clanWeight, skillWeight, minimumTier);
@@ -1705,6 +1706,133 @@ namespace HeroLoadoutFixer
         /// the gate on item tier, so how that wealth grows over a campaign is
         /// what decides whether the gate ever opens.
         /// </summary>
+        /// <summary>
+        /// Does clan standing predict what a lord actually wears, or does skill?
+        ///
+        /// TierCeiling blends the two -- clan tier at half weight, skill at full
+        /// -- inherited from DynamicLordGear and never checked against this
+        /// game. It is worth checking, because the two are not comparable
+        /// currencies: a clan reaches tier 4 and may found a kingdom, while a
+        /// lord reaching 240 combat skill takes a lifetime. If clan tier turns
+        /// out not to separate the population at all, it is noise in the
+        /// ceiling and a tier-4 royal house is being denied tier-6 armour for
+        /// nothing.
+        ///
+        /// The test is simple and the population is the answer: the gear vanilla
+        /// itself put on these lords. Bucket them by clan tier and by skill, and
+        /// see which dimension the worn tier actually tracks. A flat column
+        /// means that dimension knows nothing.
+        /// </summary>
+        private static void ReportGearVsClan()
+        {
+            int[] clanCount = new int[8];
+            int[] clanWorn = new int[8];
+            int[] skillCount = new int[SkillBands.Length];
+            int[] skillWorn = new int[SkillBands.Length];
+
+            List<int> clanTiers = new List<int>();
+            List<int> wornTiers = new List<int>();
+
+            foreach (Hero hero in Hero.AllAliveHeroes)
+            {
+                try
+                {
+                    if (!HeroFilter.IsEligible(hero)) continue;
+                    if (hero.BattleEquipment == null) continue;
+
+                    int worn = WornGearTier(hero);
+                    if (worn < 0) continue;
+
+                    int clanTier = hero.Clan != null ? hero.Clan.Tier : 0;
+                    if (clanTier < 0) clanTier = 0;
+                    if (clanTier > 7) clanTier = 7;
+
+                    clanCount[clanTier]++;
+                    clanWorn[clanTier] += worn;
+
+                    int band = BandOf(HeroAdapter.ReadSkills(hero).MaxCombatSkill);
+                    skillCount[band]++;
+                    skillWorn[band] += worn;
+
+                    clanTiers.Add(clanTier);
+                    wornTiers.Add(worn);
+                }
+                catch
+                {
+                    // One unreadable hero must not cost the survey.
+                }
+            }
+
+            for (int t = 0; t < clanCount.Length; t++)
+            {
+                if (clanCount[t] == 0) continue;
+                ModLog.Info("GEARTIER byClanTier t" + t + " lords=" + clanCount[t]
+                            + " meanWornTier=" + Mean2(clanWorn[t], clanCount[t] * 100));
+            }
+
+            for (int b = 0; b < SkillBands.Length; b++)
+            {
+                if (skillCount[b] == 0) continue;
+                ModLog.Info("GEARTIER bySkill " + SkillBands[b] + " lords=" + skillCount[b]
+                            + " meanWornTier=" + Mean2(skillWorn[b], skillCount[b] * 100));
+            }
+
+            ModLog.Info("GEARTIER wornTier(x100) " + Percentiles(wornTiers));
+            ModLog.Info("GEARTIER clanTier " + Percentiles(clanTiers));
+        }
+
+        /// <summary>Skill bands, wide enough that each holds a real sample.</summary>
+        private static readonly string[] SkillBands = { "0-79", "80-119", "120-159", "160-199", "200+" };
+
+        private static int BandOf(int skill)
+        {
+            if (skill < 80) return 0;
+            if (skill < 120) return 1;
+            if (skill < 160) return 2;
+            if (skill < 200) return 3;
+            return 4;
+        }
+
+        /// <summary>
+        /// The mean tier of everything a hero is wearing, times a hundred so it
+        /// stays an integer.
+        ///
+        /// Mean over occupied slots rather than the best piece: one splendid
+        /// helmet on an otherwise shabby lord is not what "he is a tier 5 lord"
+        /// should mean, and the maximum would say exactly that.
+        /// </summary>
+        private static int WornGearTier(Hero hero)
+        {
+            int total = 0, slots = 0;
+
+            for (int i = 0; i < SlotSnapshot.WeaponSlotCount; i++)
+            {
+                ItemObject item = hero.BattleEquipment[SlotMapping.WeaponSlot(i)].Item;
+                if (item == null) continue;
+                total += (int)item.Tier + 1;
+                slots++;
+            }
+            foreach (EquipmentIndex slot in SlotMapping.ArmorSlots)
+            {
+                ItemObject item = hero.BattleEquipment[slot].Item;
+                if (item == null) continue;
+                total += (int)item.Tier + 1;
+                slots++;
+            }
+
+            if (slots == 0) return -1;
+            return total * 100 / slots;
+        }
+
+        /// <summary>An integer hundredth printed as a decimal, without floats.</summary>
+        private static string Mean2(int scaledTotal, int scaledCount)
+        {
+            if (scaledCount == 0) return "?";
+            int whole = scaledTotal / scaledCount;
+            int frac = (scaledTotal * 100 / scaledCount) % 100;
+            return whole + "." + (frac < 10 ? "0" : "") + frac;
+        }
+
         private static void ReportClanWealth()
         {
             List<int> gold = new List<int>();
