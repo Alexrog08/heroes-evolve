@@ -55,6 +55,7 @@ namespace HeroLoadoutFixer.Tests
             SkillGrowthTests.RunAll();
             FocusGrowthTests.RunAll();
             GrantTierTests.RunAll();
+            MarketRulesTests.RunAll();
 
             Console.WriteLine();
             Console.WriteLine(Check.Passes + " passed, " + Check.Failures + " failed");

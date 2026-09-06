@@ -199,9 +199,12 @@ namespace HeroLoadoutFixer
         /// <summary>
         /// The filters every catalogue lookup shares: not a quest or crafted
         /// item, within the tier ceiling, and either the hero's culture or
-        /// unassigned. One policy, so armour and weapons cannot drift apart.
+        /// unassigned. One policy, so armour and weapons cannot drift apart --
+        /// and public, so the market shares it too. A lord who may not be given
+        /// a Khuzait lamellar may not buy one either; letting the shop keep its
+        /// own copy of this rule is how the two would quietly diverge.
         /// </summary>
-        private static bool PassesCommonFilters(ItemObject item, CultureObject culture, int maxTier)
+        public static bool PassesCommonFilters(ItemObject item, CultureObject culture, int maxTier)
         {
             if (item == null) return false;
             if (item.NotMerchandise) return false;
@@ -214,8 +217,13 @@ namespace HeroLoadoutFixer
             return true;
         }
 
-        private static bool IsEligible(ItemObject item, WeaponCategory category, CultureObject culture,
-                                       int maxTier, SkillProfile skills, Hero hero, bool mounted)
+        /// <summary>
+        /// Whether one item can fill one weapon slot for one hero. Public for
+        /// the same reason as PassesCommonFilters: the market asks the identical
+        /// question of a town's stock.
+        /// </summary>
+        public static bool IsEligible(ItemObject item, WeaponCategory category, CultureObject culture,
+                                      int maxTier, SkillProfile skills, Hero hero, bool mounted)
         {
             if (!PassesCommonFilters(item, culture, maxTier)) return false;
             // A skill governs a family of weapons, not one exact WeaponClass
@@ -309,7 +317,7 @@ namespace HeroLoadoutFixer
         /// campaign had 0 in all seven skills. Without this check they would
         /// have ridden to war on a mule with 3 charge damage.
         /// </summary>
-        private static bool IsWarMount(ItemObject item)
+        public static bool IsWarMount(ItemObject item)
         {
             if (!item.HasHorseComponent) return false;
 
