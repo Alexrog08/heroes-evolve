@@ -72,6 +72,27 @@ Trayectoria resultante con talento medio: 112 a los 20, 154 a los 40, 196 a los
 60. Prodigio: 177, 243, 310. Entre 0,6 y 1,8 puntos ganados **cada año**, sin
 tramos planos.
 
+## Náutica: medido y decidido no cambiar
+
+Las tres skills de War Sails crecen por foco, como las civiles. Se planteó
+seguir en su lugar a los barcos que comanda el lord, por analogía con el arma
+equipada. **Medido y descartado:**
+
+```
+con barcos   n=163  p50=20  p90=116
+sin barcos   n=273  p50=19  p90=110
+```
+
+Mandar una flota no predice saber navegar. Y `CultureObject.NavalFactor` tampoco:
+sturgia con 220% da mediana 19, igual que kuzait con 120%.
+
+**La señal entera es ser nord**: mediana 134 y p90 228, contra 16-19 en las otras
+seis culturas. NavalDLC siembra a sus lores como marinos y nadie más ha remado
+nunca. El sistema de foco ya hace lo correcto — desarrolla a los nords que van
+por detrás y deja al resto en 19, que es lo que el juego quiere.
+
+No volver a plantearlo sin datos nuevos.
+
 ## Decisiones tomadas y NO implementadas
 
 1. **La concesión debe dar equipo básico, no el mejor del techo.** Si la fase 1
