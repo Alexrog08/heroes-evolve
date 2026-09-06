@@ -1,11 +1,12 @@
 # Estado
 
 Rama: `feat/diagnostics` (sale de `feat/core-and-grant`, que sale de `master`).
-Nada fusionado. 373 tests del núcleo en verde, build desplegado, API verificada
+Nada fusionado. 392 tests del núcleo en verde, build desplegado, API verificada
 contra v1.4.8 con control negativo.
 
 Dos sistemas terminados y verificados en campaña: **reparación de equipo** y
-**desarrollo de skills**. El motor de compra (fase 2) no está empezado.
+**desarrollo de skills**. El **motor de compra** está escrito entero y no se ha
+visto correr todavía.
 
 ## Lo que hace
 
@@ -49,6 +50,40 @@ héroe. Uno de cada setenta destaca en los tres.
 
 **Siembra al reparar**: un roto recibe de golpe las skills que su edad debería
 haberle traído, porque a los 48 no puede pasarse otra década siendo inútil.
+
+### Comprar equipo mejor
+
+Un lord entra en una ciudad y, con un 25% de probabilidad, compra **una sola
+cosa**: la mejor oferta que mejore una ranura que **ya lleva ocupada**.
+
+Nunca vuelve a decidir el arquetipo. Lee lo que lleva puesto y busca algo mejor
+del mismo tipo. No ejecuta el planificador, no mira skills para elegir rol y no
+toca una ranura vacía. Un compañero equipado como arquero de infantería lo
+seguirá siendo dentro de cuarenta años. **Nunca una lanza.**
+
+- **El salto es de un tier entero**, no un statline mejor. Ordenar por valor
+  tendría a quinientos lores cambiando de equipo en cada puerta.
+- **La variedad la da el mercado**, no el catálogo: cada ciudad tiene su stock y
+  comprar lo retira, así que el segundo lord que entra se lleva lo siguiente.
+- **El dinero se mueve, no se crea.** Lo desplazado vuelve al roster de la ciudad
+  y se reparte el ingreso en la misma proporción en que se pagó.
+- **El clan del jugador queda fuera.** `Clan.Gold` es el oro del jugador.
+
+## Sin verificar en campaña
+
+**Todo el motor de compra.** Compila, pasa los tests del núcleo y la API está
+verificada, pero nadie lo ha visto comprar nada. Los once bugs de la fase 1
+salieron de jugar, ninguno de leer el código; no hay razón para pensar que este
+sea distinto.
+
+Instrumentos ya puestos para esa verificación:
+
+- `HEADROOM` — cuántos tiers por debajo de su techo está cada lord, y con qué
+  bolsillo. **Sin hueco no hay nada que comprar, y el silencio es correcto.**
+- `MARKET` — qué hay en cada ciudad y cuánto pasa el filtro de cultura. Ese
+  filtro es la única política del motor elegida por argumento y no por medición.
+- `hlf.market <héroe>` — ranura a ranura, dentro de la ciudad donde esté el
+  jugador, sin comprar nada.
 
 ## Verificado en campaña
 

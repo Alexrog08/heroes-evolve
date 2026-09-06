@@ -39,33 +39,56 @@ debe seguir vistiendo a sus lores.
 Efecto secundario buscado: dos lores de la misma cultura y techo ya no reciben la
 idéntica espada.
 
-## Tareas
+## Tareas — todas implementadas, ninguna verificada en campana
 
-**T1. `MarketScanner`** — dado un asentamiento, los ítems de su `ItemRoster` que
-pasan los filtros de categoría, cultura, techo y dificultad. Puro salvo la lectura
-del roster. Devuelve candidatos con su precio local vía
-`SettlementComponent.GetItemPrice`.
+**T1. `MarketScanner`** — HECHO. Lee el `ItemRoster` del asentamiento, una vez
+por visita y no una vez por ranura. Las ofertas llevan el `EquipmentElement`
+completo, no solo el `ItemObject`: una entrada del roster puede tener modificador
+y hay que entregar exactamente lo que se ha cobrado. Precio via
+`SettlementComponent.GetItemPrice`, con la party del heroe para que su Comercio
+cuente igual que le cuenta al jugador.
 
-**T2. `BudgetService`** — envuelve `BudgetMath`, que ya está construido y probado.
-Añade el ledger de gasto pendiente por clan, en memoria y reiniciado a diario, y
-la reserva de seguridad. **Cuidado con el doble conteo**: `Clan.Gold` es
-`Leader.Gold`, así que para un líder no se puede sumar su oro personal al del
-clan. Ya mordió una vez en el diagnóstico.
+**T2. `BudgetService`** — HECHO. El doble conteo esta resuelto: para un lider,
+`OwnGold` devuelve cero porque `Clan.Gold` ya es su oro.
 
-**T3. `PurchaseService`** — la transacción. Verificar stock y saldo, retirar del
-roster, transferir oro con `GiveGoldAction`, equipar. Cualquier fallo intermedio
-revierte lo anterior. Nada de crear o destruir oro.
+El ledger mide contra la bolsa **tal como estaba cuando la casa fue de compras
+por primera vez ese dia**, no contra el saldo vivo. El oro se mueve en el
+instante de la compra, asi que restar tambien el gasto del dia a un saldo vivo
+cobraria dos veces cada denar. Efecto secundario deseable: un rescate que entra a
+mediodia no reabre el presupuesto hasta manana.
 
-**T4. Venta de lo desplazado** — el ítem que sale vuelve al roster de la ciudad y
-el oro va al héroe, limitado por lo que el mercader pueda pagar.
+**T3. `PurchaseService`** — HECHO. Comprueba stock y saldo, retira del roster,
+transfiere oro con `GiveGoldAction`, equipa. El unico punto de fallo real esta
+envuelto en try/catch que devuelve el objeto a la estanteria y deja al heroe como
+estaba.
 
-**T5. Enganche** — `CampaignEvents.AfterSettlementEntered`, con probabilidad por
-visita (25% por defecto) en vez de cooldown, para escalonar el gasto.
+**T4. Venta de lo desplazado** — HECHO. Vuelve al roster de la ciudad y se paga
+limitado por el oro del mercader. **Se reparte en la misma proporcion que la
+compra**: si la casa puso el 60%, la casa recupera el 60%. Darselo todo al heroe
+movia riqueza del lider a cada lord por debajo suyo, una vez por compra, durante
+toda la campana.
 
-**T6. Diagnóstico** — igual que en las fases anteriores, y por la misma razón: sin
-instrumento no se puede distinguir "no compra porque no debe" de "no compra
-porque está roto". Reportar por lord elegible: presupuesto disponible, techo,
-candidatos encontrados en la ciudad, y por qué se descartó cada compra.
+**T5. Enganche** — HECHO. `AfterSettlementEntered`, solo ciudades, 25% por
+visita, **una compra por visita**. Comprar un equipo entero en una tarde
+deshace el sentido de que los lores se ganen su equipo.
+
+**T6. Diagnostico** — HECHO. `HEADROOM` (cuantos tiers por debajo de su techo
+esta cada lord, y con que bolsillo), `MARKET` (que hay en cada ciudad y cuanto
+pasa el filtro de cultura) y `hlf.market <heroe>` para el detalle ranura a
+ranura dentro de la ciudad donde este el jugador.
+
+## Decisiones tomadas al implementar
+
+- **El salto es de un tier entero.** Ordenar por valor del objeto habria puesto a
+  quinientos lores cambiando de equipo en cada puerta por unos puntos.
+- **Empate a tier, gana su propia clase de arma.** El catalogo empareja por
+  familia, asi que una espada podia volverse maza; con el desempate solo pasa
+  cuando la ciudad no tiene nada de su clase a ese tier.
+- **Se arregla primero el hueco mayor**, la misma disciplina que las skills.
+- **El clan del jugador queda fuera.** Para su casa `Clan.Gold` es su propio
+  dinero, y unos companeros comprando armadura se lo gastarian sin preguntar. Es
+  lo que dice la seccion 11 y es lo que evita repetir la queja que origino el mod.
+- **Las facciones menores entran**, al reves que en la reparacion.
 
 ## Riesgos anotados
 
@@ -78,6 +101,17 @@ candidatos encontrados en la ciudad, y por qué se descartó cada compra.
   bloqueados antes de dar el ritmo por bueno.
 - **Revertir una transacción a medias.** El punto más delicado. Si el oro se
   transfiere y el equipar falla, el lord ha pagado por nada.
+
+## Lo que falta
+
+Todo esto esta escrito, compilado y desplegado, con 392 tests del nucleo en
+verde y la API verificada. **Nada de ello se ha visto correr en una campana.**
+Los once bugs de la fase 1 salieron todos de jugar, ninguno de leer codigo.
+
+Orden de verificacion sugerido: censo primero (`HEADROOM` y `MARKET` dicen si hay
+algo que comprar antes de mirar si se compra), luego `hlf.market` sobre un lord
+concreto dentro de una ciudad, y solo despues dejar correr tiempo y mirar si el
+hueco se cierra.
 
 ## Verificación
 
