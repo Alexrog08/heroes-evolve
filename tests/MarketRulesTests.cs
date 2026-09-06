@@ -22,6 +22,14 @@ namespace HeroLoadoutFixer.Tests
             // downgrading him: the mod never takes gear off a lord.
             Check.False(MarketRules.IsUpgrade(5, 3, 3), "a fallen ceiling does not strip a lord");
 
+            // An item the game never ranked reads as tier zero. Treating that as
+            // "worse than everything" had a 141-denar javelin replacing the
+            // naphtha pots of three lords in a live campaign.
+            Check.False(MarketRules.IsUpgrade(0, 1, 6), "an unranked item is left alone, not replaced by junk");
+            Check.False(MarketRules.IsUpgrade(0, 6, 6), "...not even by something good");
+            Check.False(MarketRules.IsUpgrade(-1, 4, 6), "a negative tier is unranked too");
+            Check.False(MarketRules.IsUpgrade(2, 0, 6), "and an unranked offer is never bought");
+
             // Rank first: a real upgrade always beats a cheaper or more
             // characterful one.
             Check.True(MarketRules.Compare(4, false, 900, 3, true, 100) < 0, "the higher rank comes first");

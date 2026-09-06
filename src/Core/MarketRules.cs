@@ -27,9 +27,20 @@ namespace HeroLoadoutFixer.Core
         /// has no tier and callers must not ask about one. Filling empty slots
         /// is the repair's job, and letting the market do it would let a lord
         /// buy his way into a role nobody planned for him.
+        ///
+        /// A tier below 1 on either side means the game never ranked that item,
+        /// and an unranked item is left alone rather than assumed to be the
+        /// worst thing in the world. A campaign caught this: three lords
+        /// carrying naphtha pots -- which the game does not tier -- read as tier
+        /// zero, so a 141-denar tier-1 javelin counted as an upgrade and
+        /// replaced them. The rule the whole mod rests on is that gear is only
+        /// taken off a lord when the replacement is provably better, and
+        /// "provably" cannot survive comparing against a number that is not
+        /// there.
         /// </summary>
         public static bool IsUpgrade(int wornTier, int offeredTier, int ceiling)
         {
+            if (wornTier < 1 || offeredTier < 1) return false;
             if (offeredTier > ceiling) return false;
             return offeredTier > wornTier;
         }
