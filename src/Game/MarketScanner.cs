@@ -77,7 +77,7 @@ namespace HeroLoadoutFixer
                 if (avoidAlsoServing != WeaponCategory.None
                     && ItemClassifier.AlsoServesTwoHanded(item, avoidAlsoServing)) continue;
 
-                Offer(offers, settlement, hero, stock[i]);
+                Offer(offers, settlement, hero, stock[i], ItemClassifier.Classify(item) == category);
             }
 
             offers.Sort(MarketOfferOrder.Instance);
@@ -99,7 +99,7 @@ namespace HeroLoadoutFixer
                 if (!MarketRules.IsUpgrade(wornTier, TierOf(item), ceiling)) continue;
                 if (!ItemCatalog.PassesCommonFilters(item, culture, ceiling)) continue;
 
-                Offer(offers, settlement, hero, stock[i]);
+                Offer(offers, settlement, hero, stock[i], true);
             }
 
             offers.Sort(MarketOfferOrder.Instance);
@@ -126,7 +126,7 @@ namespace HeroLoadoutFixer
                 if (!ItemCatalog.PassesCommonFilters(item, culture, ceiling)) continue;
                 if (!ItemClassifier.MeetsDifficulty(item, skills)) continue;
 
-                Offer(offers, settlement, hero, stock[i]);
+                Offer(offers, settlement, hero, stock[i], true);
             }
 
             offers.Sort(MarketOfferOrder.Instance);
@@ -155,7 +155,7 @@ namespace HeroLoadoutFixer
                 if (!item.HasArmorComponent || item.ArmorComponent.FamilyType != family) continue;
                 if (!ItemCatalog.PassesCommonFilters(item, culture, ceiling)) continue;
 
-                Offer(offers, settlement, hero, stock[i]);
+                Offer(offers, settlement, hero, stock[i], true);
             }
 
             offers.Sort(MarketOfferOrder.Instance);
@@ -172,7 +172,7 @@ namespace HeroLoadoutFixer
         /// entry, not that the item is free, so it is dropped.
         /// </summary>
         private static void Offer(List<MarketOffer> offers, Settlement settlement, Hero hero,
-                                  ItemRosterElement element)
+                                  ItemRosterElement element, bool ownClass)
         {
             SettlementComponent component = settlement != null ? settlement.SettlementComponent : null;
             if (component == null) return;
@@ -181,7 +181,8 @@ namespace HeroLoadoutFixer
             int price = component.GetItemPrice(element.EquipmentElement, party, false);
             if (price <= 0) return;
 
-            offers.Add(new MarketOffer(element.EquipmentElement, price, TierOf(element.EquipmentElement.Item)));
+            offers.Add(new MarketOffer(element.EquipmentElement, price,
+                                       TierOf(element.EquipmentElement.Item), ownClass));
         }
 
         /// <summary>

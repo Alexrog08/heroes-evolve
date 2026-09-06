@@ -1,5 +1,8 @@
 using System.Collections.Generic;
 using TaleWorlds.CampaignSystem;
+using TaleWorlds.CampaignSystem.Party;
+using TaleWorlds.CampaignSystem.Settlements;
+using TaleWorlds.Core;
 
 namespace HeroLoadoutFixer
 {
@@ -15,6 +18,24 @@ namespace HeroLoadoutFixer
         internal const float SkillWeight = 1.0f;
         internal const int MinimumTier = 1;
         internal const int DominanceMargin = 30;
+
+        /// <summary>
+        /// How likely a lord is to go shopping on any one town visit.
+        ///
+        /// A probability rather than a cooldown, so the spending of a clan's
+        /// lords spreads out on its own instead of all landing the day a timer
+        /// expires. At one purchase per trip it also sets the pace of the whole
+        /// engine: a lord converges on the gear he deserves over years, paying
+        /// for it, which is the point.
+        /// </summary>
+        internal const float ShopChancePerVisit = 0.25f;
+
+        /// <summary>
+        /// The day's gear spending, per clan. Owned here because a behaviour
+        /// instance is built fresh per campaign load, which is exactly the
+        /// lifetime this ledger should have -- it holds no save data.
+        /// </summary>
+        private readonly BudgetService _budget = new BudgetService();
 
         public override void RegisterEvents()
         {
@@ -47,6 +68,15 @@ namespace HeroLoadoutFixer
             // to arrive, so running seven times as often multiplies the work
             // without changing anything anyone could notice.
             CampaignEvents.WeeklyTickEvent.AddNonSerializedListener(this, OnWeeklyTick);
+
+            // The purchase engine. Buying happens where the goods are, so the
+            // trigger is entering a town rather than any tick: what a lord can
+            // buy is whatever that particular market has on its shelves.
+            CampaignEvents.AfterSettlementEntered.AddNonSerializedListener(this, OnAfterSettlementEntered);
+
+            // Only to clear the day's spending ledger. Cheap on purpose -- see
+            // the note below about what a real daily sweep costs.
+            CampaignEvents.DailyTickEvent.AddNonSerializedListener(this, OnDailyTick);
 
             // Deliberately NOT subscribed to DailyTickEvent to run the census.
             // Measured at 480ms on a 600-lord campaign -- two thousand seven
@@ -94,6 +124,37 @@ namespace HeroLoadoutFixer
         private void OnDailyTickHero(Hero hero)
         {
             TryRepair(hero, "daily_tick");
+        }
+
+        /// <summary>Forgets what every clan spent yesterday.</summary>
+        private void OnDailyTick()
+        {
+            _budget.StartDay();
+        }
+
+        /// <summary>
+        /// A lord walks into a town and may buy one thing.
+        ///
+        /// Villages are skipped: their roster is food and trade goods, and the
+        /// scan would find nothing while running for every party on the map.
+        /// </summary>
+        private void OnAfterSettlementEntered(MobileParty party, Settlement settlement, Hero hero)
+        {
+            try
+            {
+                if (settlement == null || !settlement.IsTown) return;
+                if (!HeroFilter.IsEligibleToShop(hero)) return;
+                if (MBRandom.RandomFloat > ShopChancePerVisit) return;
+
+                ShoppingTrip.Shop(hero, settlement, _budget, ClanWeight, SkillWeight, MinimumTier);
+            }
+            catch (System.Exception ex)
+            {
+                // Guarded like every other per-hero path: one bad lord must not
+                // take down an event the whole campaign fires.
+                ModLog.Error("shopping failed for " + (hero != null ? hero.Name : null)
+                             + ": " + ex.GetType().Name + " " + ex.Message);
+            }
         }
 
         private void OnWeeklyTick()

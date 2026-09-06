@@ -21,6 +21,22 @@ namespace HeroLoadoutFixer
                 hero.GetSkillValue(DefaultSkills.Riding));
         }
 
+        /// <summary>
+        /// How good a lord's gear may get: what his house can afford him and
+        /// what his own skill deserves.
+        ///
+        /// Shared by the repair and the purchase engine on purpose. They use it
+        /// for different things -- the repair grants well below it, the market
+        /// treats it as a hard cap -- but if the two computed it separately, a
+        /// lord could be handed at repair what he is later forbidden to buy.
+        /// </summary>
+        public static int ReadCeiling(Hero hero, SkillProfile skills, float clanWeight,
+                                      float skillWeight, int minimumTier)
+        {
+            int clanTier = hero != null && hero.Clan != null ? hero.Clan.Tier : 0;
+            return TierCeiling.Compute(clanTier, skills.MaxCombatSkill, clanWeight, skillWeight, minimumTier);
+        }
+
         public static SlotSnapshot ReadEquipment(Equipment equipment)
         {
             WeaponCategory[] weapons = new WeaponCategory[SlotSnapshot.WeaponSlotCount];

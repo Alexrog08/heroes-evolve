@@ -72,6 +72,26 @@ namespace HeroLoadoutFixer.Core
                 || category == WeaponCategory.TwoHandedAxe;
         }
 
+        /// <summary>
+        /// The two-handed category a one-handed request must not be answered
+        /// with, or None.
+        ///
+        /// A bastard sword is a fine answer to a one-handed request, but not to
+        /// a hero already carrying a two-handed sword: the one-handed slot
+        /// exists to leave the shield hand free, and a second two-hander adds
+        /// nothing. Axes have their own bastard variants and behave the same.
+        ///
+        /// Maces are deliberately absent: this enum collapses one- and
+        /// two-handed maces into a single Mace, so the rule cannot be expressed
+        /// for them until that is split.
+        /// </summary>
+        public static WeaponCategory TwoHandedPartner(WeaponCategory wanted)
+        {
+            if (wanted == WeaponCategory.OneHandedSword) return WeaponCategory.TwoHandedSword;
+            if (wanted == WeaponCategory.OneHandedAxe) return WeaponCategory.TwoHandedAxe;
+            return WeaponCategory.None;
+        }
+
         /// <summary>The ammunition a ranged weapon consumes, or None.</summary>
         public static WeaponCategory AmmoFor(WeaponCategory ranged)
         {

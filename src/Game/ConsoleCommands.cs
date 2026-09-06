@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Text;
 using TaleWorlds.CampaignSystem;
+using TaleWorlds.CampaignSystem.Settlements;
 using TaleWorlds.Core;
 using TaleWorlds.Library;
 using TaleWorlds.ObjectSystem;
@@ -38,6 +39,26 @@ namespace HeroLoadoutFixer
 
             return Diagnostics.DryRun(hero, HeroLoadoutBehavior.ClanWeight, HeroLoadoutBehavior.SkillWeight,
                                       HeroLoadoutBehavior.MinimumTier, HeroLoadoutBehavior.DominanceMargin);
+        }
+
+        /// <summary>
+        /// What the purchase engine would do for a hero in the town the player
+        /// is standing in. Reads only -- nothing is bought and no gold moves.
+        /// </summary>
+        [CommandLineFunctionality.CommandLineArgumentFunction("market", "hlf")]
+        public static string Market(List<string> args)
+        {
+            if (Campaign.Current == null) return "hlf: no campaign is running.";
+
+            Settlement settlement = Settlement.CurrentSettlement;
+            if (settlement == null) return "hlf: stand inside a town first.";
+            if (!settlement.IsTown) return "hlf: " + settlement.Name + " is not a town.";
+
+            Hero hero = FindHero(args);
+            if (hero == null) return Usage("hlf.market", args);
+
+            return Diagnostics.MarketDryRun(hero, settlement, HeroLoadoutBehavior.ClanWeight,
+                                            HeroLoadoutBehavior.SkillWeight, HeroLoadoutBehavior.MinimumTier);
         }
 
         /// <summary>

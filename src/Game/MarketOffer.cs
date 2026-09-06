@@ -23,11 +23,20 @@ namespace HeroLoadoutFixer
         /// <summary>1-based, the vocabulary the ceiling speaks.</summary>
         public int Tier;
 
-        public MarketOffer(EquipmentElement element, int price, int tier)
+        /// <summary>
+        /// True when the item is the same weapon class the hero already
+        /// carries, rather than merely the same family. Only the ordering reads
+        /// it -- see MarketRules.Compare. Always true for armour, mounts and
+        /// harnesses, which have no family to drift within.
+        /// </summary>
+        public bool OwnClass;
+
+        public MarketOffer(EquipmentElement element, int price, int tier, bool ownClass)
         {
             Element = element;
             Price = price;
             Tier = tier;
+            OwnClass = ownClass;
         }
 
         public ItemObject Item
@@ -47,7 +56,7 @@ namespace HeroLoadoutFixer
 
         public int Compare(MarketOffer a, MarketOffer b)
         {
-            return MarketRules.Compare(a.Tier, a.Price, b.Tier, b.Price);
+            return MarketRules.Compare(a.Tier, a.OwnClass, a.Price, b.Tier, b.OwnClass, b.Price);
         }
     }
 }

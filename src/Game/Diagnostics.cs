@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using System.Text;
 using TaleWorlds.CampaignSystem;
+using TaleWorlds.CampaignSystem.Roster;
+using TaleWorlds.CampaignSystem.Settlements;
 using TaleWorlds.Core;
 using TaleWorlds.Library;
 using TaleWorlds.ObjectSystem;
@@ -71,6 +73,8 @@ namespace HeroLoadoutFixer
             ReportAllSkills();
             ReportGaps();
             ReportNaval();
+            ReportMarkets();
+            ReportHeadroom(clanWeight, skillWeight, minimumTier);
             List<Hero> broken = ReportHeroes();
             ReportDryRuns(broken, clanWeight, skillWeight, minimumTier, dominanceMargin);
             ModLog.Info("===== CENSUS END =====");
@@ -1580,6 +1584,272 @@ namespace HeroLoadoutFixer
         /// own statement of how seafaring a people is. Measure both before
         /// building anything on either.
         /// </summary>
+        /// <summary>
+        /// Whether the purchase engine has anything to do, measured before
+        /// blaming it for doing nothing.
+        ///
+        /// Two numbers decide that. HEADROOM is how many tiers a lord's worn
+        /// gear is below his own ceiling, slot by slot: zero headroom means the
+        /// engine is right to stay quiet, and a large one means it should be
+        /// firing. PURSE is what he could actually spend today. Reporting them
+        /// together is what distinguishes "nothing to buy" from "cannot afford
+        /// it" from "broken", and this project has already paid four times for
+        /// not being able to tell those apart.
+        /// </summary>
+        private static void ReportHeadroom(float clanWeight, float skillWeight, int minimumTier)
+        {
+            List<int> headroom = new List<int>();
+            List<int> purses = new List<int>();
+            List<int> ceilings = new List<int>();
+            Dictionary<string, int> shortBySlot = new Dictionary<string, int>();
+
+            int shoppers = 0, atCeiling = 0;
+            BudgetService budget = new BudgetService();
+
+            foreach (Hero hero in Hero.AllAliveHeroes)
+            {
+                try
+                {
+                    if (!HeroFilter.IsEligibleToShop(hero)) continue;
+                    if (hero.BattleEquipment == null) continue;
+
+                    shoppers++;
+
+                    SkillProfile skills = HeroAdapter.ReadSkills(hero);
+                    int ceiling = HeroAdapter.ReadCeiling(hero, skills, clanWeight, skillWeight, minimumTier);
+                    ceilings.Add(ceiling);
+                    purses.Add(budget.Available(hero));
+
+                    int behind = 0;
+                    for (int i = 0; i < SlotSnapshot.WeaponSlotCount; i++)
+                    {
+                        behind += SlotShortfall(hero, SlotMapping.WeaponSlot(i), ceiling, shortBySlot);
+                    }
+                    foreach (EquipmentIndex slot in SlotMapping.ArmorSlots)
+                    {
+                        behind += SlotShortfall(hero, slot, ceiling, shortBySlot);
+                    }
+                    behind += SlotShortfall(hero, EquipmentIndex.Horse, ceiling, shortBySlot);
+                    behind += SlotShortfall(hero, EquipmentIndex.HorseHarness, ceiling, shortBySlot);
+
+                    headroom.Add(behind);
+                    if (behind == 0) atCeiling++;
+                }
+                catch
+                {
+                    // One unreadable hero must not cost the survey.
+                }
+            }
+
+            ModLog.Info("HEADROOM shoppers=" + shoppers + " alreadyAtCeiling=" + atCeiling);
+            ModLog.Info("HEADROOM tiersBehind (summed over slots) " + Percentiles(headroom));
+            ModLog.Info("HEADROOM ceiling " + Percentiles(ceilings));
+            ModLog.Info("HEADROOM purse " + Percentiles(purses));
+
+            StringBuilder bySlot = new StringBuilder("HEADROOM slotsBehind");
+            foreach (KeyValuePair<string, int> pair in shortBySlot)
+            {
+                bySlot.Append(' ').Append(pair.Key).Append('=').Append(pair.Value);
+            }
+            ModLog.Info(bySlot.ToString());
+        }
+
+        /// <summary>
+        /// Tiers this one slot is below the ceiling, counting the slot as behind
+        /// while it is at it. An empty slot contributes nothing: the market only
+        /// ever replaces what a hero already wears.
+        /// </summary>
+        private static int SlotShortfall(Hero hero, EquipmentIndex slot, int ceiling,
+                                         Dictionary<string, int> shortBySlot)
+        {
+            ItemObject worn = hero.BattleEquipment[slot].Item;
+            if (worn == null) return 0;
+
+            int behind = ceiling - ((int)worn.Tier + 1);
+            if (behind <= 0) return 0;
+
+            Bump(shortBySlot, SlotMapping.NameOf(slot));
+            return behind;
+        }
+
+        /// <summary>
+        /// What every town has on its shelves, and how much of it a lord of that
+        /// town's own culture could actually be sold.
+        ///
+        /// The gap between the two columns is the culture filter, and it is the
+        /// one policy in the purchase engine chosen by argument rather than
+        /// measurement: a lord may only buy his own culture's gear or gear with
+        /// no culture at all. If it turns out to reject most of a market, the
+        /// engine will look broken while behaving exactly as written -- so the
+        /// number is reported rather than assumed.
+        /// </summary>
+        private static void ReportMarkets()
+        {
+            List<int> sizes = new List<int>();
+            List<int> usable = new List<int>();
+            int towns = 0;
+
+            foreach (Settlement settlement in Settlement.All)
+            {
+                try
+                {
+                    if (settlement == null || !settlement.IsTown) continue;
+                    towns++;
+
+                    List<ItemRosterElement> stock = MarketScanner.Stock(settlement);
+                    sizes.Add(stock.Count);
+
+                    CultureObject culture = settlement.Culture;
+                    int fits = 0;
+                    for (int i = 0; i < stock.Count; i++)
+                    {
+                        // Tier 6 as the ceiling: this counts what the shelf
+                        // could ever offer anyone, not what one lord may buy.
+                        if (ItemCatalog.PassesCommonFilters(stock[i].EquipmentElement.Item, culture, 6)) fits++;
+                    }
+                    usable.Add(fits);
+                }
+                catch
+                {
+                    // A settlement mid-transition must not cost the survey.
+                }
+            }
+
+            ModLog.Info("MARKET towns=" + towns);
+            ModLog.Info("MARKET stockPerTown " + Percentiles(sizes));
+            ModLog.Info("MARKET passingCultureAndFilters " + Percentiles(usable));
+        }
+
+        /// <summary>
+        /// Everything the purchase engine would consider for one hero in one
+        /// town, slot by slot, and what it would do. The dry run for buying,
+        /// exactly as DryRun is for repairing: it calls the real decision code
+        /// rather than a copy, so a divergence between what is reported and what
+        /// happens cannot open up. That has happened twice already.
+        /// </summary>
+        public static string MarketDryRun(Hero hero, Settlement settlement, float clanWeight,
+                                          float skillWeight, int minimumTier)
+        {
+            if (hero == null) return "hlf: no hero.";
+            if (settlement == null) return "hlf: no settlement.";
+            if (hero.BattleEquipment == null) return "hlf: " + hero.Name + " has no battle equipment.";
+
+            StringBuilder report = new StringBuilder();
+            SkillProfile skills = HeroAdapter.ReadSkills(hero);
+            int ceiling = HeroAdapter.ReadCeiling(hero, skills, clanWeight, skillWeight, minimumTier);
+
+            BudgetService budget = new BudgetService();
+            Clan clan = hero.Clan;
+
+            report.AppendLine("hero=" + hero.Name + " culture=" + (hero.Culture != null ? hero.Culture.StringId : "?")
+                              + " ceiling=" + ceiling + " eligible=" + HeroFilter.IsEligibleToShop(hero));
+            List<ItemRosterElement> stock = MarketScanner.Stock(settlement);
+            report.AppendLine("town=" + settlement.Name + " stock=" + stock.Count);
+            report.AppendLine("purse=" + budget.Available(hero)
+                              + " own=" + hero.Gold
+                              + " clanRoom=" + budget.ClanRoom(clan)
+                              + " reserve=" + budget.Reserve(clan)
+                              + " clanGold=" + (clan != null ? clan.Gold : 0)
+                              + " leader=" + (clan != null && clan.Leader == hero));
+
+            for (int i = 0; i < SlotSnapshot.WeaponSlotCount; i++)
+            {
+                DescribeSlotOffers(report, hero, settlement, stock, SlotMapping.WeaponSlot(i), ceiling, skills);
+            }
+            foreach (EquipmentIndex slot in SlotMapping.ArmorSlots)
+            {
+                DescribeSlotOffers(report, hero, settlement, stock, slot, ceiling, skills);
+            }
+            DescribeSlotOffers(report, hero, settlement, stock, EquipmentIndex.Horse, ceiling, skills);
+            DescribeSlotOffers(report, hero, settlement, stock, EquipmentIndex.HorseHarness, ceiling, skills);
+
+            ShoppingTrip.Candidate best = ShoppingTrip.Best(hero, settlement, ceiling);
+            if (best == null)
+            {
+                report.AppendLine("would buy: nothing");
+            }
+            else
+            {
+                int heroPart, clanPart;
+                bool affordable = budget.TrySplit(hero, best.Offer.Price, out heroPart, out clanPart);
+                report.AppendLine("would buy: " + SlotMapping.NameOf(best.Slot)
+                                  + " " + best.Offer.Item.StringId
+                                  + " tier=" + best.Offer.Tier + " (from " + best.WornTier + ")"
+                                  + " price=" + best.Offer.Price
+                                  + (affordable ? " paid hero=" + heroPart + " clan=" + clanPart
+                                                : " UNAFFORDABLE"));
+            }
+
+            ModLog.Info("MARKETDRYRUN\n" + report.ToString());
+            return report.ToString();
+        }
+
+        /// <summary>One slot's line in the market dry run.</summary>
+        private static void DescribeSlotOffers(StringBuilder report, Hero hero, Settlement settlement,
+                                               List<ItemRosterElement> stock, EquipmentIndex slot,
+                                               int ceiling, SkillProfile skills)
+        {
+            ItemObject worn = hero.BattleEquipment[slot].Item;
+            string name = SlotMapping.NameOf(slot);
+
+            if (worn == null)
+            {
+                report.AppendLine("  " + name + ": empty -- the market never fills a slot");
+                return;
+            }
+
+            int wornTier = (int)worn.Tier + 1;
+            if (wornTier >= ceiling)
+            {
+                report.AppendLine("  " + name + ": " + worn.StringId + " t" + wornTier + " at ceiling");
+                return;
+            }
+
+            CultureObject culture = hero.Culture;
+            if (culture == null && hero.Clan != null) culture = hero.Clan.Culture;
+            bool mounted = hero.BattleEquipment[EquipmentIndex.Horse].Item != null;
+
+            List<MarketOffer> offers;
+            if (slot == EquipmentIndex.Horse)
+            {
+                offers = MarketScanner.Mounts(stock, settlement, hero, culture, ceiling, wornTier, skills);
+            }
+            else if (slot == EquipmentIndex.HorseHarness)
+            {
+                offers = MarketScanner.Harnesses(stock, settlement, hero,
+                                                 hero.BattleEquipment[EquipmentIndex.Horse].Item,
+                                                 culture, ceiling, wornTier);
+            }
+            else if (slot == EquipmentIndex.Head || slot == EquipmentIndex.Body || slot == EquipmentIndex.Leg
+                     || slot == EquipmentIndex.Gloves || slot == EquipmentIndex.Cape)
+            {
+                offers = MarketScanner.Armor(stock, settlement, hero, worn.ItemType, culture, ceiling, wornTier);
+            }
+            else
+            {
+                SlotSnapshot current = HeroAdapter.ReadEquipment(hero.BattleEquipment);
+                WeaponCategory category = ItemClassifier.Classify(worn);
+                WeaponCategory partner = CategoryRules.TwoHandedPartner(category);
+                if (partner != WeaponCategory.None && !current.Contains(partner)) partner = WeaponCategory.None;
+
+                offers = MarketScanner.Weapons(stock, settlement, hero, category, culture,
+                                               ceiling, wornTier, skills, mounted, partner);
+            }
+
+            if (offers.Count == 0)
+            {
+                report.AppendLine("  " + name + ": " + worn.StringId + " t" + wornTier
+                                  + " room to t" + ceiling + ", nothing in stock");
+                return;
+            }
+
+            report.AppendLine("  " + name + ": " + worn.StringId + " t" + wornTier
+                              + " -> " + offers[0].Item.StringId + " t" + offers[0].Tier
+                              + " " + offers[0].Price + "d"
+                              + (offers[0].OwnClass ? "" : " (different class)")
+                              + " [" + offers.Count + " offers]");
+        }
+
         private static void ReportNaval()
         {
             Dictionary<string, List<int>> marinerByCulture = new Dictionary<string, List<int>>();

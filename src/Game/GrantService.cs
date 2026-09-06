@@ -92,7 +92,7 @@ namespace HeroLoadoutFixer
             SlotSnapshot current = HeroAdapter.ReadEquipment(hero.BattleEquipment);
 
             int clanTier = hero.Clan != null ? hero.Clan.Tier : 0;
-            int ceiling = TierCeiling.Compute(clanTier, skills.MaxCombatSkill, clanWeight, skillWeight, minimumTier);
+            int ceiling = HeroAdapter.ReadCeiling(hero, skills, clanWeight, skillWeight, minimumTier);
 
             CultureObject culture = hero.Culture;
             if (culture == null && hero.Clan != null) culture = hero.Clan.Culture;
@@ -326,18 +326,16 @@ namespace HeroLoadoutFixer
         /// not when the hero already carries a two-handed sword: the one-handed
         /// slot exists so the shield hand is free, and a second two-hander adds
         /// nothing. The same reasoning applies to axes, which have their own
-        /// bastard variants (the TwoHandedAxe crafting template's first usage is
-        /// OneHandedBastardAxe). Maces are deliberately absent: the core enum
-        /// collapses one- and two-handed maces into a single Mace category, so
-        /// the rule cannot be expressed for them without splitting that first.
+        /// bastard variants. The mapping itself lives in
+        /// CategoryRules.TwoHandedPartner, which the market shares; what is
+        /// local here is looking in the plan as well as in what is worn, since
+        /// the partner may be something this same repair is about to hand over.
         /// </summary>
         private static WeaponCategory RedundantTwoHander(WeaponCategory wanted, SlotSnapshot current,
                                                          List<PlannedSlot> plan)
         {
-            WeaponCategory partner;
-            if (wanted == WeaponCategory.OneHandedSword) partner = WeaponCategory.TwoHandedSword;
-            else if (wanted == WeaponCategory.OneHandedAxe) partner = WeaponCategory.TwoHandedAxe;
-            else return WeaponCategory.None;
+            WeaponCategory partner = CategoryRules.TwoHandedPartner(wanted);
+            if (partner == WeaponCategory.None) return WeaponCategory.None;
 
             if (current.Contains(partner)) return partner;
 

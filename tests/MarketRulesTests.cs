@@ -22,33 +22,52 @@ namespace HeroLoadoutFixer.Tests
             // downgrading him: the mod never takes gear off a lord.
             Check.False(MarketRules.IsUpgrade(5, 3, 3), "a fallen ceiling does not strip a lord");
 
-            // Ordering: the better tier first, and between equals the cheaper.
-            // Buying the dearest item of a tier burns a clan's purse on a
-            // difference the tier says does not exist.
-            Check.True(MarketRules.Compare(4, 900, 3, 100) < 0, "the higher tier comes first");
-            Check.True(MarketRules.Compare(3, 100, 4, 900) > 0, "...whichever side it is on");
-            Check.True(MarketRules.Compare(3, 100, 3, 900) < 0, "the cheaper of a tier comes first");
-            Check.True(MarketRules.Compare(3, 900, 3, 100) > 0, "...whichever side it is on");
-            Check.Equal(0, MarketRules.Compare(3, 100, 3, 100), "identical offers tie");
+            // Rank first: a real upgrade always beats a cheaper or more
+            // characterful one.
+            Check.True(MarketRules.Compare(4, false, 900, 3, true, 100) < 0, "the higher rank comes first");
+            Check.True(MarketRules.Compare(3, true, 100, 4, false, 900) > 0, "...whichever side it is on");
+
+            // Then his own weapon class, so a lord's sword does not quietly
+            // become a mace when both are the same better tier.
+            Check.True(MarketRules.Compare(4, true, 900, 4, false, 100) < 0, "his own class beats a cheaper one");
+            Check.True(MarketRules.Compare(4, false, 100, 4, true, 900) > 0, "...whichever side it is on");
+
+            // Then price. Paying more for a difference the tier says does not
+            // exist just burns the clan's purse.
+            Check.True(MarketRules.Compare(3, true, 100, 3, true, 900) < 0, "the cheaper of a tier comes first");
+            Check.True(MarketRules.Compare(3, true, 900, 3, true, 100) > 0, "...whichever side it is on");
+            Check.Equal(0, MarketRules.Compare(3, true, 100, 3, true, 100), "identical offers tie");
 
             // Sorting requires a consistent order, and a comparison that
             // disagrees with itself corrupts List.Sort rather than merely
             // ranking oddly. Check every pair of a small spread both ways.
-            int[] tiers = { 1, 2, 3, 3, 5, 6 };
-            int[] prices = { 50, 900, 100, 100, 4000, 7 };
+            int[] ranks = { 1, 2, 3, 3, 3, 5, 6 };
+            bool[] own = { true, false, true, true, false, true, false };
+            int[] prices = { 50, 900, 100, 100, 100, 4000, 7 };
             bool consistent = true;
-            for (int a = 0; a < tiers.Length; a++)
+            for (int a = 0; a < ranks.Length; a++)
             {
-                for (int b = 0; b < tiers.Length; b++)
+                for (int b = 0; b < ranks.Length; b++)
                 {
-                    int forward = MarketRules.Compare(tiers[a], prices[a], tiers[b], prices[b]);
-                    int back = MarketRules.Compare(tiers[b], prices[b], tiers[a], prices[a]);
+                    int forward = MarketRules.Compare(ranks[a], own[a], prices[a], ranks[b], own[b], prices[b]);
+                    int back = MarketRules.Compare(ranks[b], own[b], prices[b], ranks[a], own[a], prices[a]);
                     if (forward == 0 && back != 0) consistent = false;
                     if (forward < 0 && back <= 0) consistent = false;
                     if (forward > 0 && back >= 0) consistent = false;
                 }
             }
             Check.True(consistent, "the ordering is antisymmetric, so a sort is well defined");
+
+            // The redundancy rule the grant and the market share: a one-handed
+            // slot must not be filled by a second two-hander.
+            Check.True(CategoryRules.TwoHandedPartner(WeaponCategory.OneHandedSword) == WeaponCategory.TwoHandedSword,
+                       "a one-handed sword must not double a two-handed one");
+            Check.True(CategoryRules.TwoHandedPartner(WeaponCategory.OneHandedAxe) == WeaponCategory.TwoHandedAxe,
+                       "nor a one-handed axe");
+            Check.True(CategoryRules.TwoHandedPartner(WeaponCategory.Mace) == WeaponCategory.None,
+                       "maces have no partner while the enum collapses both kinds");
+            Check.True(CategoryRules.TwoHandedPartner(WeaponCategory.Bow) == WeaponCategory.None,
+                       "and a bow has nothing to duplicate");
         }
     }
 }

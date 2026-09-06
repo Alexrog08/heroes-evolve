@@ -35,17 +35,31 @@ namespace HeroLoadoutFixer.Core
         }
 
         /// <summary>
-        /// Orders two offers best-first: the higher tier wins, and between equal
-        /// tiers the cheaper one does. Negative when the first comes first, in
-        /// the shape List.Sort expects.
+        /// Orders two offers best-first, on three terms in this order: the
+        /// higher rank, then the one that keeps the hero's own weapon class,
+        /// then the cheaper. Negative when the first comes first, in the shape
+        /// List.Sort expects.
         ///
-        /// Cheapest-of-the-best matters because the alternative -- taking the
-        /// dearest item that clears the tier -- burns a clan's purse on a
-        /// difference the tier says does not exist.
+        /// Rank is the item's tier when ranking offers for one slot, and the
+        /// tier gained when ranking across slots -- the same comparison serves
+        /// both, since both mean "how much better".
+        ///
+        /// The class term is what stops a lord's sword quietly becoming a mace.
+        /// The catalogue matches a whole weapon family, because a culture may
+        /// not stock the exact class a hero carries, and the tier gate already
+        /// forbids sidegrades -- so a swap can only happen on a real upgrade. It
+        /// still leaves one case: two items of the same better tier, one his own
+        /// class and one not. Preferring his own costs nothing and keeps the
+        /// character the repair gave him.
+        ///
+        /// Cheapest last, because taking the dearest item that clears the tier
+        /// burns a clan's purse on a difference the tier says does not exist.
         /// </summary>
-        public static int Compare(int tierA, int priceA, int tierB, int priceB)
+        public static int Compare(int rankA, bool ownClassA, int priceA,
+                                  int rankB, bool ownClassB, int priceB)
         {
-            if (tierA != tierB) return tierB - tierA;
+            if (rankA != rankB) return rankB - rankA;
+            if (ownClassA != ownClassB) return ownClassA ? -1 : 1;
             return priceA - priceB;
         }
     }
