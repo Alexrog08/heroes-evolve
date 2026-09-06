@@ -144,14 +144,53 @@ no sea más débil que las tropas que lidera— pero si algún día se quiere qu
 lores lleguen a tier 5-6 comprando, lo que hay que tocar es `TierCeiling`, no el
 motor.
 
-## Sin verificar en campaña
+## El motor de compra, verificado en campaña
 
-**Que el motor compre de verdad.** Todo lo de arriba es predicción: el censo
-corre el código de decisión real sobre el stock real, pero **nadie ha visto
-todavía una línea `BUY`**. Falta dejar correr tiempo y comprobar que el oro se
-mueve, que lo desplazado vuelve al estante y que el hueco se cierra.
+**316 compras reales, 0 transacciones fallidas.**
 
-Instrumentos:
+**La economía no se resiente.** Dos ensayos independientes desde el mismo guardado
+(se recargó entre medias, así que las lecturas de partida son idénticas al denar):
+
+| | Inicio | Ensayo 1 | Ensayo 2 |
+|---|---|---|---|
+| `CLANGOLD p50` | 793.226 | **818.964** | **824.855** |
+
+En los dos, los clanes acaban **más ricos que antes de comprar**. Los ingresos de
+la IA superan al gasto en equipo con holgura, y el riesgo de drenaje que se temía
+no existe. La reserva y el ledger nunca llegaron a morder.
+
+**Lo que compran es sano.**
+
+```
+tier  1: 3    2: 6    3: 39    4: 133    5: 118    6: 17
+ranura  w3=67  w1=64  w0=46  Cape=46  w2=44  Leg=20  Gloves=15  Horse=10  Body=3
+```
+
+El grueso en tier 4-5 y unas pocas piezas de tier 6 para las casas que pueden
+pagarlas. Las armas dominan porque el catálogo las tiene: 379 de una mano contra
+108 grebas en todo el juego. `sold=<nothing>` salió **0** — cada compra desplazó
+una pieza real y la devolvió al estante.
+
+**El dinero manda en el extremo alto, como se diseñó.** La compra más cara
+registrada fue de 49.031; en la partida joven ningún precio pasó de 7.266 contra
+un límite mediano de 9.138.
+
+## Lo que hay que seguir vigilando
+
+**El hueco crece, no encoge.** `tiersBehind p50` sube de 6 a 7 dentro de un
+ensayo. No es que no compren —`wouldBuyNow` cae de 143 a 118 en el mismo rato—
+es que los techos suben detrás: un lord a 167 de skill cruza a 168 y gana un tier
+entero de golpe en once ranuras. Con 28 puntos por tier y ~1 punto al año, a
+largo plazo no debería desbocarse, pero no está medido en décadas.
+
+**El coste de la regla de cultura sube en términos absolutos**, de 77 a 149
+ranuras bloqueadas dentro de un ensayo. Pero `wrongTier` sube a la par (214 a
+290) y **la proporción se mantiene en el 34-35%**. Mientras esa proporción no se
+mueva, la decisión de conservarla sigue apoyada.
+
+## Instrumentos
+
+Para leer un motor callado, que es lo que más ha costado en este proyecto:
 
 - `SHOPPING` — el que predice: qué lores comprarían ya, qué ranura, a qué precio
   y qué puerta bloquea a los demás. Es el único que pone un lord real en una
@@ -284,8 +323,15 @@ No volver a plantearlo sin datos nuevos.
 9. **`CyclesPerYear = 12` cableado**: con FastMode corría a un tercio.
 10. **Tope y suelo por ciclo en vez de por año**: el calendario se colaba por la
     puerta de atrás incluso tras leer `DaysInYear`.
-11. El diagnóstico se separó de la producción **dos veces** (`CultureProfile`, y
-    `GAPFOCUS` midiendo skills que gobierna el equipo).
+11. El diagnóstico se separó de la producción **tres veces** (`CultureProfile`;
+    `GAPFOCUS` midiendo skills que gobierna el equipo; y `MARKET` midiendo el
+    stock contra la cultura de la ciudad en vez de la del lord, que devolvía un
+    tranquilizador 90% cuando un lord de paso ve el 28%).
+12. **`pricedOutByShare` contaba lo que no era**: lores que no podían comprar
+    *nada*, que tras hacer la compra consciente del presupuesto casi no existen.
+    Daba 2 y 0 mientras el límite gobernaba casi todas las compras.
+13. **Los objetos sin tier leían como tier 0**, o sea peor que todo. Tres lores
+    perdieron sus botes de nafta por una jabalina de 141 denares.
 
 ## Método
 
