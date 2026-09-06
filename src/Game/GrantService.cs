@@ -303,7 +303,8 @@ namespace HeroLoadoutFixer
                 // robe for another would be churn, and a hero capped at tier 1
                 // has nothing better available to him anyway.
                 bool civilian = worn != null && (int)worn.Tier + 1 <= CivilianArmorTier
-                                && ceiling > CivilianArmorTier;
+                                && ceiling > CivilianArmorTier
+                                && !ItemCatalog.IsIrreplaceable(worn);
 
                 if (worn != null && !civilian)
                 {

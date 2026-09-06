@@ -197,6 +197,32 @@ namespace HeroLoadoutFixer
         }
 
         /// <summary>
+        /// Gear the market must never take off a hero, whatever the shelves
+        /// hold.
+        ///
+        /// The test is not "is it special" but "could we have sold it to him".
+        /// An item no merchant stocks cannot be bought back: sell it once and
+        /// it is gone from that hero, and possibly from the campaign. That is a
+        /// different kind of loss from swapping one purchasable sword for
+        /// another, and it is the one worth refusing.
+        ///
+        /// It covers what TaleWorlds hung on a named character -- Caladog's
+        /// gilded armour and horned helm are the whole of how he reads on a
+        /// battlefield -- and it covers the sword a player forged and handed to
+        /// a companion, which is the same argument from the other direction.
+        ///
+        /// IsUniqueItem is checked as well and is, at least in this install,
+        /// dead weight: a census found it false for every item in the game. It
+        /// stays because it costs nothing and is the flag that ought to mean
+        /// this, not because it currently catches anything.
+        /// </summary>
+        public static bool IsIrreplaceable(ItemObject item)
+        {
+            if (item == null) return false;
+            return item.NotMerchandise || item.IsCraftedByPlayer || item.IsUniqueItem;
+        }
+
+        /// <summary>
         /// The filters every catalogue lookup shares: not a quest or crafted
         /// item, within the tier ceiling, and either the hero's culture or
         /// unassigned. One policy, so armour and weapons cannot drift apart --

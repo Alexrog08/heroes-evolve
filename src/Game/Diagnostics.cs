@@ -79,7 +79,6 @@ namespace HeroLoadoutFixer
             ReportWornBySlot();
             ReportUniqueGear();
             ReportWeaponPerks();
-            ReportArmorWeight();
             ReportTierSpread();
             ReportMarkets();
             ReportHeadroom(clanWeight, skillWeight, minimumTier);
@@ -1964,21 +1963,25 @@ namespace HeroLoadoutFixer
         }
 
         /// <summary>
-        /// The gear TaleWorlds hung on one specific character, which the engine
-        /// now refuses to touch.
+        /// The gear the engine refuses to take off a hero, and why.
         ///
-        /// Reported so the refusal can be checked rather than trusted: if this
-        /// says zero lords wear anything unique, then IsUniqueItem is not the
-        /// marker the game uses for Caladog's gilded armour and the guard is
-        /// protecting nothing.
+        /// Reported by reason rather than as one total, because the first
+        /// version of this guard was built on IsUniqueItem and a census found
+        /// that flag false for every item in the game -- it was protecting
+        /// nothing at all. Splitting the count is what would catch the same
+        /// mistake again.
         /// </summary>
         private static void ReportUniqueGear()
         {
-            int uniqueInCatalog = 0;
+            int uniqueInCatalog = 0, unsellableInCatalog = 0, craftedInCatalog = 0;
             MBReadOnlyList<ItemObject> all = MBObjectManager.Instance.GetObjectTypeList<ItemObject>();
             for (int i = 0; i < all.Count; i++)
             {
-                if (all[i] != null && all[i].IsUniqueItem) uniqueInCatalog++;
+                ItemObject item = all[i];
+                if (item == null) continue;
+                if (item.IsUniqueItem) uniqueInCatalog++;
+                if (item.NotMerchandise) unsellableInCatalog++;
+                if (item.IsCraftedByPlayer) craftedInCatalog++;
             }
 
             int wearers = 0, pieces = 0, shown = 0;
@@ -2010,8 +2013,10 @@ namespace HeroLoadoutFixer
                 }
             }
 
-            ModLog.Info("UNIQUE itemsInCatalog=" + uniqueInCatalog
-                        + " lordsWearingOne=" + wearers + " piecesWorn=" + pieces);
+            ModLog.Info("UNIQUE inCatalog unique=" + uniqueInCatalog
+                        + " notMerchandise=" + unsellableInCatalog
+                        + " playerCrafted=" + craftedInCatalog);
+            ModLog.Info("UNIQUE protectedLords=" + wearers + " protectedPieces=" + pieces);
             if (shown > 0) ModLog.Info(sample.ToString());
         }
 
@@ -2019,7 +2024,7 @@ namespace HeroLoadoutFixer
                                        StringBuilder sample)
         {
             ItemObject worn = hero.BattleEquipment[slot].Item;
-            if (worn == null || !worn.IsUniqueItem) return false;
+            if (!ItemCatalog.IsIrreplaceable(worn)) return false;
 
             pieces++;
             if (shown < 12)
@@ -2091,108 +2096,6 @@ namespace HeroLoadoutFixer
                 if (perk.StringId.IndexOf(fragment, System.StringComparison.OrdinalIgnoreCase) >= 0) return perk;
             }
             return null;
-        }
-
-        /// <summary>
-        /// What a culture's own elite troops carry in armour weight, and what
-        /// its lords carry.
-        ///
-        /// The reference for a weight cap has to come from the game, not from a
-        /// number someone liked: a Battanian Fian is an archer and should not
-        /// end up in the mail a Vlandian knight wears just because the market
-        /// ranked it higher. The troop the hero's loadout points at is the
-        /// honest yardstick, and it is per slot as well as total -- otherwise a
-        /// hero spends his whole weight budget on a cuirass and finishes in a
-        /// leather cap.
-        /// </summary>
-        private static void ReportArmorWeight()
-        {
-            foreach (CultureObject culture in MBObjectManager.Instance.GetObjectTypeList<CultureObject>())
-            {
-                try
-                {
-                    if (culture == null || !culture.IsMainCulture) continue;
-                    WeighLine(culture, culture.EliteBasicTroop, "elite");
-                    WeighLine(culture, culture.BasicTroop, "basic");
-                }
-                catch
-                {
-                    // One unreadable culture must not cost the survey.
-                }
-            }
-
-            Dictionary<string, List<int>> byRole = new Dictionary<string, List<int>>();
-            foreach (Hero hero in Hero.AllAliveHeroes)
-            {
-                try
-                {
-                    if (!HeroFilter.IsEligible(hero) || hero.BattleEquipment == null) continue;
-
-                    string role = HeroAdapter.ReadRole(hero).ToString();
-                    List<int> list;
-                    if (!byRole.TryGetValue(role, out list))
-                    {
-                        list = new List<int>();
-                        byRole[role] = list;
-                    }
-                    list.Add((int)(ArmorWeightOf(hero.BattleEquipment) * 100f));
-                }
-                catch
-                {
-                    // One unreadable hero must not cost the survey.
-                }
-            }
-
-            foreach (KeyValuePair<string, List<int>> pair in byRole)
-            {
-                ModLog.Info("WEIGHT lords " + pair.Key + " armourKgx100 " + Percentiles(pair.Value));
-            }
-        }
-
-        /// <summary>Walks one line to its top and reports what that troop wears.</summary>
-        private static void WeighLine(CultureObject culture, CharacterObject root, string line)
-        {
-            CharacterObject troop = root;
-            for (int depth = 0; depth < 10 && troop != null; depth++)
-            {
-                CharacterObject next = null;
-                if (troop.UpgradeTargets != null && troop.UpgradeTargets.Length > 0) next = troop.UpgradeTargets[0];
-                if (next == null) break;
-                troop = next;
-            }
-
-            if (troop == null) return;
-
-            Equipment set = troop.FirstBattleEquipment;
-            if (set == null) return;
-
-            StringBuilder text = new StringBuilder("WEIGHT troop ");
-            text.Append(culture.StringId).Append('/').Append(line)
-                .Append(' ').Append(troop.StringId)
-                .Append(" tier=").Append(troop.Tier)
-                .Append(" formation=").Append(troop.DefaultFormationClass)
-                .Append(" totalKgx100=").Append((int)(ArmorWeightOf(set) * 100f));
-
-            foreach (EquipmentIndex slot in SlotMapping.ArmorSlots)
-            {
-                ItemObject item = set[slot].Item;
-                text.Append(' ').Append(SlotMapping.NameOf(slot)).Append('=')
-                    .Append(item == null ? 0 : (int)(item.Weight * 100f));
-            }
-
-            ModLog.Info(text.ToString());
-        }
-
-        /// <summary>Total weight of the five armour slots.</summary>
-        private static float ArmorWeightOf(Equipment set)
-        {
-            float total = 0f;
-            foreach (EquipmentIndex slot in SlotMapping.ArmorSlots)
-            {
-                ItemObject item = set[slot].Item;
-                if (item != null) total += item.Weight;
-            }
-            return total;
         }
 
         /// <summary>

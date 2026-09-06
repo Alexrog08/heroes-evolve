@@ -21,11 +21,10 @@ namespace HeroLoadoutFixer
     /// it re-equipped heroes from their skills whenever it felt like it, so the
     /// player lost control of his own companions the moment they left his party.
     ///
-    /// Unique gear is never touched, in either direction. What TaleWorlds hung
-    /// on a specific character is that character: Caladog's gilded armour and
-    /// horned helm are the whole of how he reads on a battlefield, and trading
-    /// them for a statistically better cuirass destroys something no amount of
-    /// armour points buys back.
+    /// Gear a merchant would not have sold him is never taken off him either.
+    /// What TaleWorlds hung on a specific character is that character -- and
+    /// unlike an ordinary sword, it cannot be bought back once it is gone. See
+    /// ItemCatalog.IsIrreplaceable.
     /// </summary>
     public static class ShoppingTrip
     {
@@ -91,7 +90,7 @@ namespace HeroLoadoutFixer
                 // repair replaces it; buying a better one would cement it.
                 if (HeroAdapter.IsVanillaDummySword(worn)) continue;
 
-                if (worn.IsUniqueItem) continue;
+                if (ItemCatalog.IsIrreplaceable(worn)) continue;
 
                 WeaponCategory category = ItemClassifier.Classify(worn);
                 if (category == WeaponCategory.None) continue;
@@ -116,7 +115,7 @@ namespace HeroLoadoutFixer
             {
                 ItemObject worn = hero.BattleEquipment[slot].Item;
                 if (worn == null) continue;
-                if (worn.IsUniqueItem) continue;
+                if (ItemCatalog.IsIrreplaceable(worn)) continue;
 
                 List<MarketOffer> offers = MarketScanner.Armor(stock, settlement, hero, worn.ItemType,
                                                                culture, ceiling, FineOf(worn));
@@ -124,14 +123,14 @@ namespace HeroLoadoutFixer
             }
 
             ItemObject mount = hero.BattleEquipment[EquipmentIndex.Horse].Item;
-            if (mount != null && !mount.IsUniqueItem)
+            if (mount != null && !ItemCatalog.IsIrreplaceable(mount))
             {
                 List<MarketOffer> mounts = MarketScanner.Mounts(stock, settlement, hero, culture,
                                                                 ceiling, FineOf(mount), skills);
                 best = Better(best, EquipmentIndex.Horse, mounts, mount, limit);
 
                 ItemObject harness = hero.BattleEquipment[EquipmentIndex.HorseHarness].Item;
-                if (harness != null && !harness.IsUniqueItem)
+                if (harness != null && !ItemCatalog.IsIrreplaceable(harness))
                 {
                     List<MarketOffer> harnesses = MarketScanner.Harnesses(stock, settlement, hero, mount,
                                                                           culture, ceiling, FineOf(harness));
