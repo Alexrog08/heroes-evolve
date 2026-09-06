@@ -647,7 +647,8 @@ namespace HeroLoadoutFixer
                     + " | skills=" + RenderSkills(HeroAdapter.ReadSkills(hero))
                     + " | current=" + resolved.CurrentWeapons
                     + " | target=" + resolved.TargetWeapons
-                    + " | placed=" + resolved.PlacedWeapons;
+                    + " | placed=" + resolved.PlacedWeapons
+                    + " | ifStripped=" + IfStripped(hero, resolved);
 
                 ModLog.Info(header);
                 echo.AppendLine(header);
@@ -690,6 +691,49 @@ namespace HeroLoadoutFixer
                    + " tier=" + ((int)slot.Item.Tier + 1)
                    + " value=" + slot.Item.Value
                    + (slot.Existing != null ? " (replaces " + slot.Existing + ")" : "");
+        }
+
+        /// <summary>
+        /// What this hero would be planned if every weapon slot were empty.
+        ///
+        /// The `target` field alone reads as if it were the whole answer, and it
+        /// is not: it holds only the archetype core (a melee weapon and a
+        /// shield, say), while the remaining slots are filled afterwards by the
+        /// skill walk. A cavalry lord whose target says "Spear,Shield" still
+        /// picks up a bow in the spare pair if Bow ranks high enough -- which is
+        /// exactly what vanilla gave those lords in the first place. Without
+        /// this line the log invites the conclusion that a strong secondary
+        /// skill is being thrown away.
+        ///
+        /// Pure computation on a synthetic empty snapshot; the hero is not read
+        /// for equipment and never written to.
+        /// </summary>
+        private static string IfStripped(Hero hero, ResolvedGrant resolved)
+        {
+            WeaponCategory[] none = new WeaponCategory[SlotSnapshot.WeaponSlotCount];
+            for (int i = 0; i < none.Length; i++) none[i] = WeaponCategory.None;
+
+            // Mount state is kept as the real plan decided it, so the mounted
+            // ranged rules stay the same as the ones the hero is actually judged
+            // by; only the weapon slots are emptied.
+            SlotSnapshot empty = new SlotSnapshot(none, resolved.Mounted,
+                                                  false, false, false, false, false, false);
+
+            List<PlannedSlot> plan = LoadoutPlanner.Plan(HeroAdapter.ReadSkills(hero), empty,
+                                                         resolved.Availability,
+                                                         HeroLoadoutBehavior.DominanceMargin,
+                                                         resolved.CultureFieldsMountedElites,
+                                                         HeroAdapter.ReadRole(hero));
+
+            if (plan.Count == 0) return "<none>";
+
+            StringBuilder text = new StringBuilder();
+            for (int i = 0; i < plan.Count; i++)
+            {
+                if (i > 0) text.Append(',');
+                text.Append(plan[i].Category);
+            }
+            return text.ToString();
         }
 
         /// <summary>

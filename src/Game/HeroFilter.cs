@@ -28,6 +28,21 @@ namespace HeroLoadoutFixer
             // data that every hero later spawned from that template inherits.
             if (hero.IsTemplate) return false;
 
+            // Minor factions are excluded, not repaired. The Eleftheroi, the
+            // Jawwal and their kind are deliberately rough: their whole troop
+            // tree fields cruder equipment because that is the clan's identity,
+            // and their leaders match it. Two of the sixteen heroes the symptom
+            // detector flagged in a live campaign were minor-faction leaders,
+            // and "repairing" them would have erased the design rather than a
+            // defect. Their gear still improves later through the purchase
+            // engine, which scales with the clan's own wealth and skills.
+            if (hero.Clan != null && (hero.Clan.IsMinorFaction
+                                      || hero.Clan.IsBanditFaction
+                                      || hero.Clan.IsOutlaw
+                                      || hero.Clan.IsSect
+                                      || hero.Clan.IsNomad
+                                      || hero.Clan.IsMafia)) return false;
+
             return true;
         }
     }
