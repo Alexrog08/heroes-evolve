@@ -66,6 +66,7 @@ namespace HeroLoadoutFixer
             ReportSkillCurve();
             ReportPlayerCharacters();
             ReportAttributes();
+            ReportTalentSpread();
             List<Hero> broken = ReportHeroes();
             ReportDryRuns(broken, clanWeight, skillWeight, minimumTier, dominanceMargin);
             ModLog.Info("===== CENSUS END =====");
@@ -1212,6 +1213,14 @@ namespace HeroLoadoutFixer
                     if (hero.Age > 25f) continue;
                     if (hero == Hero.MainHero) continue;
 
+                    // Lords only. The first cut of this compared the player's
+                    // children against every hero under twenty-five --
+                    // wanderers, notables and villagers included -- which
+                    // dragged the comparison group down and flattered the
+                    // clan. Templates are excluded for the usual reason.
+                    if (hero.IsTemplate) continue;
+                    if (!hero.IsLord) continue;
+
                     int total = 0;
                     StringBuilder detail = new StringBuilder();
                     foreach (CharacterAttribute attribute in TaleWorlds.CampaignSystem.Extensions.Attributes.All)
@@ -1242,6 +1251,66 @@ namespace HeroLoadoutFixer
 
             ModLog.Info("ATTR playerClan under25 " + Percentiles(clanTotals));
             ModLog.Info("ATTR otherLords under25 " + Percentiles(otherTotals));
+        }
+
+        /// <summary>
+        /// How talent actually lands across this campaign's lords, and who the
+        /// gifted ones are.
+        ///
+        /// The distribution is triangular by construction, so the arithmetic is
+        /// known: for a threshold t above the midpoint, the share above it is
+        /// 2(1-t)^2. Over six hundred lords that puts roughly six above 1.90,
+        /// one or two above 1.95 and almost none at the ceiling -- which is the
+        /// intent, a handful of exceptional lords per campaign arrived at by
+        /// probability rather than by a rule that forces them.
+        ///
+        /// Arithmetic is not evidence, though. This reports where the hashes of
+        /// the real hero ids actually fell, and names the top few so they can be
+        /// looked up in game.
+        /// </summary>
+        private static void ReportTalentSpread()
+        {
+            List<int> all = new List<int>();
+            List<string> gifted = new List<string>();
+            int above190 = 0, above195 = 0, below070 = 0;
+
+            foreach (Hero hero in Hero.AllAliveHeroes)
+            {
+                try
+                {
+                    if (!HeroFilter.IsEligible(hero)) continue;
+
+                    float talent = Talent.For(hero.StringId);
+                    all.Add((int)(talent * 100));
+
+                    if (talent < 0.70f) below070++;
+                    if (talent > 1.90f)
+                    {
+                        above190++;
+                        if (gifted.Count < 12)
+                        {
+                            gifted.Add(hero.Name + " (" + CultureIdOf(hero) + ", "
+                                       + (int)hero.Age + ") " + (int)(talent * 100));
+                        }
+                    }
+                    if (talent > 1.95f) above195++;
+                }
+                catch
+                {
+                    // One unreadable hero must not cost the spread.
+                }
+            }
+
+            ModLog.Info("TALENT " + Percentiles(all));
+            ModLog.Info("TALENT exceptional above190=" + above190
+                        + " above195=" + above195
+                        + " poor below070=" + below070
+                        + " of " + all.Count);
+
+            for (int i = 0; i < gifted.Count; i++)
+            {
+                ModLog.Info("TALENT gifted " + gifted[i]);
+            }
         }
 
         private static string DescribeSlots(Hero hero)
