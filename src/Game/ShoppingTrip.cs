@@ -48,9 +48,13 @@ namespace HeroLoadoutFixer
         /// gear, and closing the worst gap first is the same discipline the
         /// skill growth uses: chase the shortfall, not the average.
         /// </summary>
-        public static Candidate Best(Hero hero, Settlement settlement, int ceiling)
+        public static Candidate Best(Hero hero, Settlement settlement, int ceiling, BudgetService budget)
         {
             if (hero == null || hero.BattleEquipment == null || settlement == null) return null;
+
+            // What one purchase may cost him. Read once: it does not move until
+            // something is actually bought.
+            int limit = budget == null ? int.MaxValue : budget.Available(hero);
 
             List<ItemRosterElement> stock = MarketScanner.Stock(settlement);
             if (stock.Count == 0) return null;
@@ -85,7 +89,7 @@ namespace HeroLoadoutFixer
 
                 List<MarketOffer> offers = MarketScanner.Weapons(stock, settlement, hero, category, culture,
                                                                  ceiling, TierOf(worn), skills, mounted, partner);
-                best = Better(best, slot, offers, TierOf(worn));
+                best = Better(best, slot, offers, TierOf(worn), limit);
             }
 
             foreach (EquipmentIndex slot in SlotMapping.ArmorSlots)
@@ -95,7 +99,7 @@ namespace HeroLoadoutFixer
 
                 List<MarketOffer> offers = MarketScanner.Armor(stock, settlement, hero, worn.ItemType,
                                                                culture, ceiling, TierOf(worn));
-                best = Better(best, slot, offers, TierOf(worn));
+                best = Better(best, slot, offers, TierOf(worn), limit);
             }
 
             ItemObject mount = hero.BattleEquipment[EquipmentIndex.Horse].Item;
@@ -103,14 +107,14 @@ namespace HeroLoadoutFixer
             {
                 List<MarketOffer> mounts = MarketScanner.Mounts(stock, settlement, hero, culture,
                                                                 ceiling, TierOf(mount), skills);
-                best = Better(best, EquipmentIndex.Horse, mounts, TierOf(mount));
+                best = Better(best, EquipmentIndex.Horse, mounts, TierOf(mount), limit);
 
                 ItemObject harness = hero.BattleEquipment[EquipmentIndex.HorseHarness].Item;
                 if (harness != null)
                 {
                     List<MarketOffer> harnesses = MarketScanner.Harnesses(stock, settlement, hero, mount,
                                                                           culture, ceiling, TierOf(harness));
-                    best = Better(best, EquipmentIndex.HorseHarness, harnesses, TierOf(harness));
+                    best = Better(best, EquipmentIndex.HorseHarness, harnesses, TierOf(harness), limit);
                 }
             }
 
@@ -131,13 +135,19 @@ namespace HeroLoadoutFixer
             return Shop(hero, settlement, ceiling, budget);
         }
 
+        /// <summary>The best affordable buy, or null. Kept for diagnostics.</summary>
+        public static Candidate Best(Hero hero, Settlement settlement, int ceiling)
+        {
+            return Best(hero, settlement, ceiling, null);
+        }
+
         /// <summary>
         /// Buys the best thing on offer, if there is one and it can be paid for.
         /// Returns true when gold actually moved.
         /// </summary>
         public static bool Shop(Hero hero, Settlement settlement, int ceiling, BudgetService budget)
         {
-            Candidate candidate = Best(hero, settlement, ceiling);
+            Candidate candidate = Best(hero, settlement, ceiling, budget);
             if (candidate == null) return false;
 
             string failure;
@@ -153,15 +163,29 @@ namespace HeroLoadoutFixer
         }
 
         /// <summary>
-        /// Keeps whichever of two slots is the better buy. The offers arrive
-        /// already sorted best-first, so only the head of the list can win.
+        /// Keeps whichever of two slots is the better buy, considering only what
+        /// the hero can pay for.
+        ///
+        /// The offers arrive sorted best-first, so the first one within the
+        /// limit is the best affordable one and the walk stops there. Taking the
+        /// head of the list unconditionally was fine while money was free; the
+        /// moment a spending share binds, it would have a lord fixate on the
+        /// splendid sword he cannot buy and walk out with nothing, while a
+        /// perfectly good cheaper upgrade sat on the same shelf.
         /// </summary>
         private static Candidate Better(Candidate best, EquipmentIndex slot,
-                                        List<MarketOffer> offers, int wornTier)
+                                        List<MarketOffer> offers, int wornTier, int limit)
         {
             if (offers == null || offers.Count == 0) return best;
 
-            MarketOffer offer = offers[0];
+            int chosen = -1;
+            for (int i = 0; i < offers.Count; i++)
+            {
+                if (offers[i].Price <= limit) { chosen = i; break; }
+            }
+            if (chosen < 0) return best;
+
+            MarketOffer offer = offers[chosen];
             if (best != null
                 && MarketRules.Compare(offer.Tier - wornTier, offer.OwnClass, offer.Price,
                                        best.Gain, best.Offer.OwnClass, best.Offer.Price) >= 0)

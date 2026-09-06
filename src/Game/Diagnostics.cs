@@ -73,6 +73,7 @@ namespace HeroLoadoutFixer
             ReportAllSkills();
             ReportGaps();
             ReportNaval();
+            ReportClanWealth();
             ReportMarkets();
             ReportHeadroom(clanWeight, skillWeight, minimumTier);
             ReportShopping(clanWeight, skillWeight, minimumTier);
@@ -1601,6 +1602,7 @@ namespace HeroLoadoutFixer
         {
             List<int> headroom = new List<int>();
             List<int> purses = new List<int>();
+            List<int> limits = new List<int>();
             List<int> ceilings = new List<int>();
             Dictionary<string, int> shortBySlot = new Dictionary<string, int>();
 
@@ -1619,7 +1621,8 @@ namespace HeroLoadoutFixer
                     SkillProfile skills = HeroAdapter.ReadSkills(hero);
                     int ceiling = HeroAdapter.ReadCeiling(hero, skills, clanWeight, skillWeight, minimumTier);
                     ceilings.Add(ceiling);
-                    purses.Add(budget.Available(hero));
+                    purses.Add(budget.Wallet(hero));
+                    limits.Add(budget.Available(hero));
 
                     int behind = 0;
                     for (int i = 0; i < SlotSnapshot.WeaponSlotCount; i++)
@@ -1645,7 +1648,8 @@ namespace HeroLoadoutFixer
             ModLog.Info("HEADROOM shoppers=" + shoppers + " alreadyAtCeiling=" + atCeiling);
             ModLog.Info("HEADROOM tiersBehind (summed over slots) " + Percentiles(headroom));
             ModLog.Info("HEADROOM ceiling " + Percentiles(ceilings));
-            ModLog.Info("HEADROOM purse " + Percentiles(purses));
+            ModLog.Info("HEADROOM wallet " + Percentiles(purses));
+            ModLog.Info("HEADROOM perPurchaseLimit " + Percentiles(limits));
 
             StringBuilder bySlot = new StringBuilder("HEADROOM slotsBehind");
             foreach (KeyValuePair<string, int> pair in shortBySlot)
@@ -1690,6 +1694,60 @@ namespace HeroLoadoutFixer
         /// or gear with no culture at all. If it rejects most of a market, the
         /// engine looks broken while behaving exactly as written.
         /// </summary>
+        /// <summary>
+        /// What the houses of the map are actually worth, per clan and not per
+        /// hero.
+        ///
+        /// HEADROOM's wallet column repeats a leader's purse once for every lord
+        /// under him, which is right for "what can this hero spend" and wrong
+        /// for "how rich are the clans". This is the line to carry between two
+        /// saves of different ages: the spending share turns clan wealth into
+        /// the gate on item tier, so how that wealth grows over a campaign is
+        /// what decides whether the gate ever opens.
+        /// </summary>
+        private static void ReportClanWealth()
+        {
+            List<int> gold = new List<int>();
+            Dictionary<string, int> byTier = new Dictionary<string, int>();
+
+            foreach (Clan clan in Clan.All)
+            {
+                try
+                {
+                    if (clan == null || clan.Leader == null) continue;
+                    if (clan.IsEliminated) continue;
+                    if (clan.IsBanditFaction || clan.IsOutlaw) continue;
+                    if (clan == Clan.PlayerClan) continue;
+
+                    gold.Add(clan.Gold);
+                    Bump(byTier, "t" + clan.Tier);
+                }
+                catch
+                {
+                    // A clan mid-collapse must not cost the survey.
+                }
+            }
+
+            ModLog.Info("CLANGOLD " + Percentiles(gold));
+            ModLog.Info("CLANGOLD " + Tally("clansByTier", byTier));
+
+            // What a tenth of each purse actually buys, in the game's own value
+            // curve: tier 3 ~2,080, tier 4 ~5,700, tier 5 ~15,700, tier 6
+            // ~43,300. Printed so the share can be judged against prices rather
+            // than against a feeling.
+            int t4 = 0, t5 = 0, t6 = 0;
+            for (int i = 0; i < gold.Count; i++)
+            {
+                int limit = (int)(gold[i] * BudgetService.DefaultSpendingShare);
+                if (limit >= 5700) t4++;
+                if (limit >= 15700) t5++;
+                if (limit >= 43300) t6++;
+            }
+            ModLog.Info("CLANGOLD clansAffording n=" + gold.Count
+                        + " tier4=" + t4 + " tier5=" + t5 + " tier6=" + t6
+                        + " atShare=" + BudgetService.DefaultSpendingShare);
+        }
+
         private static void ReportMarkets()
         {
             List<int> sizes = new List<int>();
@@ -1763,7 +1821,8 @@ namespace HeroLoadoutFixer
                               + " ceiling=" + ceiling + " eligible=" + HeroFilter.IsEligibleToShop(hero));
             List<ItemRosterElement> stock = MarketScanner.Stock(settlement);
             report.AppendLine("town=" + settlement.Name + " stock=" + stock.Count);
-            report.AppendLine("purse=" + budget.Available(hero)
+            report.AppendLine("wallet=" + budget.Wallet(hero)
+                              + " perPurchaseLimit=" + budget.Available(hero)
                               + " own=" + hero.Gold
                               + " clanRoom=" + budget.ClanRoom(clan)
                               + " reserve=" + budget.Reserve(clan)
@@ -1781,10 +1840,15 @@ namespace HeroLoadoutFixer
             DescribeSlotOffers(report, hero, settlement, stock, EquipmentIndex.Horse, ceiling, skills);
             DescribeSlotOffers(report, hero, settlement, stock, EquipmentIndex.HorseHarness, ceiling, skills);
 
-            ShoppingTrip.Candidate best = ShoppingTrip.Best(hero, settlement, ceiling);
+            ShoppingTrip.Candidate best = ShoppingTrip.Best(hero, settlement, ceiling, budget);
             if (best == null)
             {
-                report.AppendLine("would buy: nothing");
+                ShoppingTrip.Candidate ignoringMoney = ShoppingTrip.Best(hero, settlement, ceiling, null);
+                report.AppendLine(ignoringMoney == null
+                    ? "would buy: nothing"
+                    : "would buy: nothing -- priced out, best on offer is "
+                      + ignoringMoney.Offer.Item.StringId + " at " + ignoringMoney.Offer.Price
+                      + " against a limit of " + budget.Available(hero));
             }
             else
             {
@@ -1959,7 +2023,8 @@ namespace HeroLoadoutFixer
         /// </summary>
         private static void ReportShopping(float clanWeight, float skillWeight, int minimumTier)
         {
-            int inTowns = 0, wouldBuy = 0, nothingWanted = 0;
+            int inTowns = 0, wouldBuy = 0, nothingWanted = 0, pricedOut = 0;
+            BudgetService budget = new BudgetService();
             Dictionary<string, int> blockedBy = new Dictionary<string, int>();
             Dictionary<string, int> buySlots = new Dictionary<string, int>();
             List<int> prices = new List<int>();
@@ -1979,12 +2044,22 @@ namespace HeroLoadoutFixer
                     SkillProfile skills = HeroAdapter.ReadSkills(hero);
                     int ceiling = HeroAdapter.ReadCeiling(hero, skills, clanWeight, skillWeight, minimumTier);
 
-                    ShoppingTrip.Candidate best = ShoppingTrip.Best(hero, settlement, ceiling);
+                    ShoppingTrip.Candidate best = ShoppingTrip.Best(hero, settlement, ceiling, budget);
                     if (best != null)
                     {
                         wouldBuy++;
                         Bump(buySlots, SlotMapping.NameOf(best.Slot));
                         prices.Add(best.Offer.Price);
+                        continue;
+                    }
+
+                    // Nothing affordable is not the same as nothing on offer.
+                    // Asking again with no budget separates the two, and that
+                    // difference IS the cost of the spending share -- the one
+                    // number that says whether gold has started to matter.
+                    if (ShoppingTrip.Best(hero, settlement, ceiling, null) != null)
+                    {
+                        pricedOut++;
                         continue;
                     }
 
@@ -2017,6 +2092,7 @@ namespace HeroLoadoutFixer
 
             ModLog.Info("SHOPPING lordsInTowns=" + inTowns
                         + " wouldBuyNow=" + wouldBuy
+                        + " pricedOutByShare=" + pricedOut
                         + " alreadyAtCeilingEverywhere=" + nothingWanted);
             ModLog.Info("SHOPPING " + Tally("blockedSlotsBy", blockedBy));
             ModLog.Info("SHOPPING " + Tally("wouldBuySlot", buySlots));

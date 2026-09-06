@@ -35,14 +35,40 @@ namespace HeroLoadoutFixer
         /// </summary>
         public const float DefaultReserveMultiplier = 1.0f;
 
+        /// <summary>
+        /// The share of a hero's whole wallet he may put into one purchase.
+        ///
+        /// This is what makes gold matter. A campaign measured 876,000 as the
+        /// median wallet against a 2,924 median purchase: without a share, money
+        /// is not a constraint and never becomes one, and the tier ceiling is
+        /// the only thing standing between a lord and the best item in the shop.
+        ///
+        /// With a share, the price of a thing is measured against the wealth of
+        /// the house that buys it. A tier-6 piece runs about 43,000, so at a
+        /// tenth it takes a house holding some 430,000 to afford one; tier 5 at
+        /// 15,700 needs about 157,000. A young clan is priced out of the good
+        /// stuff and grows into it, which is the shape the ceiling alone cannot
+        /// express.
+        ///
+        /// A tenth is Lords Gear's own default territory -- its
+        /// AIGoldSpendingPercentage and ClanGoldSpendingPercentage multiply the
+        /// same wallet (hero gold plus clan gold, less pending) and its log line
+        /// literally reads "Wealth: {1}, Limit: {2}". It is the one number here
+        /// taken from someone else's play experience rather than a measurement,
+        /// and it is reported every census so it can become one.
+        /// </summary>
+        public const float DefaultSpendingShare = 0.10f;
+
         private readonly float _reserveMultiplier;
+        private readonly float _spendingShare;
         private readonly Dictionary<string, ClanDay> _today = new Dictionary<string, ClanDay>();
 
-        public BudgetService() : this(DefaultReserveMultiplier) { }
+        public BudgetService() : this(DefaultReserveMultiplier, DefaultSpendingShare) { }
 
-        public BudgetService(float reserveMultiplier)
+        public BudgetService(float reserveMultiplier, float spendingShare)
         {
             _reserveMultiplier = reserveMultiplier;
+            _spendingShare = spendingShare < 0f ? 0f : spendingShare;
         }
 
         /// <summary>
@@ -98,16 +124,25 @@ namespace HeroLoadoutFixer
         }
 
         /// <summary>
-        /// The most this hero could spend on one item right now: his own purse
-        /// plus whatever the house can still contribute.
+        /// Everything this hero could reach: his own purse plus whatever the
+        /// house can still contribute today.
         ///
         /// A clan leader contributes zero of "his own", because the clan purse
-        /// below already is his purse.
+        /// already is his purse.
         /// </summary>
-        public int Available(Hero hero)
+        public int Wallet(Hero hero)
         {
             if (hero == null) return 0;
             return OwnGold(hero) + ClanRoom(hero.Clan);
+        }
+
+        /// <summary>
+        /// The most this hero may put into one purchase: his share of the
+        /// wallet. See DefaultSpendingShare for why a share and not the lot.
+        /// </summary>
+        public int Available(Hero hero)
+        {
+            return (int)(Wallet(hero) * _spendingShare);
         }
 
         /// <summary>
@@ -125,6 +160,11 @@ namespace HeroLoadoutFixer
             heroPart = 0;
             clanPart = 0;
             if (hero == null || price <= 0) return false;
+
+            // The share comes first and binds everything below it. A hero with
+            // half a million behind him is still not allowed to spend it all on
+            // one helmet.
+            if (price > Available(hero)) return false;
 
             Clan clan = hero.Clan;
             Hero leader = clan != null ? clan.Leader : null;
