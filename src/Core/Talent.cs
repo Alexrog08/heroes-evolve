@@ -18,8 +18,23 @@ namespace HeroLoadoutFixer.Core
         /// <summary>The least talented hero learns at this fraction of the norm.</summary>
         public const float Minimum = 0.55f;
 
-        /// <summary>The most talented hero learns at this multiple of the norm.</summary>
-        public const float Maximum = 1.65f;
+        /// <summary>
+        /// The most talented hero learns at this multiple of the norm.
+        ///
+        /// Calibrated against a real campaign rather than chosen. The founder,
+        /// played to eighty-one, topped out at Bow 288; the median campaign-born
+        /// lord past fifty-five sits at 134, and the strongest the game produces
+        /// on its own reached 230. At 2.0 the most gifted lord this system can
+        /// make lands at 268 -- ninety-three percent of a character played for
+        /// thirty years, and only a little past what the campaign already grows
+        /// unaided.
+        ///
+        /// So an exceptional lord can stand nearly level with a played hero,
+        /// which is the point, while the triangular distribution keeps him rare:
+        /// reaching this multiplier at all takes both halves of the hash landing
+        /// at their extreme.
+        /// </summary>
+        public const float Maximum = 2.0f;
 
         /// <summary>
         /// A stable multiplier in [Minimum, Maximum] for this hero.

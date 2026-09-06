@@ -65,6 +65,7 @@ namespace HeroLoadoutFixer
             ReportDefectRate();
             ReportSkillCurve();
             ReportPlayerCharacters();
+            ReportAttributes();
             List<Hero> broken = ReportHeroes();
             ReportDryRuns(broken, clanWeight, skillWeight, minimumTier, dominanceMargin);
             ModLog.Info("===== CENSUS END =====");
@@ -1177,6 +1178,70 @@ namespace HeroLoadoutFixer
                 ModLog.Error("PLAYER report failed for " + hero.Name
                              + ": " + ex.GetType().Name + " " + ex.Message);
             }
+        }
+
+        /// <summary>
+        /// Starting attributes of the young, split by whether they were born
+        /// into the player's clan.
+        ///
+        /// The question is whether the player's children begin life better than
+        /// ordinary nobles -- higher Vigor, Control and the rest -- which would
+        /// mean an inherited character has a genuinely higher ceiling than any
+        /// AI lord and not merely more attention. The evidence so far argues
+        /// against it: Baldimos and Terea, both inherited into the player clan
+        /// and both fifty, top out at 132 and 109, squarely inside the AI band,
+        /// while Lina, created at character creation, reached 288. That points
+        /// at play time rather than breeding.
+        ///
+        /// Attributes settle it, because they are set at birth and the player
+        /// cannot have spent points on a hero who has not come of age. Anyone
+        /// under twenty-five is close enough to their starting values to
+        /// compare; the player's own characters are excluded, since those have
+        /// had points spent on them by hand.
+        /// </summary>
+        private static void ReportAttributes()
+        {
+            List<int> clanTotals = new List<int>();
+            List<int> otherTotals = new List<int>();
+
+            foreach (Hero hero in Hero.AllAliveHeroes)
+            {
+                try
+                {
+                    if (hero == null || hero.IsDead) continue;
+                    if (hero.Age > 25f) continue;
+                    if (hero == Hero.MainHero) continue;
+
+                    int total = 0;
+                    StringBuilder detail = new StringBuilder();
+                    foreach (CharacterAttribute attribute in TaleWorlds.CampaignSystem.Extensions.Attributes.All)
+                    {
+                        int value = hero.GetAttributeValue(attribute);
+                        total += value;
+                        detail.Append(attribute.Name).Append('=').Append(value).Append(' ');
+                    }
+
+                    bool playerClan = hero.Clan != null && hero.Clan == Clan.PlayerClan;
+                    if (playerClan) clanTotals.Add(total); else otherTotals.Add(total);
+
+                    // The player's own children are few; name them so the
+                    // comparison can be read case by case rather than only in
+                    // aggregate.
+                    if (playerClan)
+                    {
+                        ModLog.Info("ATTR playerClan " + hero.Name
+                                    + " age=" + (int)hero.Age
+                                    + " total=" + total + " | " + detail);
+                    }
+                }
+                catch
+                {
+                    // One unreadable hero must not cost the comparison.
+                }
+            }
+
+            ModLog.Info("ATTR playerClan under25 " + Percentiles(clanTotals));
+            ModLog.Info("ATTR otherLords under25 " + Percentiles(otherTotals));
         }
 
         private static string DescribeSlots(Hero hero)
