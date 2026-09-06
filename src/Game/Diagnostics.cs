@@ -592,7 +592,40 @@ namespace HeroLoadoutFixer
         /// </summary>
         private static void ReportCohorts()
         {
-            float elapsedYears = CampaignTime.Now.ElapsedYearsUntilNow;
+            // CampaignTime.Now.ElapsedYearsUntilNow is years from now until now,
+            // which is zero -- it measures forward from the instance it is read
+            // on. There is no CampaignStartTime to ask either, and hardcoding
+            // 1084 would break on any mod that moves the start.
+            //
+            // So derive the boundary from the data: every hand-authored lord
+            // (character id "lord_...") already existed on day one, so the
+            // latest birth year among them is at or just before the campaign's
+            // start. The youngest authored characters are toddlers, which puts
+            // the marker within a couple of years of the true start -- close
+            // enough to separate a hero born in play from one who was not.
+            double latestAuthoredBirthYear = double.MinValue;
+            foreach (Hero probe in Hero.AllAliveHeroes)
+            {
+                try
+                {
+                    if (probe == null || probe.CharacterObject == null) continue;
+                    if (probe.CharacterObject.StringId == null) continue;
+                    if (!probe.CharacterObject.StringId.StartsWith("lord_")) continue;
+
+                    double born = probe.BirthDay.ToYears;
+                    if (born > latestAuthoredBirthYear) latestAuthoredBirthYear = born;
+                }
+                catch
+                {
+                    // Skip anything unreadable; the marker only needs the bulk.
+                }
+            }
+
+            if (latestAuthoredBirthYear <= double.MinValue)
+            {
+                ModLog.Info("COHORT no authored lords found; cohort split unavailable");
+                return;
+            }
 
             Dictionary<string, List<int>> ridingByKey = new Dictionary<string, List<int>>();
             Dictionary<string, int> roleCounts = new Dictionary<string, int>();
@@ -603,9 +636,7 @@ namespace HeroLoadoutFixer
                 {
                     if (!HeroFilter.IsEligible(hero)) continue;
 
-                    // Born after the campaign began: their age is less than the
-                    // time that has passed since day one.
-                    bool bornInPlay = hero.Age < elapsedYears;
+                    bool bornInPlay = hero.BirthDay.ToYears > latestAuthoredBirthYear;
                     string cohort = bornInPlay ? "born" : "start";
                     string culture = CultureIdOf(hero);
                     BattleRole role = HeroAdapter.ReadRole(hero);
@@ -629,7 +660,8 @@ namespace HeroLoadoutFixer
                 }
             }
 
-            ModLog.Info("COHORT elapsedYears=" + (int)elapsedYears);
+            ModLog.Info("COHORT now=" + (int)CampaignTime.Now.ToYears
+                        + " latestAuthoredBirth=" + (int)latestAuthoredBirthYear);
 
             foreach (KeyValuePair<string, int> pair in roleCounts)
             {
