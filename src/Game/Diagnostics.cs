@@ -1485,6 +1485,14 @@ namespace HeroLoadoutFixer
                     {
                         if (skill == null || skill.Name == null) continue;
 
+                        // The eight weapon and movement skills are grown by the
+                        // equipment pass against a rank-based target, not by
+                        // focus. Measuring them here reported a shortfall
+                        // against a target the system does not use for them --
+                        // a diagnostic describing something nobody runs, which
+                        // is exactly the drift that made the old dry-run lie.
+                        if (IsGrownByEquipment(skill)) continue;
+
                         int focus = hero.HeroDeveloper.GetFocus(skill);
                         if (focus <= 0) continue;
 
@@ -1523,6 +1531,22 @@ namespace HeroLoadoutFixer
                             + " atOrAbove=" + atOrAbove
                             + " | " + Percentiles(pair.Value));
             }
+        }
+
+        /// <summary>
+        /// The skills the equipment pass owns: six weapons plus the two the
+        /// mount decision picks between. Mirrors SkillGrowthService.
+        /// </summary>
+        private static bool IsGrownByEquipment(SkillObject skill)
+        {
+            return skill == DefaultSkills.OneHanded
+                   || skill == DefaultSkills.TwoHanded
+                   || skill == DefaultSkills.Polearm
+                   || skill == DefaultSkills.Bow
+                   || skill == DefaultSkills.Crossbow
+                   || skill == DefaultSkills.Throwing
+                   || skill == DefaultSkills.Riding
+                   || skill == DefaultSkills.Athletics;
         }
 
         /// <summary>
