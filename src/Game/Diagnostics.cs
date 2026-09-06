@@ -64,6 +64,7 @@ namespace HeroLoadoutFixer
             ReportVariety(dominanceMargin);
             ReportDefectRate();
             ReportSkillCurve();
+            ReportPlayerCharacters();
             List<Hero> broken = ReportHeroes();
             ReportDryRuns(broken, clanWeight, skillWeight, minimumTier, dominanceMargin);
             ModLog.Info("===== CENSUS END =====");
@@ -465,8 +466,6 @@ namespace HeroLoadoutFixer
                                     + " formation=" + (hero.CharacterObject != null
                                         ? hero.CharacterObject.DefaultFormationClass.ToString() : "?")
                                     + " charId=" + (hero.CharacterObject != null ? hero.CharacterObject.StringId : "?")
-                                    + " heroId=" + hero.StringId
-                                    + " talent=" + (int)(Talent.For(hero.StringId) * 100)
                                     + " culture=" + CultureIdOf(hero)
                                     + " | " + DescribeSlots(hero));
                     }
@@ -1109,6 +1108,77 @@ namespace HeroLoadoutFixer
             ModLog.Info(text.ToString());
         }
 
+        /// <summary>
+        /// Every character the player has controlled, alive or dead, with their
+        /// skills and the focus invested in each.
+        ///
+        /// Two things need it. The player is meant to be the most capable hero
+        /// on the map, so their skills are the ceiling AI growth must not cross
+        /// -- and that ceiling can only be read from the character themselves.
+        /// And the focus allocation shows where a human actually spent a
+        /// campaign's worth of points, which is the shape a deliberately built
+        /// hero has, as opposed to the one the AI's own allocator produces.
+        ///
+        /// Dead characters are included: a campaign that has passed through
+        /// several generations keeps its history in DeadOrDisabledHeroes, and
+        /// the founder is usually the most developed character the save has
+        /// ever held.
+        /// </summary>
+        private static void ReportPlayerCharacters()
+        {
+            Hero main = Hero.MainHero;
+            if (main != null) DescribeDeveloped(main, "current");
+
+            foreach (Hero hero in Hero.DeadOrDisabledHeroes)
+            {
+                try
+                {
+                    if (hero == null) continue;
+
+                    // Former player characters: dead, and belonging to the
+                    // player's own clan. Not a perfect filter -- relatives share
+                    // it -- but the skills tell the two apart at a glance.
+                    if (hero.Clan == null || hero.Clan != Clan.PlayerClan) continue;
+
+                    DescribeDeveloped(hero, hero.IsDead ? "dead" : "disabled");
+                }
+                catch
+                {
+                    // One unreadable hero must not cost the report.
+                }
+            }
+        }
+
+        private static void DescribeDeveloped(Hero hero, string state)
+        {
+            try
+            {
+                StringBuilder text = new StringBuilder("PLAYER ");
+                text.Append(state).Append(' ').Append(hero.Name)
+                    .Append(" age=").Append((int)hero.Age)
+                    .Append(" level=").Append(hero.Level)
+                    .Append(" | ");
+
+                foreach (SkillObject skill in TaleWorlds.CampaignSystem.Extensions.Skills.All)
+                {
+                    int value = hero.GetSkillValue(skill);
+                    int focus = hero.HeroDeveloper != null ? hero.HeroDeveloper.GetFocus(skill) : 0;
+                    if (value <= 0 && focus <= 0) continue;
+
+                    text.Append(skill.Name).Append('=').Append(value);
+                    if (focus > 0) text.Append('(').Append(focus).Append("f)");
+                    text.Append(' ');
+                }
+
+                ModLog.Info(text.ToString());
+            }
+            catch (System.Exception ex)
+            {
+                ModLog.Error("PLAYER report failed for " + hero.Name
+                             + ": " + ex.GetType().Name + " " + ex.Message);
+            }
+        }
+
         private static string DescribeSlots(Hero hero)
         {
             StringBuilder text = new StringBuilder();
@@ -1272,6 +1342,8 @@ namespace HeroLoadoutFixer
                     + " formation=" + (hero.CharacterObject != null
                                             ? hero.CharacterObject.DefaultFormationClass.ToString() : "<none>")
                     + " charId=" + (hero.CharacterObject != null ? hero.CharacterObject.StringId : "<none>")
+                    + " heroId=" + hero.StringId
+                    + " talent=" + (int)(Talent.For(hero.StringId) * 100)
                     + " | skills=" + RenderSkills(HeroAdapter.ReadSkills(hero))
                     + " | current=" + resolved.CurrentWeapons
                     + " | target=" + resolved.TargetWeapons
