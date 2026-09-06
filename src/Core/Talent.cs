@@ -22,10 +22,16 @@ namespace HeroLoadoutFixer.Core
         /// The most talented hero learns at this multiple of the norm.
         ///
         /// Calibrated against a real campaign rather than chosen. With a peak
-        /// norm of 150 the most gifted lord in the world finishes on 285.
+        /// norm of 150 the most gifted lord in the world finishes on 310.
         ///
         /// The reference is the roster TaleWorlds authored, whose strongest lord
-        /// carries 309, and not the founder of the lab save who reached 288.
+        /// carries 309: the rarest prodigy a campaign can produce should be able
+        /// to stand level with the best the game ever wrote, and no higher. Two
+        /// or three heroes in a campaign reach that far -- with a triangular
+        /// distribution the share above 2.0 is under half a percent, which over
+        /// four hundred lords is a pair of them.
+        ///
+        /// Not the founder of the lab save, who reached 288.
         /// She was played under FastMode, where a year is twenty-eight campaign
         /// days rather than eighty-four, so she lived a third of the days an
         /// equally old character would have lived in stock -- fewer days, fewer
@@ -39,7 +45,7 @@ namespace HeroLoadoutFixer.Core
         /// reaching this multiplier at all takes both halves of the hash landing
         /// at their extreme.
         /// </summary>
-        public const float Maximum = 1.9f;
+        public const float Maximum = 2.07f;
 
         /// <summary>
         /// The three separate aptitudes a hero has. A man good with a lance is

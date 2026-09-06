@@ -34,15 +34,19 @@ namespace HeroLoadoutFixer.Tests
             // twenty-year-old at 230 on his first day.
             int giftedYouth = SkillGrowth.PrimaryTarget(20, Talent.Maximum);
             int giftedOld = SkillGrowth.PrimaryTarget(60, Talent.Maximum);
-                        // A gifted twenty-year-old lands near 162 -- above the 134 a
-            // campaign-born lord of that age reaches, well below the 250 the
-            // authored young lords are given, and far from his own peak of 285.
-            Check.True(giftedYouth < 175, "a gifted youth is promising, not a veteran");
+                        // A gifted twenty-year-old lands near 177: the best young lord on
+            // the map, well clear of the 134 a campaign-born one of that age
+            // reaches, still well under the 250 TaleWorlds gives its own young
+            // lords, and barely half his own peak of 310. Promise, not arrival.
+            Check.True(giftedYouth < 190, "a gifted youth is promising, not a veteran");
             Check.True(giftedOld > giftedYouth + 80, "his peak arrives decades later");
 
             // And that peak stays below a founder played for thirty years (288)
             // while sitting above what the campaign already grows unaided (230).
-            Check.True(giftedOld < 309, "even the most gifted lord stays under the strongest TaleWorlds authored");
+                        // The rarest prodigy stands level with the best lord TaleWorlds
+            // ever wrote -- 309 -- and no higher.
+            Check.True(giftedOld >= 300 && giftedOld <= 315,
+                       "the world's finest matches the strongest authored lord");
             Check.True(giftedOld > 230, "...but above what a campaign grows unaided");
 
             // The average lord ends meaningfully above today's stagnant 134.
