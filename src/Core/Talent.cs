@@ -37,18 +37,41 @@ namespace HeroLoadoutFixer.Core
         public const float Maximum = 2.0f;
 
         /// <summary>
-        /// A stable multiplier in [Minimum, Maximum] for this hero.
+        /// The three separate aptitudes a hero has. A man good with a lance is
+        /// not thereby good with a ledger, and a single talent figure would have
+        /// made every prodigy a prodigy at everything.
+        /// </summary>
+        public const string Combat = "combat";
+        public const string Civil = "civil";
+        public const string Naval = "naval";
+
+        /// <summary>Combat aptitude, kept as the bare overload it has always been.</summary>
+        public static float For(string heroId)
+        {
+            return For(heroId, Combat);
+        }
+
+        /// <summary>
+        /// A stable multiplier in [Minimum, Maximum] for this hero in one
+        /// domain.
         ///
         /// Distribution is deliberately centre-weighted rather than flat: two
         /// independent draws are averaged, which piles most heroes near the norm
         /// and makes the extremes rare. A map where one lord in six is
         /// exceptional is a map where none of them is.
+        ///
+        /// The domains are independent because they are salted into the hash
+        /// separately, so a lord's sword arm says nothing about his stewardship.
+        /// Being gifted in all three at once is possible and duly rare -- with
+        /// three independent draws it happens about as often as one lord in
+        /// seventy -- which is the point: it should exist, and it should be
+        /// remarkable.
         /// </summary>
-        public static float For(string heroId)
+        public static float For(string heroId, string domain)
         {
             if (string.IsNullOrEmpty(heroId)) return 1f;
 
-            uint hash = Hash(heroId);
+            uint hash = Hash(domain + ":" + heroId);
 
             // Two 10-bit draws from opposite ends of the hash. Averaging them
             // gives a triangular distribution: the middle is reached many ways,

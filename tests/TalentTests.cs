@@ -51,6 +51,36 @@ namespace HeroLoadoutFixer.Tests
             Check.True(middle > sample.Count / 2, "most heroes sit near the norm");
             Check.True(extremes * 10 < sample.Count, "fewer than one in ten is extreme");
 
+            // The three domains are independent: a lord's sword arm says nothing
+            // about his ledger or his seamanship.
+            int sameCombatAndCivil = 0, sameCombatAndNaval = 0;
+            int giftedInAll = 0, giftedInOne = 0;
+
+            for (int i = 0; i < 4000; i++)
+            {
+                string id = "lord_" + i + "_1";
+                float combat = Talent.For(id, Talent.Combat);
+                float civil = Talent.For(id, Talent.Civil);
+                float naval = Talent.For(id, Talent.Naval);
+
+                if (combat == civil) sameCombatAndCivil++;
+                if (combat == naval) sameCombatAndNaval++;
+
+                bool c = combat > 1.5f, v = civil > 1.5f, n = naval > 1.5f;
+                if (c && v && n) giftedInAll++;
+                if (c || v || n) giftedInOne++;
+            }
+
+            Check.True(sameCombatAndCivil < 40, "combat and civil talent are not the same number");
+            Check.True(sameCombatAndNaval < 40, "nor are combat and naval");
+            Check.True(Talent.For("lord_4_1") == Talent.For("lord_4_1", Talent.Combat),
+                       "the bare overload is the combat one");
+
+            // Gifted everywhere must be possible and must be rare. Roughly one
+            // lord in seventy clears a moderate bar in all three at once.
+            Check.True(giftedInAll > 10, "a lord favoured in everything does exist");
+            Check.True(giftedInAll * 20 < giftedInOne, "but he is a small fraction of the merely gifted");
+
             // The target scales with talent and is clamped to what the game can
             // actually show.
             Check.Equal(120, Talent.TargetFor(120, 1f), "average talent reaches the age norm");

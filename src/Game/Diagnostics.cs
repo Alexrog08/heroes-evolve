@@ -68,6 +68,7 @@ namespace HeroLoadoutFixer
             ReportPlayerCharacters();
             ReportAttributes();
             ReportTalentSpread();
+            ReportAllSkills();
             List<Hero> broken = ReportHeroes();
             ReportDryRuns(broken, clanWeight, skillWeight, minimumTier, dominanceMargin);
             ModLog.Info("===== CENSUS END =====");
@@ -1320,6 +1321,86 @@ namespace HeroLoadoutFixer
             for (int i = 0; i < gifted.Count; i++)
             {
                 ModLog.Info("TALENT gifted " + gifted[i]);
+            }
+        }
+
+        /// <summary>
+        /// Every skill the game has, across the lords this mod acts on: how high
+        /// they run, and how the AI has spent its focus on them.
+        ///
+        /// Combat was measured before anything was built for it and the numbers
+        /// overturned two of my assumptions on the way. The rest of the sheet --
+        /// Leadership, Steward, Medicine, Engineering, Trade, Charm, Roguery,
+        /// Scouting, Tactics, Smithing, and the three War Sails skills -- has
+        /// never been looked at at all, and there is no reason to think guessing
+        /// would go better this time.
+        ///
+        /// Focus matters as much as level here. The plan for non-combat growth
+        /// is to follow where the AI has already invested, since that is the
+        /// game's own statement of what this lord is for; whether that
+        /// investment is broad, narrow or absent decides whether the plan works.
+        /// </summary>
+        private static void ReportAllSkills()
+        {
+            Dictionary<string, List<int>> values = new Dictionary<string, List<int>>();
+            Dictionary<string, List<int>> focus = new Dictionary<string, List<int>>();
+            Dictionary<string, int> anyFocus = new Dictionary<string, int>();
+            List<int> focusTotals = new List<int>();
+            int lords = 0;
+
+            foreach (Hero hero in Hero.AllAliveHeroes)
+            {
+                try
+                {
+                    if (!HeroFilter.IsEligible(hero)) continue;
+                    if (hero.HeroDeveloper == null) continue;
+
+                    lords++;
+                    int totalFocus = 0;
+
+                    foreach (SkillObject skill in TaleWorlds.CampaignSystem.Extensions.Skills.All)
+                    {
+                        if (skill == null || skill.Name == null) continue;
+                        string name = skill.Name.ToString();
+
+                        List<int> vals;
+                        if (!values.TryGetValue(name, out vals)) { vals = new List<int>(); values[name] = vals; }
+                        vals.Add(hero.GetSkillValue(skill));
+
+                        int f = hero.HeroDeveloper.GetFocus(skill);
+                        totalFocus += f;
+
+                        List<int> fs;
+                        if (!focus.TryGetValue(name, out fs)) { fs = new List<int>(); focus[name] = fs; }
+                        fs.Add(f);
+
+                        if (f > 0) Bump(anyFocus, name);
+                    }
+
+                    focusTotals.Add(totalFocus);
+                }
+                catch
+                {
+                    // One unreadable hero must not cost the sheet.
+                }
+            }
+
+            ModLog.Info("ALLSKILL lords=" + lords + " focusPointsPerLord " + Percentiles(focusTotals));
+
+            foreach (KeyValuePair<string, List<int>> pair in values)
+            {
+                List<int> fs;
+                focus.TryGetValue(pair.Key, out fs);
+
+                int withFocus;
+                anyFocus.TryGetValue(pair.Key, out withFocus);
+
+                int pct = lords == 0 ? 0 : (withFocus * 100) / lords;
+
+                ModLog.Info("ALLSKILL " + pair.Key
+                            + " | value " + Percentiles(pair.Value)
+                            + " | focus " + (fs == null ? "n=0" : Percentiles(fs))
+                            + " | lordsWithFocus=" + withFocus + " (" + pct + "%)");
             }
         }
 
