@@ -465,6 +465,8 @@ namespace HeroLoadoutFixer
                                     + " formation=" + (hero.CharacterObject != null
                                         ? hero.CharacterObject.DefaultFormationClass.ToString() : "?")
                                     + " charId=" + (hero.CharacterObject != null ? hero.CharacterObject.StringId : "?")
+                                    + " heroId=" + hero.StringId
+                                    + " talent=" + (int)(Talent.For(hero.StringId) * 100)
                                     + " culture=" + CultureIdOf(hero)
                                     + " | " + DescribeSlots(hero));
                     }
