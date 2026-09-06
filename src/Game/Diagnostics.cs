@@ -60,6 +60,7 @@ namespace HeroLoadoutFixer
             ReportSuspectKits();
             ReportRiding();
             ReportCohorts();
+            CultureProfile.Report();
             List<Hero> broken = ReportHeroes();
             ReportDryRuns(broken, clanWeight, skillWeight, minimumTier, dominanceMargin);
             ModLog.Info("===== CENSUS END =====");

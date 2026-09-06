@@ -33,6 +33,19 @@ namespace HeroLoadoutFixer.Core
             return role == BattleRole.Cavalry || role == BattleRole.HorseArcher;
         }
 
+        /// <summary>
+        /// The same role on foot. Used when a hero's culture does not put its
+        /// lords on horses at all: the weapon archetype is unchanged (Cavalry
+        /// and Infantry both build melee, HorseArcher and Ranged both build
+        /// ranged), only the mount goes away.
+        /// </summary>
+        public static BattleRole Dismounted(BattleRole role)
+        {
+            if (role == BattleRole.Cavalry) return BattleRole.Infantry;
+            if (role == BattleRole.HorseArcher) return BattleRole.Ranged;
+            return role;
+        }
+
         /// <summary>Roles whose primary weapon is a ranged one.</summary>
         public static bool IsRanged(BattleRole role)
         {

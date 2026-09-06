@@ -99,6 +99,15 @@ namespace HeroLoadoutFixer
 
             bool cultureMounted = HeroAdapter.CultureFieldsMountedElites(hero);
             BattleRole role = HeroAdapter.ReadRole(hero);
+
+            // A culture that does not put its lords on horses does not get one
+            // here either, whatever this particular hero's label says. The label
+            // drifts over campaign generations -- every mounted Nord lord in the
+            // save was born in play, against twenty-one authored ones on foot --
+            // and Nord fields no cavalry for such a lord to lead. Only the mount
+            // is dropped; the weapon archetype is untouched, since Cavalry and
+            // Infantry build the same melee target.
+            if (!CultureProfile.MountsItsLords(culture)) role = BattleRoleRules.Dismounted(role);
             MountedRangedAvailability availability = ItemCatalog.RangedAvailability(hero, culture, ceiling);
 
             // PlanTarget is called here as well as inside Plan (which calls it

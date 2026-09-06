@@ -117,6 +117,27 @@ namespace HeroLoadoutFixer.Tests
                        "HorseArcher with no mounted-viable ranged weapon still plans melee");
             Check.False(StartsRanged(starved), "...and that fallback is not a ranged weapon");
 
+            // A foot culture's lord keeps his weapon archetype and loses only
+            // the horse: Cavalry and Infantry both build melee, HorseArcher and
+            // Ranged both build ranged.
+            Check.True(BattleRoleRules.Dismounted(BattleRole.Cavalry) == BattleRole.Infantry,
+                       "dismounted cavalry is infantry");
+            Check.True(BattleRoleRules.Dismounted(BattleRole.HorseArcher) == BattleRole.Ranged,
+                       "dismounted horse archer is a foot archer");
+            Check.True(BattleRoleRules.Dismounted(BattleRole.Infantry) == BattleRole.Infantry,
+                       "dismounting a foot role changes nothing");
+            Check.True(BattleRoleRules.Dismounted(BattleRole.Unset) == BattleRole.Unset,
+                       "dismounting an unlabelled hero changes nothing");
+
+            SkillProfile rider = new SkillProfile(120, 60, 60, 40, 0, 0, 120);
+            Check.False(Plan(rider, BattleRoleRules.Dismounted(BattleRole.Cavalry), true).WantsMount,
+                        "a dismounted cavalry role takes no mount even from a mounted culture");
+
+            SkillProfile archerRider = new SkillProfile(60, 40, 40, 160, 0, 0, 120);
+            LoadoutTarget footArcher = Plan(archerRider, BattleRoleRules.Dismounted(BattleRole.HorseArcher), true);
+            Check.True(StartsRanged(footArcher), "a dismounted horse archer still shoots");
+            Check.False(footArcher.WantsMount, "...but on foot");
+
             // Role must not disturb slot arithmetic.
             List<PlannedSlot> plan = LoadoutPlanner.Plan(merag, Empty(), MountedRangedAvailability.All(),
                                                          30, false, BattleRole.Ranged);

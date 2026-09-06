@@ -20,6 +20,7 @@ namespace HeroLoadoutFixer
             // A fresh behaviour instance is built per campaign load, but the
             // diagnostics counter is static and outlives one campaign.
             Diagnostics.ResetSession();
+            CultureProfile.Reset();
 
             // Deliberately NOT subscribed to CampaignEvents.HeroComesOfAgeEvent.
             //
