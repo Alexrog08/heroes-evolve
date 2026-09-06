@@ -61,6 +61,7 @@ namespace HeroLoadoutFixer
             ReportRiding();
             ReportCohorts();
             CultureProfile.Report();
+            CultureArchetypes.Report();
             ReportVariety(dominanceMargin);
             ReportDefectRate();
             ReportSkillCurve();

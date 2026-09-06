@@ -118,6 +118,14 @@ namespace HeroLoadoutFixer
             // and Nord fields no cavalry for such a lord to lead. Only the mount
             // is dropped; the weapon archetype is untouched, since Cavalry and
             // Infantry build the same melee target.
+            // What the failed generation left him outranks what his culture
+            // expects. A broken lord keeps exactly one skill and one matching
+            // weapon -- Nus only Throwing, Zandina only Polearm -- and that
+            // number is the only thing the game ever recorded about who he was.
+            // It is only honoured where his people actually field that shape, so
+            // a Vlandian who shoots becomes a crossbowman and never an archer.
+            role = CultureArchetypes.RoleFor(culture, skills, role);
+
             if (!cultureMounted) role = BattleRoleRules.Dismounted(role);
             MountedRangedAvailability availability = ItemCatalog.RangedAvailability(hero, culture, ceiling);
 
