@@ -1676,17 +1676,24 @@ namespace HeroLoadoutFixer
         /// What every town has on its shelves, and how much of it a lord of that
         /// town's own culture could actually be sold.
         ///
-        /// The gap between the two columns is the culture filter, and it is the
-        /// one policy in the purchase engine chosen by argument rather than
-        /// measurement: a lord may only buy his own culture's gear or gear with
-        /// no culture at all. If it turns out to reject most of a market, the
-        /// engine will look broken while behaving exactly as written -- so the
-        /// number is reported rather than assumed.
+        /// Three columns, because the first version of this report answered the
+        /// wrong question. It measured a town's stock against the TOWN's own
+        /// culture -- a local lord shopping at home -- and returned a reassuring
+        /// 90%. Lords are hardly ever at home: they campaign, they follow
+        /// armies, they garrison foreign towns. What a travelling lord can buy
+        /// is only the culture-neutral part of the shelf, which is the third
+        /// column, and that is the number the culture policy actually rests on.
+        ///
+        /// That policy is the one rule in the purchase engine chosen by argument
+        /// rather than measurement: a lord may only buy his own culture's gear
+        /// or gear with no culture at all. If it rejects most of a market, the
+        /// engine looks broken while behaving exactly as written.
         /// </summary>
         private static void ReportMarkets()
         {
             List<int> sizes = new List<int>();
             List<int> usable = new List<int>();
+            List<int> neutral = new List<int>();
             int towns = 0;
 
             foreach (Settlement settlement in Settlement.All)
@@ -1700,14 +1707,23 @@ namespace HeroLoadoutFixer
                     sizes.Add(stock.Count);
 
                     CultureObject culture = settlement.Culture;
-                    int fits = 0;
+                    int fits = 0, anyone = 0;
                     for (int i = 0; i < stock.Count; i++)
                     {
+                        ItemObject item = stock[i].EquipmentElement.Item;
+
                         // Tier 6 as the ceiling: this counts what the shelf
                         // could ever offer anyone, not what one lord may buy.
-                        if (ItemCatalog.PassesCommonFilters(stock[i].EquipmentElement.Item, culture, 6)) fits++;
+                        if (!ItemCatalog.PassesCommonFilters(item, culture, 6)) continue;
+                        fits++;
+
+                        // Culture-neutral gear is what a lord from anywhere else
+                        // can buy here, and most lords in a town are from
+                        // somewhere else.
+                        if (item.Culture == null) anyone++;
                     }
                     usable.Add(fits);
+                    neutral.Add(anyone);
                 }
                 catch
                 {
@@ -1717,7 +1733,8 @@ namespace HeroLoadoutFixer
 
             ModLog.Info("MARKET towns=" + towns);
             ModLog.Info("MARKET stockPerTown " + Percentiles(sizes));
-            ModLog.Info("MARKET passingCultureAndFilters " + Percentiles(usable));
+            ModLog.Info("MARKET forALocalLord " + Percentiles(usable));
+            ModLog.Info("MARKET forAForeignLord " + Percentiles(neutral));
         }
 
         /// <summary>
@@ -1801,7 +1818,12 @@ namespace HeroLoadoutFixer
             int wornTier = (int)worn.Tier + 1;
             if (wornTier >= ceiling)
             {
-                report.AppendLine("  " + name + ": " + worn.StringId + " t" + wornTier + " at ceiling");
+                // Above is not the same as at, and reading "t6 at ceiling" on a
+                // lord whose ceiling is 4 hides the real finding: plenty of
+                // lords already wear better than their merit says they should,
+                // and the engine correctly has nothing to do for them.
+                report.AppendLine("  " + name + ": " + worn.StringId + " t" + wornTier
+                                  + (wornTier > ceiling ? " ABOVE ceiling " + ceiling : " at ceiling"));
                 return;
             }
 
@@ -1839,7 +1861,8 @@ namespace HeroLoadoutFixer
             if (offers.Count == 0)
             {
                 report.AppendLine("  " + name + ": " + worn.StringId + " t" + wornTier
-                                  + " room to t" + ceiling + ", nothing in stock");
+                                  + " room to t" + ceiling + ", nothing in stock -- "
+                                  + WhyNothing(stock, worn, culture, ceiling, wornTier));
                 return;
             }
 
@@ -1848,6 +1871,52 @@ namespace HeroLoadoutFixer
                               + " " + offers[0].Price + "d"
                               + (offers[0].OwnClass ? "" : " (different class)")
                               + " [" + offers.Count + " offers]");
+        }
+
+        /// <summary>
+        /// Which gate emptied a slot's offers, counted over the same stock.
+        ///
+        /// "Nothing in stock" is three different findings wearing one label, and
+        /// they lead to opposite fixes. If the shelf holds no item of this kind
+        /// at all, the catalogue is thin and nothing about the engine will
+        /// help -- there are 108 leg armours in the whole game against 1125
+        /// helmets. If it holds them but all at the wrong tier, the engine is
+        /// right and the lord has to wait for a better town. If it holds them at
+        /// the right tier and the culture rule rejects them, that is a policy
+        /// decision showing its cost, and it is the one worth revisiting.
+        ///
+        /// The predicates are the scanner's own, called in the scanner's order,
+        /// so this attributes the real refusal rather than a second opinion.
+        /// </summary>
+        private static string WhyNothing(List<ItemRosterElement> stock, ItemObject worn,
+                                         CultureObject culture, int ceiling, int wornTier)
+        {
+            int sameKind = 0, rightTier = 0, wrongCulture = 0;
+
+            for (int i = 0; i < stock.Count; i++)
+            {
+                ItemObject item = stock[i].EquipmentElement.Item;
+                if (item.ItemType != worn.ItemType) continue;
+                sameKind++;
+
+                if (!MarketRules.IsUpgrade(wornTier, (int)item.Tier + 1, ceiling)) continue;
+                rightTier++;
+
+                if (item.Culture != null && culture != null && item.Culture.StringId != culture.StringId)
+                {
+                    wrongCulture++;
+                }
+            }
+
+            if (sameKind == 0) return "the town stocks none of that kind at all";
+            if (rightTier == 0) return sameKind + " of that kind, none in the tier band";
+            if (wrongCulture == rightTier) return rightTier + " at the right tier, ALL rejected on culture";
+            if (wrongCulture > 0)
+            {
+                return rightTier + " at the right tier, " + wrongCulture
+                       + " rejected on culture, the rest on skill or usage";
+            }
+            return rightTier + " at the right tier, rejected on skill or usage";
         }
 
         private static void ReportNaval()
