@@ -158,6 +158,59 @@ namespace HeroLoadoutFixer
 
                 ModLog.Info(line.ToString());
             }
+
+            ReportCorrections();
+        }
+
+        /// <summary>
+        /// How many living lords the culture rule actually dismounts.
+        ///
+        /// Sampled dry-run lines cannot show this: the sampler takes two heroes
+        /// per culture and may well pick ones the game already labelled on foot,
+        /// which proves nothing. A count of heroes whose mounted label was
+        /// overridden is the direct evidence.
+        /// </summary>
+        private static void ReportCorrections()
+        {
+            Dictionary<string, int> corrected = new Dictionary<string, int>();
+            Dictionary<string, int> mountedLabels = new Dictionary<string, int>();
+
+            foreach (Hero hero in Hero.AllAliveHeroes)
+            {
+                try
+                {
+                    if (!HeroFilter.IsEligible(hero)) continue;
+
+                    CultureObject culture = hero.Culture;
+                    if (culture == null && hero.Clan != null) culture = hero.Clan.Culture;
+                    if (culture == null || culture.StringId == null) continue;
+
+                    if (!Core.BattleRoleRules.IsMounted(HeroAdapter.ReadRole(hero))) continue;
+
+                    int labelled;
+                    mountedLabels.TryGetValue(culture.StringId, out labelled);
+                    mountedLabels[culture.StringId] = labelled + 1;
+
+                    if (MountsItsLords(culture)) continue;
+
+                    int n;
+                    corrected.TryGetValue(culture.StringId, out n);
+                    corrected[culture.StringId] = n + 1;
+                }
+                catch
+                {
+                    // One unreadable hero must not cost the count.
+                }
+            }
+
+            foreach (KeyValuePair<string, int> pair in mountedLabels)
+            {
+                int n;
+                corrected.TryGetValue(pair.Key, out n);
+                ModLog.Info("CULTURE correction " + pair.Key
+                            + " mountedLabels=" + pair.Value
+                            + " dismountedByRule=" + n);
+            }
         }
     }
 }
