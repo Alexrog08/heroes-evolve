@@ -28,6 +28,22 @@ namespace HeroLoadoutFixer
         /// </summary>
         internal const int MovementRank = 1;
 
+        /// <summary>
+        /// Weekly ticks in one campaign year, asked of the game rather than
+        /// assumed. CampaignTime derives its calendar from static fields any mod
+        /// may change -- FastMode cuts a season to one week, so a year is four
+        /// ticks there against twelve in stock -- and a growth rate written
+        /// against one calendar runs at the wrong speed on the other.
+        /// </summary>
+        private static float CyclesPerYear()
+        {
+            float daysInWeek = CampaignTime.DaysInWeek;
+            if (daysInWeek <= 0f) return SkillGrowth.DefaultCyclesPerYear;
+
+            float cycles = CampaignTime.DaysInYear / daysInWeek;
+            return cycles > 0f ? cycles : SkillGrowth.DefaultCyclesPerYear;
+        }
+
         public static void GrowWeekly(Hero hero)
         {
             if (!HeroFilter.IsEligible(hero)) return;
@@ -127,7 +143,7 @@ namespace HeroLoadoutFixer
             if (skill == null || target <= 0) return;
 
             int current = hero.GetSkillValue(skill);
-            float points = SkillGrowth.PointsStep(current, target, talent);
+            float points = SkillGrowth.PointsStep(current, target, talent, CyclesPerYear());
             if (points <= 0f) return;
 
             int xp = (int)(points * XpPerPointAt(current));

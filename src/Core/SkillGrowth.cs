@@ -125,10 +125,11 @@ namespace HeroLoadoutFixer.Core
         /// hero catches up quickly and then eases in rather than crawling for
         /// decades or arriving in one jump.
         /// </summary>
-        public static float PointsStep(int current, int target, float talent)
+        public static float PointsStep(int current, int target, float talent, float cyclesPerYear)
         {
             if (target <= 0) return 0f;
             if (current >= target) return 0f;
+            if (cyclesPerYear <= 0f) cyclesPerYear = DefaultCyclesPerYear;
 
             int gap = target - current;
 
@@ -137,7 +138,7 @@ namespace HeroLoadoutFixer.Core
             // sit on the limit and advance identically, which erases the one
             // thing talent exists to express. Capping the base instead keeps
             // them apart at every gap size.
-            float perCycle = (gap * CatchUpPerYear) / CyclesPerYear;
+            float perCycle = (gap * CatchUpPerYear) / cyclesPerYear;
 
             // A floor as well as a ceiling. Closing a fixed share of what
             // remains is geometric, so the last few points shrink toward nothing
@@ -163,10 +164,18 @@ namespace HeroLoadoutFixer.Core
         public const float CatchUpPerYear = 0.12f;
 
         /// <summary>
-        /// Weekly cycles in a campaign year. Bannerlord runs four seasons of
-        /// twenty-one days, so eighty-four days, so twelve weeks.
+        /// Weekly cycles in a campaign year, for callers with no campaign to
+        /// ask. Stock Bannerlord runs four seasons of three weeks, so twelve.
+        ///
+        /// A default rather than a fact, because the calendar is not fixed:
+        /// CampaignTime builds DaysInYear out of WeeksInSeason, DaysInWeek and
+        /// SeasonsInYear, all static fields a mod may change. FastMode shortens
+        /// a season to a single week, which makes a year four weekly ticks
+        /// instead of twelve -- so a rate written against the stock calendar
+        /// runs at a third speed there. The real figure is read from the game
+        /// and passed in.
         /// </summary>
-        public const float CyclesPerYear = 12f;
+        public const float DefaultCyclesPerYear = 12f;
 
         /// <summary>
         /// Ceiling on the pre-talent step, so no hero visibly jumps between two

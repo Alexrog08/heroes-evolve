@@ -58,23 +58,23 @@ namespace HeroLoadoutFixer.Tests
             Check.Equal(0, SkillGrowth.TargetForRank(0, 0), "no target means no ranks");
 
             // Growth stops on arrival, so a properly developed lord is untouched.
-            Check.True(SkillGrowth.PointsStep(200, 200, 1f) == 0f, "an arrived skill gains nothing");
-            Check.True(SkillGrowth.PointsStep(250, 200, 1f) == 0f, "a skill past its target gains nothing");
-            Check.True(SkillGrowth.PointsStep(0, 0, 1f) == 0f, "no target, no growth");
+            Check.True(SkillGrowth.PointsStep(200, 200, 1f, 12f) == 0f, "an arrived skill gains nothing");
+            Check.True(SkillGrowth.PointsStep(250, 200, 1f, 12f) == 0f, "a skill past its target gains nothing");
+            Check.True(SkillGrowth.PointsStep(0, 0, 1f, 12f) == 0f, "no target, no growth");
 
             // A wide gap moves faster than a narrow one.
-            float wide = SkillGrowth.PointsStep(0, 200, 1f);
-            float narrow = SkillGrowth.PointsStep(190, 200, 1f);
+            float wide = SkillGrowth.PointsStep(0, 200, 1f, 12f);
+            float narrow = SkillGrowth.PointsStep(190, 200, 1f, 12f);
             Check.True(wide > narrow, "the further behind, the faster the catch-up");
             Check.True(narrow > 0f, "the last few points still land");
 
             // Talent changes the rate, not just the destination.
-            Check.True(SkillGrowth.PointsStep(0, 200, Talent.Maximum)
-                       > SkillGrowth.PointsStep(0, 200, Talent.Minimum),
+            Check.True(SkillGrowth.PointsStep(0, 200, Talent.Maximum, 12f)
+                       > SkillGrowth.PointsStep(0, 200, Talent.Minimum, 12f),
                        "a talented hero closes the same gap faster");
 
             // No single cycle is allowed to be dramatic.
-            Check.True(SkillGrowth.PointsStep(0, 330, Talent.Maximum)
+            Check.True(SkillGrowth.PointsStep(0, 330, Talent.Maximum, 12f)
                        <= SkillGrowth.MaximumBasePointsPerCycle * Talent.Maximum,
                        "one cycle never moves more than the cap");
 
@@ -82,10 +82,10 @@ namespace HeroLoadoutFixer.Tests
             // target and keep climbing, not sprint to it and stop. Ten points
             // behind, an average lord gains about a point a year less than his
             // target rises, which is what keeps him chasing.
-            Check.True(SkillGrowth.PointsStep(160, 170, 1f) * SkillGrowth.CyclesPerYear < 4f,
+            Check.True(SkillGrowth.PointsStep(160, 170, 1f, 12f) * SkillGrowth.DefaultCyclesPerYear < 4f,
                        "a lord near his target advances gently, not in a rush");
-            Check.True(SkillGrowth.PointsStep(0, 330, Talent.Maximum)
-                       > SkillGrowth.PointsStep(0, 330, Talent.Minimum),
+            Check.True(SkillGrowth.PointsStep(0, 330, Talent.Maximum, 12f)
+                       > SkillGrowth.PointsStep(0, 330, Talent.Minimum, 12f),
                        "talent still separates them at the cap");
 
             // Sustained growth is the requirement, so it is simulated rather
@@ -101,15 +101,15 @@ namespace HeroLoadoutFixer.Tests
             bool climbedEveryYear = true;
             bool everOvertook = false;
 
-            for (int week = 0; week < (int)SkillGrowth.CyclesPerYear * 25; week++)
+            for (int week = 0; week < (int)SkillGrowth.DefaultCyclesPerYear * 25; week++)
             {
                 int target = SkillGrowth.PrimaryTarget(careerAge, 1.27f);
                 if (skill > target + 1) everOvertook = true;
 
-                skill += SkillGrowth.PointsStep((int)skill, target, 1.27f);
-                careerAge += 1f / SkillGrowth.CyclesPerYear;
+                skill += SkillGrowth.PointsStep((int)skill, target, 1.27f, 12f);
+                careerAge += 1f / SkillGrowth.DefaultCyclesPerYear;
 
-                if (week > 0 && week % (int)SkillGrowth.CyclesPerYear == 0)
+                if (week > 0 && week % (int)SkillGrowth.DefaultCyclesPerYear == 0)
                 {
                     // Compared as a float: the first year gains only six tenths
                     // of a point, which an integer comparison would read as no
@@ -120,6 +120,21 @@ namespace HeroLoadoutFixer.Tests
             }
 
             Check.True(climbedEveryYear, "a lord gains ground every year of his career");
+
+            // The same career on a shortened calendar must land in the same
+            // place by the same age. FastMode makes a year four weekly ticks
+            // instead of twelve, and a rate written against one calendar runs at
+            // a third speed on the other -- which a hardcoded twelve did.
+            float fastSkill = 120f;
+            float fastAge = 35f;
+            for (int week = 0; week < 4 * 25; week++)
+            {
+                int fastTarget = SkillGrowth.PrimaryTarget(fastAge, 1.27f);
+                fastSkill += SkillGrowth.PointsStep((int)fastSkill, fastTarget, 1.27f, 4f);
+                fastAge += 1f / 4f;
+            }
+            Check.True(fastSkill > skill - 12 && fastSkill < skill + 12,
+                       "a shortened calendar reaches the same place by the same age");
             Check.True(!everOvertook, "and never overtakes what his years entitle him to");
 
             int finalTarget = SkillGrowth.PrimaryTarget(60f, 1.27f);
@@ -127,8 +142,8 @@ namespace HeroLoadoutFixer.Tests
             Check.True(skill < finalTarget, "but short of it -- there is always further to go");
 
             // Talent still separates them over a career.
-            Check.True(SkillGrowth.PointsStep(120, 170, Talent.Maximum)
-                       > SkillGrowth.PointsStep(120, 170, Talent.Minimum),
+            Check.True(SkillGrowth.PointsStep(120, 170, Talent.Maximum, 12f)
+                       > SkillGrowth.PointsStep(120, 170, Talent.Minimum, 12f),
                        "and the gifted get there first");
         }
     }
