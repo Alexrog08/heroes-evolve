@@ -45,6 +45,17 @@ bug y no una decisión.
    contra 2,5% de los escritos a mano. Decisión del usuario: es evolución
    generacional y da variedad. Solo se corrige la montura, no el rol de arma.
 
+4. **La variedad de objeto la da el mercado, no la concesion.** La fase 1 solo
+   fija categorias; que dos lores acaben con espadas distintas depende de lo
+   que hubiera en la ciudad donde compraron. **Condicion para que eso ocurra:**
+   el motor de compra debe mirar el inventario de la ciudad concreta, no el
+   catalogo global. Hoy `ItemCatalog.FindBest` escanea el catalogo entero y
+   devuelve el primero del tier mas alto, asi que dos lores de la misma cultura
+   y techo reciben la identica espada. Repetir ese patron en la fase 2
+   reproduciria el determinismo cobrandolo.
+   Lo que la fase 1 si fija para siempre es la *forma* del loadout, y eso sale
+   de las skills, que ya varian solas.
+
 ## Hechos del juego verificados, con su prueba
 
 - `Clan.Gold` **es** `Leader.Gold`. Desensamblado: `get_Gold` → `get_Leader` →
