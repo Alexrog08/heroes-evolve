@@ -75,11 +75,14 @@ namespace HeroLoadoutFixer
         /// </summary>
         private readonly HashSet<string> _beyondRepair = new HashSet<string>();
 
+        /// <summary>
+        /// The hero's own object id. Not the CharacterObject's: that is unique
+        /// per hero in practice, but nothing guarantees it, and a shared
+        /// character would make two heroes share a give-up entry.
+        /// </summary>
         private static string IdOf(Hero hero)
         {
-            return hero.CharacterObject != null && hero.CharacterObject.StringId != null
-                ? hero.CharacterObject.StringId
-                : hero.StringId;
+            return hero.StringId;
         }
 
         private void OnDailyTickHero(Hero hero)
@@ -100,7 +103,11 @@ namespace HeroLoadoutFixer
                 ModLog.Info("REPAIR hero=" + hero.Name + " reason=" + reason);
                 int granted = GrantService.Grant(hero, ClanWeight, SkillWeight,
                                                  MinimumTier, DominanceMargin);
-                Diagnostics.NoteRepair();
+
+                // Counted only when something was actually placed: the census
+                // reports this as repairs already made, and an attempt that
+                // changed nothing is not one.
+                if (granted > 0) Diagnostics.NoteRepair();
 
                 if (granted == 0 && id != null)
                 {
