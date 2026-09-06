@@ -70,6 +70,7 @@ namespace HeroLoadoutFixer
             ReportTalentSpread();
             ReportAllSkills();
             ReportGaps();
+            ReportNaval();
             List<Hero> broken = ReportHeroes();
             ReportDryRuns(broken, clanWeight, skillWeight, minimumTier, dominanceMargin);
             ModLog.Info("===== CENSUS END =====");
@@ -1558,6 +1559,123 @@ namespace HeroLoadoutFixer
         {
             string id = skill.StringId;
             return id == "Mariner" || id == "Boatswain" || id == "Shipmaster";
+        }
+
+        /// <summary>
+        /// The naval picture: how nautical each culture is by the game's own
+        /// reckoning, how many lords actually command ships, and where their
+        /// seamanship stands.
+        ///
+        /// The three War Sails skills currently grow the same way stewardship
+        /// does -- by focus alone -- and barely move, because only six to
+        /// seventeen percent of lords have any focus in them. That may be right
+        /// or it may be a hole: their maxima of 260 to 280 are the highest
+        /// figures anywhere on the sheet, so a handful of lords are outstanding
+        /// sailors while the median has never touched a tiller.
+        ///
+        /// Combat is not decided by focus alone -- it follows what a lord
+        /// actually carries. Two candidates exist for the naval equivalent and
+        /// neither has been looked at: MobileParty.Ships says whether this lord
+        /// commands a fleet at all, and CultureObject.NavalFactor is TaleWorlds'
+        /// own statement of how seafaring a people is. Measure both before
+        /// building anything on either.
+        /// </summary>
+        private static void ReportNaval()
+        {
+            Dictionary<string, List<int>> marinerByCulture = new Dictionary<string, List<int>>();
+            Dictionary<string, int> lordsByCulture = new Dictionary<string, int>();
+            Dictionary<string, int> shipOwnersByCulture = new Dictionary<string, int>();
+            Dictionary<string, float> navalFactor = new Dictionary<string, float>();
+
+            List<int> withShips = new List<int>();
+            List<int> withoutShips = new List<int>();
+
+            foreach (Hero hero in Hero.AllAliveHeroes)
+            {
+                try
+                {
+                    if (!HeroFilter.IsEligible(hero)) continue;
+
+                    CultureObject culture = hero.Culture;
+                    if (culture == null || culture.StringId == null) continue;
+
+                    string key = culture.StringId;
+                    Bump(lordsByCulture, key);
+                    if (!navalFactor.ContainsKey(key)) navalFactor[key] = culture.NavalFactor;
+
+                    SkillObject marinerSkill = FindSkill("Mariner");
+                    int mariner = marinerSkill == null ? 0 : hero.GetSkillValue(marinerSkill);
+
+                    List<int> list;
+                    if (!marinerByCulture.TryGetValue(key, out list))
+                    {
+                        list = new List<int>();
+                        marinerByCulture[key] = list;
+                    }
+                    list.Add(mariner);
+
+                    int ships = 0;
+                    if (hero.PartyBelongedTo != null && hero.PartyBelongedTo.Ships != null)
+                    {
+                        ships = hero.PartyBelongedTo.Ships.Count;
+                    }
+
+                    if (ships > 0)
+                    {
+                        Bump(shipOwnersByCulture, key);
+                        withShips.Add(mariner);
+                    }
+                    else
+                    {
+                        withoutShips.Add(mariner);
+                    }
+                }
+                catch
+                {
+                    // One unreadable hero must not cost the survey.
+                }
+            }
+
+            // The question that decides the design: does commanding a ship go
+            // with knowing how to sail one? If it does, ships are to seamanship
+            // what a lance is to Polearm, and the naval skills should follow
+            // them rather than focus alone.
+            ModLog.Info("NAVAL withShips " + Percentiles(withShips));
+            ModLog.Info("NAVAL withoutShips " + Percentiles(withoutShips));
+
+            foreach (KeyValuePair<string, int> pair in lordsByCulture)
+            {
+                float factor;
+                navalFactor.TryGetValue(pair.Key, out factor);
+
+                int owners;
+                shipOwnersByCulture.TryGetValue(pair.Key, out owners);
+
+                List<int> mariners;
+                marinerByCulture.TryGetValue(pair.Key, out mariners);
+
+                ModLog.Info("NAVAL " + pair.Key
+                            + " navalFactor=" + (int)(factor * 100) + "%"
+                            + " lords=" + pair.Value
+                            + " withShips=" + owners
+                            + " | mariner " + (mariners == null ? "n=0" : Percentiles(mariners)));
+            }
+        }
+
+        /// <summary>
+        /// A skill by its string id, or null when this installation has no such
+        /// skill. The War Sails skills are not members of DefaultSkills -- the
+        /// build fails outright if you name them there -- so they can only be
+        /// reached by walking the registry, which also makes the report work
+        /// unchanged for anyone without the DLC.
+        /// </summary>
+        private static SkillObject FindSkill(string stringId)
+        {
+            foreach (SkillObject skill in TaleWorlds.CampaignSystem.Extensions.Skills.All)
+            {
+                if (skill != null && skill.StringId == stringId) return skill;
+            }
+            return null;
         }
 
         private static string DescribeSlots(Hero hero)
