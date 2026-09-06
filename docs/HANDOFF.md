@@ -67,7 +67,11 @@ seguirá siendo dentro de cuarenta años. **Nunca una lanza.**
   comprar lo retira, así que el segundo lord que entra se lleva lo siguiente.
 - **El dinero se mueve, no se crea.** Lo desplazado vuelve al roster de la ciudad
   y se reparte el ingreso en la misma proporción en que se pagó.
-- **El clan del jugador queda fuera.** `Clan.Gold` es el oro del jugador.
+- **La línea del clan del jugador se traza en la party, no en el clan.** Quien
+  va dentro de tu party no compra: lo equipas tú. Quien lidera una party propia
+  —un lord con tropas, un compañero con una caravana— sí. Fuera de tu casa no
+  hay condición de party.
+- **Una salida de compras por lord y día**, marcada aunque no compre nada.
 
 ## Sin verificar en campaña
 
@@ -153,6 +157,16 @@ No volver a plantearlo sin datos nuevos.
    de foco coherente con su arquetipo.
 
 ## Hechos del juego verificados, con su prueba
+
+- **Lords Gear no sortea que el lord vaya a la ciudad.** Su
+  `LordEquipmentBehavior::OnHourlyTick` recorre `Hero.AllAliveHeroes` **cada
+  hora**, exige `hero.CurrentSettlement != null` e `IsTown`, y solo entonces tira
+  `MBRandom.RandomInt(1, 101)` contra `AIShopVisitChance` o `ClanShopVisitChance`.
+  El lord va donde lo lleva la IA del juego; el mod solo decide si compra estando
+  ya allí. `OnDailyTick` limpia el conjunto de ids, así que hay **un tope de una
+  compra por lord y día**. Nuestro enganche es por evento de entrada en vez de
+  sondeo horario —más barato y una tirada por visita en vez de una por hora— con
+  el mismo tope diario.
 
 - `Clan.Gold` **es** `Leader.Gold`. Desensamblado: `get_Gold` → `get_Leader` →
   `Hero::get_Gold`. No hay bote de clan.

@@ -85,9 +85,11 @@ ranura dentro de la ciudad donde este el jugador.
   familia, asi que una espada podia volverse maza; con el desempate solo pasa
   cuando la ciudad no tiene nada de su clase a ese tier.
 - **Se arregla primero el hueco mayor**, la misma disciplina que las skills.
-- **El clan del jugador queda fuera.** Para su casa `Clan.Gold` es su propio
-  dinero, y unos companeros comprando armadura se lo gastarian sin preguntar. Es
-  lo que dice la seccion 11 y es lo que evita repetir la queja que origino el mod.
+- **La linea del clan del jugador se traza en la party, no en el clan.** Quien
+  va dentro de la party del jugador no compra: la equipa el. Quien lidera una
+  party propia si. Decision del usuario, y encaja con el motivo original: lo que
+  molestaba de Lords Gear era perder el control de los companeros propios.
+- **Un viaje de compras por lord y dia**, igual que Lords Gear.
 - **Las facciones menores entran**, al reves que en la reparacion.
 
 ## Riesgos anotados
