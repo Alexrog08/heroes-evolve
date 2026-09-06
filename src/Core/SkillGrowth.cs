@@ -55,20 +55,27 @@ namespace HeroLoadoutFixer.Core
         /// Talent decides how far a hero can go; age decides how far along he
         /// is. The peak belongs to old men.
         /// </summary>
-        public static float Maturity(int age)
+        public static float Maturity(float age)
         {
             if (age <= StartAge) return StartMaturity;
             if (age >= MatureAge) return 1f;
 
-            float progress = (float)(age - StartAge) / (MatureAge - StartAge);
+            float progress = (age - StartAge) / (MatureAge - StartAge);
             return StartMaturity + (1f - StartMaturity) * progress;
         }
 
         /// <summary>
         /// Where this hero's best combat skill should be sitting: as far along
         /// his own ceiling as his years have carried him.
+        ///
+        /// Age is taken as a fraction of a year, not whole years. With whole
+        /// years the target stood still for twelve cycles and then jumped, so a
+        /// hero sprinted to it, stopped dead, and waited for his next birthday
+        /// to unlock the next stretch -- growth in steps rather than growth.
+        /// Fractional age makes the target climb every week, which is what the
+        /// hero is then chasing.
         /// </summary>
-        public static int PrimaryTarget(int age, float talent)
+        public static int PrimaryTarget(float age, float talent)
         {
             int peak = Talent.TargetFor(PeakNorm, talent);
             return (int)(peak * Maturity(age));
@@ -145,11 +152,15 @@ namespace HeroLoadoutFixer.Core
 
         /// <summary>
         /// Share of the remaining gap a hero of average talent closes in a year.
-        /// A third leaves a badly broken lord recognisably better within a
-        /// couple of years and near his target within five, without anyone
-        /// watching a skill bar climb.
+        ///
+        /// Deliberately small. At a third, a lord caught his target within a few
+        /// years and then sat pinned to it exactly, advancing only as fast as
+        /// the target itself -- correct arithmetic, but it reads as a sprint
+        /// followed by a lifetime of tracking a line. At an eighth he settles
+        /// some ten points short and climbs steadily for the rest of his life,
+        /// never arriving. A man should always have further to go.
         /// </summary>
-        public const float CatchUpPerYear = 0.33f;
+        public const float CatchUpPerYear = 0.12f;
 
         /// <summary>
         /// Weekly cycles in a campaign year. Bannerlord runs four seasons of
@@ -166,13 +177,15 @@ namespace HeroLoadoutFixer.Core
         /// Talent.Maximum -- two points in a week for a prodigy who is badly
         /// behind, half that for a slow learner in the same hole.
         /// </summary>
-        public const float MaximumBasePointsPerCycle = 1f;
+        public const float MaximumBasePointsPerCycle = 0.35f;
 
         /// <summary>
-        /// Floor on the pre-talent step, so the tail of a catch-up terminates.
-        /// A quarter point a week is three a year: enough that the last stretch
-        /// closes inside a couple of years rather than never.
+        /// Floor on the pre-talent step. Much lower than it was: with the target
+        /// climbing every week a hero's gap no longer shrinks toward nothing, so
+        /// the floor is a guard against stalling rather than the engine of the
+        /// tail. Left in because a hero already at his ceiling -- past sixty,
+        /// where maturity stops -- would otherwise have no gap at all.
         /// </summary>
-        public const float MinimumBasePointsPerCycle = 0.25f;
+        public const float MinimumBasePointsPerCycle = 0.02f;
     }
 }

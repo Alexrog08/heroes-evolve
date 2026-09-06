@@ -4,29 +4,20 @@ namespace HeroLoadoutFixer.Tests
 {
     public static class SkillGrowthTests
     {
-        /// <summary>Campaign years for a hero to close a gap of this size.</summary>
-        private static int YearsToClose(int gap, float talent)
-        {
-            float current = 0f;
-            int target = gap;
-
-            for (int week = 0; week < (int)SkillGrowth.CyclesPerYear * 40; week++)
-            {
-                float step = SkillGrowth.PointsStep((int)current, target, talent);
-                if (step <= 0f) return week / (int)SkillGrowth.CyclesPerYear;
-                current += step;
-            }
-            return 40;
-        }
-
         public static void RunAll()
         {
             // Maturity: a hero starts part-formed and peaks in old age.
-            Check.True(SkillGrowth.Maturity(18) == SkillGrowth.StartMaturity, "a youth is part formed");
-            Check.True(SkillGrowth.Maturity(10) == SkillGrowth.StartMaturity, "younger than 18 clamps");
-            Check.True(SkillGrowth.Maturity(60) == 1f, "fully developed at 60");
-            Check.True(SkillGrowth.Maturity(90) == 1f, "and no further");
-            Check.True(SkillGrowth.Maturity(40) > SkillGrowth.Maturity(25), "maturity rises with age");
+            Check.True(SkillGrowth.Maturity(18f) == SkillGrowth.StartMaturity, "a youth is part formed");
+            Check.True(SkillGrowth.Maturity(10f) == SkillGrowth.StartMaturity, "younger than 18 clamps");
+            Check.True(SkillGrowth.Maturity(60f) == 1f, "fully developed at 60");
+            Check.True(SkillGrowth.Maturity(90f) == 1f, "and no further");
+                        Check.True(SkillGrowth.Maturity(40f) > SkillGrowth.Maturity(25f), "maturity rises with age");
+
+            // Fractional, not annual. This is the whole reason growth used to
+            // come in bursts: a target that stands still for a year lets a hero
+            // arrive and then wait for his birthday.
+            Check.True(SkillGrowth.Maturity(40.5f) > SkillGrowth.Maturity(40f),
+                       "the target climbs between birthdays too");
 
             int previousTarget = 0;
             bool monotonic = true;
@@ -86,30 +77,58 @@ namespace HeroLoadoutFixer.Tests
             Check.True(SkillGrowth.PointsStep(0, 330, Talent.Maximum)
                        <= SkillGrowth.MaximumBasePointsPerCycle * Talent.Maximum,
                        "one cycle never moves more than the cap");
+
+            // Sustained rather than bursty: a hero should settle short of his
+            // target and keep climbing, not sprint to it and stop. Ten points
+            // behind, an average lord gains about a point a year less than his
+            // target rises, which is what keeps him chasing.
+            Check.True(SkillGrowth.PointsStep(160, 170, 1f) * SkillGrowth.CyclesPerYear < 4f,
+                       "a lord near his target advances gently, not in a rush");
             Check.True(SkillGrowth.PointsStep(0, 330, Talent.Maximum)
                        > SkillGrowth.PointsStep(0, 330, Talent.Minimum),
                        "talent still separates them at the cap");
 
-            // The rate has to be big enough to matter. Under the first version
-            // eight weekly passes over a live campaign moved the population by
-            // nothing at all, so the timescale is asserted rather than assumed.
-            //
-            // The realistic case first: a lord who has simply aged past his
-            // target carries a gap of ten or twenty points, and that should
-            // close comfortably within a few years.
-            // Bounds taken from tracing the model, not from a wish. A twenty
-            // point gap closes in about five years for average talent, which
-            // keeps pace with a target that itself climbs roughly two points a
-            // year as the hero matures.
-            Check.True(YearsToClose(20, 1f) <= 6, "an ordinary gap closes within a few years");
-            Check.True(YearsToClose(10, 1f) <= 4, "a small one sooner");
+            // Sustained growth is the requirement, so it is simulated rather
+            // than asserted at a point. A lord is followed from thirty-five to
+            // sixty with his age advancing weekly, and three things must hold:
+            // he climbs every single year, he never overtakes his target, and he
+            // stays within reach of it. The failure this replaces measured a
+            // static gap, which the system no longer produces -- the target
+            // moves, so the hero is always chasing.
+            float skill = 120f;
+            float careerAge = 35f;
+            float lastYear = skill;
+            bool climbedEveryYear = true;
+            bool everOvertook = false;
 
-            // And the pathological case, which in practice only a hero the mod
-            // has not yet repaired can have -- seeding closes those at once.
-            // The per-cycle cap deliberately slows this: nobody should watch a
-            // skill bar climb.
-            Check.True(YearsToClose(100, 1f) <= 15, "even a hopeless case is not hopeless forever");
-            Check.True(YearsToClose(100, Talent.Maximum) < YearsToClose(100, Talent.Minimum),
+            for (int week = 0; week < (int)SkillGrowth.CyclesPerYear * 25; week++)
+            {
+                int target = SkillGrowth.PrimaryTarget(careerAge, 1.27f);
+                if (skill > target + 1) everOvertook = true;
+
+                skill += SkillGrowth.PointsStep((int)skill, target, 1.27f);
+                careerAge += 1f / SkillGrowth.CyclesPerYear;
+
+                if (week > 0 && week % (int)SkillGrowth.CyclesPerYear == 0)
+                {
+                    // Compared as a float: the first year gains only six tenths
+                    // of a point, which an integer comparison would read as no
+                    // progress at all.
+                    if (skill <= lastYear) climbedEveryYear = false;
+                    lastYear = skill;
+                }
+            }
+
+            Check.True(climbedEveryYear, "a lord gains ground every year of his career");
+            Check.True(!everOvertook, "and never overtakes what his years entitle him to");
+
+            int finalTarget = SkillGrowth.PrimaryTarget(60f, 1.27f);
+            Check.True(skill > finalTarget - 25, "he ends within reach of his ceiling");
+            Check.True(skill < finalTarget, "but short of it -- there is always further to go");
+
+            // Talent still separates them over a career.
+            Check.True(SkillGrowth.PointsStep(120, 170, Talent.Maximum)
+                       > SkillGrowth.PointsStep(120, 170, Talent.Minimum),
                        "and the gifted get there first");
         }
     }

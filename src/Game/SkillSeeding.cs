@@ -36,7 +36,7 @@ namespace HeroLoadoutFixer
             if (hero == null || hero.HeroDeveloper == null || hero.BattleEquipment == null) return 0;
 
             float talent = Talent.For(hero.StringId);
-            int primaryTarget = SkillGrowth.PrimaryTarget((int)hero.Age, talent);
+            int primaryTarget = SkillGrowth.PrimaryTarget(hero.Age, talent);
             if (primaryTarget <= 0) return 0;
 
             int raised = 0;
