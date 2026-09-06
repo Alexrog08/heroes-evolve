@@ -73,21 +73,94 @@ seguirá siendo dentro de cuarenta años. **Nunca una lanza.**
   hay condición de party.
 - **Una salida de compras por lord y día**, marcada aunque no compre nada.
 
+## El motor de compra, medido antes de verlo comprar
+
+Censo sobre una campaña avanzada (525 lores elegibles, 57 ciudades).
+
+**Dispara.** De 261 lores que estaban dentro de una ciudad en ese instante,
+**119 comprarían algo ya mismo**. 65 están en o por encima de su techo en todas
+las ranuras y el motor no tiene nada que hacer con ellos, que es correcto.
+
+**El dinero no es la restricción y no lo será nunca.**
+
+| | |
+|---|---|
+| Bolsillo disponible | p50 = **876.619**, mínimo 27.010 |
+| Precio de lo que compraría | p50 = **2.924**, máximo 12.139 |
+
+Trescientas compras de sobra para el lord mediano. La reserva y el ledger quedan
+como seguridad, no como ritmo: el único freno real es el techo de tier.
+
+**El hueco está en las botas; las compras serán armas.**
+
+```
+lores por detrás   Leg=337  Gloves=172  Cape=115  w0=106  Horse=88 ... Body=5 Head=2
+comprarían         w3=30  Cape=22  w0=20  w2=16  Leg=11  w1=9  Gloves=7  Horse=4
+```
+
+No es contradicción, es el catálogo: hay **1125 cascos y 661 corazas, contra 108
+grebas y 90 guantes**. El juego ya viste bien a los lores por arriba y los deja
+descalzos, pero los mercados tampoco tienen grebas que venderles. Las armas
+abundan (379 de una mano) y por eso son lo que acaba cambiando de manos.
+
+**Body=5 y Head=2**: prácticamente nadie va mal de coraza ni de casco.
+
+## La regla de cultura: medida y conservada
+
+Cuesta, y bastante:
+
+```
+MARKET stockPerTown      p50=505
+       forALocalLord     p50=454   (90%)
+       forAForeignLord   p50=144   (28%)
+```
+
+Un lord fuera de casa ve el 28% del estante. **Aun así se queda**, porque el
+reparto de bloqueos dice que no es lo que frena al motor:
+
+```
+SHOPPING blockedSlotsBy  wrongTier=103  culture=58
+```
+
+Dos de cada tres ranuras bloqueadas lo están por **escasez de tier**, que
+relajar la cultura no arregla: en la ciudad de Amorcon había 23 grebas y ninguna
+en la banda. `emptyShelf` y `skillOrUsage` salieron a **cero** las dos: el estante
+nunca está vacío del todo y la dificultad nunca es el motivo.
+
+Con el motor disparando ya para el 46% de los lores en ciudad, romper la
+coherencia cultural —que es la espina dorsal de la fase 1— para desbloquear una
+minoría de ranuras no sale a cuenta. Un lord bloqueado no lo está para siempre:
+vuelve a casa, o pasa por otra ciudad.
+
+**No volver a plantearlo sin datos nuevos.**
+
+## Observación anotada, sin decidir
+
+El techo va **sistemáticamente por debajo de lo que los lores ya visten**: techo
+mediano 4, y Amorcon lleva tier 5 y 6 en seis ranuras con techo 4. El motor no
+degrada a nadie, así que no hace daño, pero significa que **es un subidor de
+suelo, no un perseguidor de techo**. Encaja con el motivo original —que un héroe
+no sea más débil que las tropas que lidera— pero si algún día se quiere que los
+lores lleguen a tier 5-6 comprando, lo que hay que tocar es `TierCeiling`, no el
+motor.
+
 ## Sin verificar en campaña
 
-**Todo el motor de compra.** Compila, pasa los tests del núcleo y la API está
-verificada, pero nadie lo ha visto comprar nada. Los once bugs de la fase 1
-salieron de jugar, ninguno de leer el código; no hay razón para pensar que este
-sea distinto.
+**Que el motor compre de verdad.** Todo lo de arriba es predicción: el censo
+corre el código de decisión real sobre el stock real, pero **nadie ha visto
+todavía una línea `BUY`**. Falta dejar correr tiempo y comprobar que el oro se
+mueve, que lo desplazado vuelve al estante y que el hueco se cierra.
 
-Instrumentos ya puestos para esa verificación:
+Instrumentos:
 
+- `SHOPPING` — el que predice: qué lores comprarían ya, qué ranura, a qué precio
+  y qué puerta bloquea a los demás. Es el único que pone un lord real en una
+  ciudad real.
 - `HEADROOM` — cuántos tiers por debajo de su techo está cada lord, y con qué
   bolsillo. **Sin hueco no hay nada que comprar, y el silencio es correcto.**
-- `MARKET` — qué hay en cada ciudad y cuánto pasa el filtro de cultura. Ese
-  filtro es la única política del motor elegida por argumento y no por medición.
-- `hlf.market <héroe>` — ranura a ranura, dentro de la ciudad donde esté el
-  jugador, sin comprar nada.
+- `MARKET` — stock por ciudad, para un lord local y para uno de paso.
+- `hlf.market <héroe>` — ranura a ranura dentro de la ciudad donde esté el
+  jugador, con el motivo del bloqueo, sin comprar nada.
 
 ## Verificado en campaña
 
