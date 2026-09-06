@@ -59,6 +59,7 @@ namespace HeroLoadoutFixer
             ReportFormations();
             ReportSuspectKits();
             ReportRiding();
+            ReportCohorts();
             List<Hero> broken = ReportHeroes();
             ReportDryRuns(broken, clanWeight, skillWeight, minimumTier, dominanceMargin);
             ModLog.Info("===== CENSUS END =====");
@@ -569,6 +570,104 @@ namespace HeroLoadoutFixer
                 }
                 if (r > 0) text.Append(' ');
                 text.Append('<').Append(rungs[r]).Append('=').Append(n);
+            }
+            return text.ToString();
+        }
+
+        /// <summary>
+        /// Role mix and Riding, per culture, split by whether the hero existed
+        /// when the campaign started or was born into it.
+        ///
+        /// This is the population the mount rule actually governs. Heroes who
+        /// were already on the map keep whatever they have; the decision only
+        /// ever falls on the ones born during play. And the mix is expected to
+        /// differ sharply by culture -- in lords.xml every Khuzait lord carries
+        /// a mounted role and only one Battanian in forty does -- so a single
+        /// map-wide percentage would hide the thing that matters. The
+        /// campaign-born rows are the ones to read.
+        ///
+        /// Cohort is decided from BirthDay against elapsed campaign time rather
+        /// than from the character id, because a generated id only means the
+        /// hero was not authored by hand, not that the campaign produced him.
+        /// </summary>
+        private static void ReportCohorts()
+        {
+            float elapsedYears = CampaignTime.Now.ElapsedYearsUntilNow;
+
+            Dictionary<string, List<int>> ridingByKey = new Dictionary<string, List<int>>();
+            Dictionary<string, int> roleCounts = new Dictionary<string, int>();
+
+            foreach (Hero hero in Hero.AllAliveHeroes)
+            {
+                try
+                {
+                    if (!HeroFilter.IsEligible(hero)) continue;
+
+                    // Born after the campaign began: their age is less than the
+                    // time that has passed since day one.
+                    bool bornInPlay = hero.Age < elapsedYears;
+                    string cohort = bornInPlay ? "born" : "start";
+                    string culture = CultureIdOf(hero);
+                    BattleRole role = HeroAdapter.ReadRole(hero);
+
+                    Bump(roleCounts, cohort + "|" + culture + "|" + role);
+
+                    if (!BattleRoleRules.IsMounted(role)) continue;
+
+                    string key = cohort + "|" + culture;
+                    List<int> riding;
+                    if (!ridingByKey.TryGetValue(key, out riding))
+                    {
+                        riding = new List<int>();
+                        ridingByKey[key] = riding;
+                    }
+                    riding.Add(HeroAdapter.ReadSkills(hero).Get(SkillKind.Riding));
+                }
+                catch
+                {
+                    // One unreadable hero must not cost the breakdown.
+                }
+            }
+
+            ModLog.Info("COHORT elapsedYears=" + (int)elapsedYears);
+
+            foreach (KeyValuePair<string, int> pair in roleCounts)
+            {
+                ModLog.Info("COHORT role " + pair.Key.Replace("|", " ") + " n=" + pair.Value);
+            }
+
+            // For mounted-role heroes only: what fraction would still be mounted
+            // at each candidate floor. This is the number the threshold decision
+            // is actually made against.
+            foreach (KeyValuePair<string, List<int>> pair in ridingByKey)
+            {
+                List<int> riding = pair.Value;
+                ModLog.Info("COHORT riding " + pair.Key.Replace("|", " ")
+                            + " " + Percentiles(riding)
+                            + " | mountedAt " + MountedFractions(riding));
+            }
+        }
+
+        /// <summary>
+        /// The share of a mounted-role group that clears each candidate floor.
+        /// Expressed as a percentage because the choice is "how many of these
+        /// lords do we want on horses", not "what number feels right".
+        /// </summary>
+        private static string MountedFractions(List<int> riding)
+        {
+            int[] floors = { 5, 10, 15, 20, 30, 40, 50 };
+            StringBuilder text = new StringBuilder();
+
+            for (int f = 0; f < floors.Length; f++)
+            {
+                int clear = 0;
+                for (int i = 0; i < riding.Count; i++)
+                {
+                    if (riding[i] >= floors[f]) clear++;
+                }
+                int pct = riding.Count == 0 ? 0 : (clear * 100) / riding.Count;
+                if (f > 0) text.Append(' ');
+                text.Append(floors[f]).Append("=>").Append(pct).Append('%');
             }
             return text.ToString();
         }
