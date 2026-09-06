@@ -2151,7 +2151,8 @@ namespace HeroLoadoutFixer
         /// </summary>
         private static void ReportShopping(float clanWeight, float skillWeight, int minimumTier)
         {
-            int inTowns = 0, wouldBuy = 0, nothingWanted = 0, pricedOut = 0;
+            int inTowns = 0, wouldBuy = 0, nothingWanted = 0, pricedOut = 0, pushedDown = 0;
+            List<int> foregone = new List<int>();
             BudgetService budget = new BudgetService();
             Dictionary<string, int> blockedBy = new Dictionary<string, int>();
             Dictionary<string, int> buySlots = new Dictionary<string, int>();
@@ -2172,20 +2173,32 @@ namespace HeroLoadoutFixer
                     SkillProfile skills = HeroAdapter.ReadSkills(hero);
                     int ceiling = HeroAdapter.ReadCeiling(hero, skills, clanWeight, skillWeight, minimumTier);
 
+                    // Asked twice on purpose: once as the engine will run, and
+                    // once with money no object. The difference between the two
+                    // is the whole effect of the spending share.
                     ShoppingTrip.Candidate best = ShoppingTrip.Best(hero, settlement, ceiling, budget);
+                    ShoppingTrip.Candidate rich = ShoppingTrip.Best(hero, settlement, ceiling, null);
+
                     if (best != null)
                     {
                         wouldBuy++;
                         Bump(buySlots, SlotMapping.NameOf(best.Slot));
                         prices.Add(best.Offer.Price);
+
+                        // The share almost never leaves a lord with nothing --
+                        // he drops to a cheaper upgrade instead, which is the
+                        // behaviour we want and is invisible in a count of
+                        // refusals. This is where the money actually shows.
+                        if (rich != null && rich.Offer.Price > best.Offer.Price)
+                        {
+                            pushedDown++;
+                            foregone.Add(rich.Offer.Price - best.Offer.Price);
+                        }
                         continue;
                     }
 
                     // Nothing affordable is not the same as nothing on offer.
-                    // Asking again with no budget separates the two, and that
-                    // difference IS the cost of the spending share -- the one
-                    // number that says whether gold has started to matter.
-                    if (ShoppingTrip.Best(hero, settlement, ceiling, null) != null)
+                    if (rich != null)
                     {
                         pricedOut++;
                         continue;
@@ -2220,8 +2233,10 @@ namespace HeroLoadoutFixer
 
             ModLog.Info("SHOPPING lordsInTowns=" + inTowns
                         + " wouldBuyNow=" + wouldBuy
+                        + " boughtCheaperBecauseOfShare=" + pushedDown
                         + " pricedOutByShare=" + pricedOut
                         + " alreadyAtCeilingEverywhere=" + nothingWanted);
+            ModLog.Info("SHOPPING foregoneByShare " + Percentiles(foregone));
             ModLog.Info("SHOPPING " + Tally("blockedSlotsBy", blockedBy));
             ModLog.Info("SHOPPING " + Tally("wouldBuySlot", buySlots));
             ModLog.Info("SHOPPING price " + Percentiles(prices));
