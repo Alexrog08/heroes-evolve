@@ -102,44 +102,77 @@ namespace HeroLoadoutFixer.Core
         }
 
         /// <summary>
-        /// Experience to grant a skill this cycle. Zero once the skill has
-        /// arrived, so a properly developed lord is left alone entirely.
+        /// Skill points to move this cycle. Zero once the skill has arrived, so
+        /// a properly developed lord is left alone entirely.
         ///
-        /// The step is proportional to the distance remaining, which makes a
-        /// badly broken hero catch up quickly at first and then ease in, rather
-        /// than crawling for decades or arriving in one jump. The floor stops
-        /// the tail from taking forever; the cap stops a hero from gaining a
-        /// visible chunk of a skill in a single day.
+        /// Returned in points rather than experience on purpose. The first
+        /// version returned experience through a flat guess of twelve per point,
+        /// and eight weekly passes over a live campaign moved the population by
+        /// nothing at all: Bannerlord's curve costs hundreds to thousands of
+        /// experience per point at the levels lords actually sit at, so a
+        /// fifty-point gap was being fed fifteen experience a week. Points are a
+        /// unit this class can reason about; the conversion belongs where the
+        /// game's own curve can be asked.
+        ///
+        /// The step is proportional to the distance remaining, so a badly broken
+        /// hero catches up quickly and then eases in rather than crawling for
+        /// decades or arriving in one jump.
         /// </summary>
-        public static int XpStep(int current, int target, float talent)
+        public static float PointsStep(int current, int target, float talent)
         {
-            if (target <= 0) return 0;
-            if (current >= target) return 0;
+            if (target <= 0) return 0f;
+            if (current >= target) return 0f;
 
             int gap = target - current;
 
-            // XpPerPoint is a rough conversion: Bannerlord's own curve costs far
-            // more per point at high levels, so this understates the tail on
-            // purpose. Undershooting means a slow arrival; overshooting would
-            // mean a lord vaulting past his target between two ticks.
-            float step = gap * CatchUpFraction * talent * XpPerPoint;
+            // The cap is applied BEFORE talent, not after. Capping the final
+            // figure let a prodigy and a dullard with the same large gap both
+            // sit on the limit and advance identically, which erases the one
+            // thing talent exists to express. Capping the base instead keeps
+            // them apart at every gap size.
+            float perCycle = (gap * CatchUpPerYear) / CyclesPerYear;
 
-            if (step < MinimumStep) step = MinimumStep;
-            if (step > MaximumStep) step = MaximumStep;
+            // A floor as well as a ceiling. Closing a fixed share of what
+            // remains is geometric, so the last few points shrink toward nothing
+            // and never actually land -- a hero would sit forever at
+            // ninety-something percent of his target. The floor makes the tail
+            // finite.
+            if (perCycle < MinimumBasePointsPerCycle) perCycle = MinimumBasePointsPerCycle;
+            if (perCycle > MaximumBasePointsPerCycle) perCycle = MaximumBasePointsPerCycle;
 
-            return (int)step;
+            return perCycle * talent;
         }
 
-        /// <summary>Fraction of the remaining gap aimed at per cycle.</summary>
-        public const float CatchUpFraction = 0.02f;
+        /// <summary>
+        /// Share of the remaining gap a hero of average talent closes in a year.
+        /// A third leaves a badly broken lord recognisably better within a
+        /// couple of years and near his target within five, without anyone
+        /// watching a skill bar climb.
+        /// </summary>
+        public const float CatchUpPerYear = 0.33f;
 
-        /// <summary>Rough experience per skill point, for turning a gap into XP.</summary>
-        public const float XpPerPoint = 12f;
+        /// <summary>
+        /// Weekly cycles in a campaign year. Bannerlord runs four seasons of
+        /// twenty-one days, so eighty-four days, so twelve weeks.
+        /// </summary>
+        public const float CyclesPerYear = 12f;
 
-        /// <summary>Never grant less than this, or the last few points never land.</summary>
-        public const float MinimumStep = 5f;
+        /// <summary>
+        /// Ceiling on the pre-talent step, so no hero visibly jumps between two
+        /// weeks when the gap is enormous. Seeding exists for that case and
+        /// applies at once, deliberately.
+        ///
+        /// Talent multiplies afterwards, so the true ceiling is this times
+        /// Talent.Maximum -- two points in a week for a prodigy who is badly
+        /// behind, half that for a slow learner in the same hole.
+        /// </summary>
+        public const float MaximumBasePointsPerCycle = 1f;
 
-        /// <summary>Never grant more than this in one go.</summary>
-        public const float MaximumStep = 400f;
+        /// <summary>
+        /// Floor on the pre-talent step, so the tail of a catch-up terminates.
+        /// A quarter point a week is three a year: enough that the last stretch
+        /// closes inside a couple of years rather than never.
+        /// </summary>
+        public const float MinimumBasePointsPerCycle = 0.25f;
     }
 }

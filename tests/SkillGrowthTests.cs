@@ -4,6 +4,21 @@ namespace HeroLoadoutFixer.Tests
 {
     public static class SkillGrowthTests
     {
+        /// <summary>Campaign years for a hero to close a gap of this size.</summary>
+        private static int YearsToClose(int gap, float talent)
+        {
+            float current = 0f;
+            int target = gap;
+
+            for (int week = 0; week < (int)SkillGrowth.CyclesPerYear * 40; week++)
+            {
+                float step = SkillGrowth.PointsStep((int)current, target, talent);
+                if (step <= 0f) return week / (int)SkillGrowth.CyclesPerYear;
+                current += step;
+            }
+            return 40;
+        }
+
         public static void RunAll()
         {
             // Maturity: a hero starts part-formed and peaks in old age.
@@ -52,23 +67,50 @@ namespace HeroLoadoutFixer.Tests
             Check.Equal(0, SkillGrowth.TargetForRank(0, 0), "no target means no ranks");
 
             // Growth stops on arrival, so a properly developed lord is untouched.
-            Check.Equal(0, SkillGrowth.XpStep(200, 200, 1f), "an arrived skill gains nothing");
-            Check.Equal(0, SkillGrowth.XpStep(250, 200, 1f), "a skill past its target gains nothing");
-            Check.Equal(0, SkillGrowth.XpStep(0, 0, 1f), "no target, no growth");
+            Check.True(SkillGrowth.PointsStep(200, 200, 1f) == 0f, "an arrived skill gains nothing");
+            Check.True(SkillGrowth.PointsStep(250, 200, 1f) == 0f, "a skill past its target gains nothing");
+            Check.True(SkillGrowth.PointsStep(0, 0, 1f) == 0f, "no target, no growth");
 
             // A wide gap moves faster than a narrow one.
-            int wide = SkillGrowth.XpStep(0, 200, 1f);
-            int narrow = SkillGrowth.XpStep(190, 200, 1f);
+            float wide = SkillGrowth.PointsStep(0, 200, 1f);
+            float narrow = SkillGrowth.PointsStep(190, 200, 1f);
             Check.True(wide > narrow, "the further behind, the faster the catch-up");
-            Check.True(narrow > 0, "the last few points still land");
+            Check.True(narrow > 0f, "the last few points still land");
 
             // Talent changes the rate, not just the destination.
-            Check.True(SkillGrowth.XpStep(0, 200, Talent.Maximum) > SkillGrowth.XpStep(0, 200, Talent.Minimum),
+            Check.True(SkillGrowth.PointsStep(0, 200, Talent.Maximum)
+                       > SkillGrowth.PointsStep(0, 200, Talent.Minimum),
                        "a talented hero closes the same gap faster");
 
-            // No single step is allowed to be dramatic.
-            Check.True(SkillGrowth.XpStep(0, 330, Talent.Maximum) <= (int)SkillGrowth.MaximumStep,
-                       "one cycle never grants more than the cap");
+            // No single cycle is allowed to be dramatic.
+            Check.True(SkillGrowth.PointsStep(0, 330, Talent.Maximum)
+                       <= SkillGrowth.MaximumBasePointsPerCycle * Talent.Maximum,
+                       "one cycle never moves more than the cap");
+            Check.True(SkillGrowth.PointsStep(0, 330, Talent.Maximum)
+                       > SkillGrowth.PointsStep(0, 330, Talent.Minimum),
+                       "talent still separates them at the cap");
+
+            // The rate has to be big enough to matter. Under the first version
+            // eight weekly passes over a live campaign moved the population by
+            // nothing at all, so the timescale is asserted rather than assumed.
+            //
+            // The realistic case first: a lord who has simply aged past his
+            // target carries a gap of ten or twenty points, and that should
+            // close comfortably within a few years.
+            // Bounds taken from tracing the model, not from a wish. A twenty
+            // point gap closes in about five years for average talent, which
+            // keeps pace with a target that itself climbs roughly two points a
+            // year as the hero matures.
+            Check.True(YearsToClose(20, 1f) <= 6, "an ordinary gap closes within a few years");
+            Check.True(YearsToClose(10, 1f) <= 4, "a small one sooner");
+
+            // And the pathological case, which in practice only a hero the mod
+            // has not yet repaired can have -- seeding closes those at once.
+            // The per-cycle cap deliberately slows this: nobody should watch a
+            // skill bar climb.
+            Check.True(YearsToClose(100, 1f) <= 15, "even a hopeless case is not hopeless forever");
+            Check.True(YearsToClose(100, Talent.Maximum) < YearsToClose(100, Talent.Minimum),
+                       "and the gifted get there first");
         }
     }
 }

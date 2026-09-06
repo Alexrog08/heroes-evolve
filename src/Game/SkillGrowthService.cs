@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using TaleWorlds.CampaignSystem;
+using TaleWorlds.CampaignSystem.ComponentInterfaces;
 using TaleWorlds.Core;
 using HeroLoadoutFixer.Core;
 
@@ -61,7 +62,10 @@ namespace HeroLoadoutFixer
             if (skill == null || target <= 0) return;
 
             int current = hero.GetSkillValue(skill);
-            int xp = SkillGrowth.XpStep(current, target, talent);
+            float points = SkillGrowth.PointsStep(current, target, talent);
+            if (points <= 0f) return;
+
+            int xp = (int)(points * XpPerPointAt(current));
             if (xp <= 0) return;
 
             // Hero.AddSkillXp routes through HeroDeveloper with the focus factor
@@ -71,6 +75,31 @@ namespace HeroLoadoutFixer
             // whichever skill most exceeds its learning limit, pushing a skill
             // here makes the game itself follow.
             hero.AddSkillXp(skill, xp);
+        }
+
+        /// <summary>
+        /// What one more point of this skill costs at its current level, asked
+        /// of the game rather than guessed.
+        ///
+        /// The first version of this used a flat twelve experience per point and
+        /// eight weekly passes over a live campaign moved nothing: the real
+        /// curve charges hundreds to thousands per point at the levels lords sit
+        /// at, so the grants were two orders of magnitude too small to register.
+        /// </summary>
+        private static float XpPerPointAt(int level)
+        {
+            if (level < 0) level = 0;
+
+            CharacterDevelopmentModel model = Campaign.Current != null && Campaign.Current.Models != null
+                ? Campaign.Current.Models.CharacterDevelopmentModel
+                : null;
+            if (model == null) return 1f;
+
+            float here = model.GetXpRequiredForSkillLevel(level);
+            float next = model.GetXpRequiredForSkillLevel(level + 1);
+
+            float cost = next - here;
+            return cost > 1f ? cost : 1f;
         }
 
         /// <summary>
