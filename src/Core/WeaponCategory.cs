@@ -73,6 +73,28 @@ namespace HeroLoadoutFixer.Core
         }
 
         /// <summary>
+        /// True for the classes the game's two "axes and maces" perks reward.
+        ///
+        /// Of 164 weapon perks, exactly two look at which weapon of a category a
+        /// hero carries rather than the category itself: Swift Strike gives
+        /// damage with one-handed axes and maces, On The Edge the same for two
+        /// handed. Everything else says "one handed weapons" or "polearms" and
+        /// cannot tell a sword from an axe.
+        ///
+        /// The enum collapses one- and two-handed maces into a single Mace, so
+        /// Mace answers for both handednesses here. That is imprecise in the one
+        /// place it could matter -- a one-handed hero with the two-handed perk
+        /// would see a one-handed mace as favoured -- and the caller guards it
+        /// by only asking about the handedness the hero is shopping for.
+        /// </summary>
+        public static bool IsAxeOrMace(WeaponCategory category)
+        {
+            return category == WeaponCategory.OneHandedAxe
+                || category == WeaponCategory.TwoHandedAxe
+                || category == WeaponCategory.Mace;
+        }
+
+        /// <summary>
         /// The two-handed category a one-handed request must not be answered
         /// with, or None.
         ///

@@ -102,8 +102,13 @@ namespace HeroLoadoutFixer
                     partner = WeaponCategory.None;
                 }
 
+                // The perk outranks the sword in his hand as a statement of
+                // what he fights with: he chose it, the sword was handed to him.
+                bool prefersBlunt = WeaponPerks.FavoursAxeOrMace(hero, category);
+
                 List<MarketOffer> offers = MarketScanner.Weapons(stock, settlement, hero, category, culture,
-                                                                 ceiling, FineOf(worn), skills, mounted, partner);
+                                                                 ceiling, FineOf(worn), skills, mounted, partner,
+                                                                 prefersBlunt);
                 best = Better(best, slot, offers, worn, limit);
             }
 

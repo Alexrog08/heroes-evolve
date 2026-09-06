@@ -60,11 +60,18 @@ namespace HeroLoadoutFixer
         ///
         /// The category is the caller's -- read from what the hero is wearing,
         /// not planned afresh. A lord equipped as a crossbowman stays one.
+        ///
+        /// preferAxeOrMace redefines which offers count as "his own class" for
+        /// the ordering. A hero holding the axes-and-maces perk has said what he
+        /// fights with more deliberately than the sword in his hand does, so for
+        /// him the favoured class is the axe or the mace and the sword is the
+        /// drift. Without the perk it means exactly what it did: keep what he
+        /// carries.
         /// </summary>
         public static List<MarketOffer> Weapons(List<ItemRosterElement> stock, Settlement settlement, Hero hero,
                                                 WeaponCategory category, CultureObject culture,
                                                 int ceiling, int wornFine, SkillProfile skills, bool mounted,
-                                                WeaponCategory avoidAlsoServing)
+                                                WeaponCategory avoidAlsoServing, bool preferAxeOrMace)
         {
             List<MarketOffer> offers = new List<MarketOffer>();
             if (stock == null || category == WeaponCategory.None) return offers;
@@ -77,7 +84,12 @@ namespace HeroLoadoutFixer
                 if (avoidAlsoServing != WeaponCategory.None
                     && ItemClassifier.AlsoServesTwoHanded(item, avoidAlsoServing)) continue;
 
-                Offer(offers, settlement, hero, stock[i], ItemClassifier.Classify(item) == category);
+                WeaponCategory offered = ItemClassifier.Classify(item);
+                bool favoured = preferAxeOrMace
+                    ? CategoryRules.IsAxeOrMace(offered)
+                    : offered == category;
+
+                Offer(offers, settlement, hero, stock[i], favoured);
             }
 
             offers.Sort(MarketOfferOrder.Instance);

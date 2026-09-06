@@ -62,6 +62,7 @@ namespace HeroLoadoutFixer
             Diagnostics.ResetSession();
             CultureProfile.Reset();
             CultureArchetypes.Reset();
+            WeaponPerks.Reset();
 
             // Deliberately NOT subscribed to CampaignEvents.HeroComesOfAgeEvent.
             //

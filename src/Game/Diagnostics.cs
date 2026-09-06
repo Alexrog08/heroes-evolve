@@ -2509,7 +2509,8 @@ namespace HeroLoadoutFixer
                 if (partner != WeaponCategory.None && !current.Contains(partner)) partner = WeaponCategory.None;
 
                 offers = MarketScanner.Weapons(stock, settlement, hero, category, culture,
-                                               ceiling, wornFine, skills, mounted, partner);
+                                               ceiling, wornFine, skills, mounted, partner,
+                                               WeaponPerks.FavoursAxeOrMace(hero, category));
             }
 
             if (offers.Count == 0)
