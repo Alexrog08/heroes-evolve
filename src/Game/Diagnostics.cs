@@ -75,6 +75,7 @@ namespace HeroLoadoutFixer
             ReportNaval();
             ReportClanWealth();
             ReportGearVsClan();
+            ReportWornBySlot();
             ReportMarkets();
             ReportHeadroom(clanWeight, skillWeight, minimumTier);
             ReportShopping(clanWeight, skillWeight, minimumTier);
@@ -1831,6 +1832,79 @@ namespace HeroLoadoutFixer
             int whole = scaledTotal / scaledCount;
             int frac = (scaledTotal * 100 / scaledCount) % 100;
             return whole + "." + (frac < 10 ? "0" : "") + frac;
+        }
+
+        /// <summary>
+        /// What tier a lord is actually wearing, slot by slot.
+        ///
+        /// The averages hide the thing that matters. "TaleWorlds equips its
+        /// lords at tier 4 or 5" is true of the pieces anyone looks at and false
+        /// of the rest: the census had 445 lords behind on legs and 359 on
+        /// gloves against 18 on body armour and 2 on helmets. A tier-2 purchase
+        /// by a lord in tier-5 armour looks wrong until you see that the slot he
+        /// bought for held tier-1 boots.
+        ///
+        /// So this reports the distribution per slot rather than one number per
+        /// lord, which is the only shape that can show a well-dressed lord in
+        /// cheap boots.
+        /// </summary>
+        private static void ReportWornBySlot()
+        {
+            Dictionary<string, List<int>> bySlot = new Dictionary<string, List<int>>();
+            Dictionary<string, int> emptyBySlot = new Dictionary<string, int>();
+
+            foreach (Hero hero in Hero.AllAliveHeroes)
+            {
+                try
+                {
+                    if (!HeroFilter.IsEligible(hero)) continue;
+                    if (hero.BattleEquipment == null) continue;
+
+                    for (int i = 0; i < SlotSnapshot.WeaponSlotCount; i++)
+                    {
+                        RecordWorn(hero, SlotMapping.WeaponSlot(i), bySlot, emptyBySlot);
+                    }
+                    foreach (EquipmentIndex slot in SlotMapping.ArmorSlots)
+                    {
+                        RecordWorn(hero, slot, bySlot, emptyBySlot);
+                    }
+                    RecordWorn(hero, EquipmentIndex.Horse, bySlot, emptyBySlot);
+                    RecordWorn(hero, EquipmentIndex.HorseHarness, bySlot, emptyBySlot);
+                }
+                catch
+                {
+                    // One unreadable hero must not cost the survey.
+                }
+            }
+
+            foreach (KeyValuePair<string, List<int>> pair in bySlot)
+            {
+                int empty;
+                emptyBySlot.TryGetValue(pair.Key, out empty);
+                ModLog.Info("WORN " + pair.Key + " " + Percentiles(pair.Value) + " empty=" + empty);
+            }
+        }
+
+        private static void RecordWorn(Hero hero, EquipmentIndex slot,
+                                       Dictionary<string, List<int>> bySlot,
+                                       Dictionary<string, int> emptyBySlot)
+        {
+            string name = SlotMapping.NameOf(slot);
+            ItemObject worn = hero.BattleEquipment[slot].Item;
+
+            if (worn == null)
+            {
+                Bump(emptyBySlot, name);
+                return;
+            }
+
+            List<int> tiers;
+            if (!bySlot.TryGetValue(name, out tiers))
+            {
+                tiers = new List<int>();
+                bySlot[name] = tiers;
+            }
+            tiers.Add((int)worn.Tier + 1);
         }
 
         private static void ReportClanWealth()
