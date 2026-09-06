@@ -63,6 +63,7 @@ namespace HeroLoadoutFixer
             CultureProfile.Report();
             ReportVariety(dominanceMargin);
             ReportDefectRate();
+            ReportSkillCurve();
             List<Hero> broken = ReportHeroes();
             ReportDryRuns(broken, clanWeight, skillWeight, minimumTier, dominanceMargin);
             ModLog.Info("===== CENSUS END =====");
@@ -987,6 +988,97 @@ namespace HeroLoadoutFixer
                             + " degenerate=" + degenerate + " (" + pct + "%)"
                             + " brokenKit=" + kit + " (" + kitPct + "%)");
             }
+        }
+
+        /// <summary>
+        /// What a healthy lord's combat skills look like at each age, and how
+        /// they are shaped.
+        ///
+        /// The mod is about to seed skills on repaired heroes, and the value to
+        /// seed cannot be invented: a lord repaired at forty-eight should end up
+        /// where his healthy contemporaries are, not where a number that felt
+        /// right puts him. Two things are needed and neither is guessable.
+        ///
+        /// The level: the campaign's own skill-by-age curve, so a catch-up has
+        /// somewhere to catch up to.
+        ///
+        /// The shape: a healthy lord does not carry one skill, he carries a
+        /// spread -- Zoana runs 85/81/76/72/70/70, Kjarvon 187/157/155/135/68/36
+        /// -- so seeding a single skill would produce something no lord in the
+        /// game resembles. Reported as the median ratio of each ranked skill to
+        /// the best one.
+        ///
+        /// Degenerate heroes (one weapon skill or none) are excluded from both:
+        /// they are the population being fixed, and leaving them in would drag
+        /// the target down toward the defect it is meant to repair.
+        /// </summary>
+        private static void ReportSkillCurve()
+        {
+            int[] bounds = { 18, 25, 35, 45, 55, 200 };
+            string[] labels = { "18-24", "25-34", "35-44", "45-54", "55+" };
+
+            List<int>[] maxByBucket = new List<int>[labels.Length];
+            for (int i = 0; i < labels.Length; i++) maxByBucket[i] = new List<int>();
+
+            // Ratio of the Nth-best weapon skill to the best, as a percentage.
+            List<int>[] shape = new List<int>[6];
+            for (int i = 0; i < shape.Length; i++) shape[i] = new List<int>();
+
+            foreach (Hero hero in Hero.AllAliveHeroes)
+            {
+                try
+                {
+                    if (!HeroFilter.IsEligible(hero)) continue;
+
+                    SkillProfile skills = HeroAdapter.ReadSkills(hero);
+
+                    int[] weapon = new int[6];
+                    int nonZero = 0;
+                    for (int i = 0; i < 6; i++)
+                    {
+                        weapon[i] = skills.Get((SkillKind)i);
+                        if (weapon[i] > 0) nonZero++;
+                    }
+                    if (nonZero <= 1) continue;
+
+                    System.Array.Sort(weapon);
+                    System.Array.Reverse(weapon);
+
+                    int best = weapon[0];
+                    if (best <= 0) continue;
+
+                    for (int i = 0; i < 6; i++) shape[i].Add((weapon[i] * 100) / best);
+
+                    int age = (int)hero.Age;
+                    for (int b = 0; b < labels.Length; b++)
+                    {
+                        if (age >= bounds[b] && age < bounds[b + 1])
+                        {
+                            maxByBucket[b].Add(best);
+                            break;
+                        }
+                    }
+                }
+                catch
+                {
+                    // One unreadable hero must not cost the curve.
+                }
+            }
+
+            for (int b = 0; b < labels.Length; b++)
+            {
+                ModLog.Info("SKILLAGE " + labels[b] + " " + Percentiles(maxByBucket[b]));
+            }
+
+            StringBuilder text = new StringBuilder("SKILLSHAPE medianRatioToBest");
+            for (int i = 0; i < shape.Length; i++)
+            {
+                int[] sorted = shape[i].ToArray();
+                if (sorted.Length == 0) { text.Append(" s").Append(i + 1).Append("=n/a"); continue; }
+                System.Array.Sort(sorted);
+                text.Append(" s").Append(i + 1).Append('=').Append(At(sorted, 0.50f)).Append('%');
+            }
+            ModLog.Info(text.ToString());
         }
 
         private static string DescribeSlots(Hero hero)
