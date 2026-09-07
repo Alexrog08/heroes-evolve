@@ -66,9 +66,16 @@ namespace HeroLoadoutFixer
 
             EquipmentElement displaced = hero.BattleEquipment[slot];
 
+            // Whether the shelf was actually touched. Without this the rollback
+            // below could put back an item it never took, which would mint one
+            // out of nothing -- the single thing this whole service exists to
+            // avoid -- if the removal were what threw.
+            bool removed = false;
+
             try
             {
                 roster.AddToCounts(offer.Element, -1);
+                removed = true;
 
                 if (heroPart > 0) GiveGoldAction.ApplyForCharacterToSettlement(hero, settlement, heroPart, true);
                 if (clanPart > 0) GiveGoldAction.ApplyForCharacterToSettlement(leader, settlement, clanPart, true);
@@ -80,7 +87,7 @@ namespace HeroLoadoutFixer
                 // Put the shelf back the way it was and leave the hero as he
                 // was. Gold already moved stays moved -- it went to the town,
                 // not into nothing -- and the log says so rather than hiding it.
-                roster.AddToCounts(offer.Element, 1);
+                if (removed) roster.AddToCounts(offer.Element, 1);
                 hero.BattleEquipment[slot] = displaced;
                 failure = "transaction failed: " + error.Message;
                 ModLog.Info("BUY FAILED hero=" + hero.Name + " slot=" + SlotMapping.NameOf(slot)

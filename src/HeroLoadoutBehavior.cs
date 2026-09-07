@@ -225,6 +225,14 @@ namespace HeroLoadoutFixer
         {
             if (!Settings.EnableSkillGrowth) return;
 
+            // A hero on the give-up list was unrepairable at the ceiling he had
+            // then. Ceilings rise with skill, and skill is exactly what this
+            // tick moves, so the list is cleared here rather than held for the
+            // session: a lord who could not be helped a year ago may be
+            // helpable now, and the daily saving costs only one re-examination
+            // a week to keep honest.
+            _beyondRepair.Clear();
+
             int grown = 0;
 
             foreach (Hero hero in Hero.AllAliveHeroes)
