@@ -264,6 +264,10 @@ Banner=52  OneHandedWeapon=59  HeadArmor=46  Thrown=33  Horse=23
 Polearm=13  TwoHandedWeapon=13  HorseHarness=8  ...  LegArmor=1
 ```
 
+Las **52 banderas no cuentan**: el estandarte vive en `ExtraWeaponSlot` (índice
+4) y el motor solo recorre `Weapon0..Weapon3`, así que esa ranura queda fuera de
+su alcance por completo. La cifra que afecta al equipo son las ~231 restantes.
+
 La reventa es **el único camino por el que este mod pone algo en un estante**. Que
 un lord cambie su espada noble y esa espada esté esa tarde en el mercado de
 Praven desmonta la exclusividad del equipo noble compra a compra, para toda la

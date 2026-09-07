@@ -2,7 +2,20 @@ using TaleWorlds.Core;
 
 namespace HeroLoadoutFixer
 {
-    /// <summary>Translation between core slot indices and Bannerlord's EquipmentIndex.</summary>
+    /// <summary>
+    /// Translation between core slot indices and Bannerlord's EquipmentIndex.
+    ///
+    /// Four weapon slots, and deliberately not five. EquipmentIndex numbers them
+    /// Weapon0..Weapon3 as 0..3 and then puts ExtraWeaponSlot at 4 -- the banner.
+    /// A banner is not gear a lord upgrades: it is the clan's, it carries a
+    /// formation bonus rather than a statline, and no merchant sells one. Both
+    /// the repair and the market stop at index 3 for that reason, so neither
+    /// ever reads or writes a hero's banner.
+    ///
+    /// Written down because it is currently true by arithmetic rather than by
+    /// intent, and a reader counting slots could raise the bound to five and
+    /// start trading standards for javelins.
+    /// </summary>
     public static class SlotMapping
     {
         public static EquipmentIndex WeaponSlot(int index)
