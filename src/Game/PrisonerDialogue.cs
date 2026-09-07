@@ -52,6 +52,24 @@ namespace HeroLoadoutFixer
         /// </summary>
         private static bool CanStrip()
         {
+            try
+            {
+                return CanStripCore();
+            }
+            catch (System.Exception ex)
+            {
+                // This runs on every conversation with every hero in the game.
+                // An exception here would take the dialogue down with it, so it
+                // fails to "no option offered" like every other entry point in
+                // this mod fails to doing nothing.
+                ModLog.Error("prisoner dialogue condition failed: "
+                             + ex.GetType().Name + " " + ex.Message);
+                return false;
+            }
+        }
+
+        private static bool CanStripCore()
+        {
             if (!Settings.EnableCaptureLoss) return false;
 
             Hero hero = Hero.OneToOneConversationHero;
@@ -88,6 +106,18 @@ namespace HeroLoadoutFixer
         }
 
         private static void Strip()
+        {
+            try
+            {
+                StripCore();
+            }
+            catch (System.Exception ex)
+            {
+                ModLog.Error("prisoner dialogue failed: " + ex.GetType().Name + " " + ex.Message);
+            }
+        }
+
+        private static void StripCore()
         {
             Hero hero = Hero.OneToOneConversationHero;
             if (hero == null) return;
