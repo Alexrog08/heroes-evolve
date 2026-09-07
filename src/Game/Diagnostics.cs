@@ -2141,11 +2141,11 @@ namespace HeroLoadoutFixer
                 {
                     if (settlement == null || !settlement.IsTown) continue;
 
-                    List<ItemRosterElement> stock = MarketScanner.Stock(settlement);
+                    List<StockEntry> stock = MarketScanner.Stock(settlement);
                     int here = 0;
                     for (int i = 0; i < stock.Count; i++)
                     {
-                        if (stock[i].EquipmentElement.Item.ItemType == ItemObject.ItemTypeEnum.Banner) here++;
+                        if (stock[i].Item.ItemType == ItemObject.ItemTypeEnum.Banner) here++;
                     }
 
                     if (here > 0) townsStocking++;
@@ -2363,14 +2363,14 @@ namespace HeroLoadoutFixer
                     if (settlement == null || !settlement.IsTown) continue;
                     towns++;
 
-                    List<ItemRosterElement> stock = MarketScanner.Stock(settlement);
+                    List<StockEntry> stock = MarketScanner.Stock(settlement);
                     sizes.Add(stock.Count);
 
                     CultureObject culture = settlement.Culture;
                     int fits = 0, anyone = 0;
                     for (int i = 0; i < stock.Count; i++)
                     {
-                        ItemObject item = stock[i].EquipmentElement.Item;
+                        ItemObject item = stock[i].Item;
 
                         // Tier 6 as the ceiling: this counts what the shelf
                         // could ever offer anyone, not what one lord may buy.
@@ -2420,7 +2420,7 @@ namespace HeroLoadoutFixer
 
             report.AppendLine("hero=" + hero.Name + " culture=" + (hero.Culture != null ? hero.Culture.StringId : "?")
                               + " ceiling=" + ceiling + " eligible=" + HeroFilter.IsEligibleToShop(hero));
-            List<ItemRosterElement> stock = MarketScanner.Stock(settlement);
+            List<StockEntry> stock = MarketScanner.Stock(settlement);
             report.AppendLine("town=" + settlement.Name + " stock=" + stock.Count);
             report.AppendLine("wallet=" + budget.Wallet(hero)
                               + " perPurchaseLimit=" + budget.Available(hero)
@@ -2469,7 +2469,7 @@ namespace HeroLoadoutFixer
 
         /// <summary>One slot's line in the market dry run.</summary>
         private static void DescribeSlotOffers(StringBuilder report, Hero hero, Settlement settlement,
-                                               List<ItemRosterElement> stock, EquipmentIndex slot,
+                                               List<StockEntry> stock, EquipmentIndex slot,
                                                int ceiling, SkillProfile skills)
         {
             ItemObject worn = hero.BattleEquipment[slot].Item;
@@ -2556,7 +2556,7 @@ namespace HeroLoadoutFixer
         /// The predicates are the scanner's own, called in the scanner's order,
         /// so this attributes the real refusal rather than a second opinion.
         /// </summary>
-        private static string WhyNothing(List<ItemRosterElement> stock, ItemObject worn,
+        private static string WhyNothing(List<StockEntry> stock, ItemObject worn,
                                          CultureObject culture, int ceiling, int wornFine)
         {
             int sameKind, rightTier, wrongCulture;
@@ -2579,7 +2579,7 @@ namespace HeroLoadoutFixer
         /// it. Named keys rather than an enum because they are printed straight
         /// into the tally and read back out of the log.
         /// </summary>
-        private static string Blocker(List<ItemRosterElement> stock, ItemObject worn, CultureObject culture,
+        private static string Blocker(List<StockEntry> stock, ItemObject worn, CultureObject culture,
                                       int ceiling, int wornFine,
                                       out int sameKind, out int rightTier, out int wrongCulture)
         {
@@ -2589,7 +2589,7 @@ namespace HeroLoadoutFixer
 
             for (int i = 0; i < stock.Count; i++)
             {
-                ItemObject item = stock[i].EquipmentElement.Item;
+                ItemObject item = stock[i].Item;
                 if (item.ItemType != worn.ItemType) continue;
                 sameKind++;
 
@@ -2685,7 +2685,7 @@ namespace HeroLoadoutFixer
                     CultureObject culture = hero.Culture;
                     if (culture == null && hero.Clan != null) culture = hero.Clan.Culture;
 
-                    List<ItemRosterElement> stock = MarketScanner.Stock(settlement);
+                    List<StockEntry> stock = MarketScanner.Stock(settlement);
                     bool anyRoom = false;
 
                     for (int i = 0; i < SlotSnapshot.WeaponSlotCount; i++)
@@ -2723,7 +2723,7 @@ namespace HeroLoadoutFixer
         /// slot had room at all, so the caller can tell "at his ceiling
         /// everywhere" from "blocked in every slot".
         /// </summary>
-        private static bool TallyBlock(Hero hero, EquipmentIndex slot, List<ItemRosterElement> stock,
+        private static bool TallyBlock(Hero hero, EquipmentIndex slot, List<StockEntry> stock,
                                        CultureObject culture, int ceiling, Dictionary<string, int> blockedBy)
         {
             ItemObject worn = hero.BattleEquipment[slot].Item;

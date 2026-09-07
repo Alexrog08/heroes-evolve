@@ -68,7 +68,7 @@ namespace HeroLoadoutFixer
             // something is actually bought.
             int limit = budget == null ? int.MaxValue : budget.Available(hero);
 
-            List<ItemRosterElement> stock = MarketScanner.Stock(settlement);
+            List<StockEntry> stock = MarketScanner.Stock(settlement);
             if (stock.Count == 0) return null;
 
             CultureObject culture = hero.Culture;
