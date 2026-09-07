@@ -1974,13 +1974,18 @@ namespace HeroLoadoutFixer
         private static void ReportUniqueGear()
         {
             int uniqueInCatalog = 0, unsellableInCatalog = 0, craftedInCatalog = 0;
+            Dictionary<string, int> unsellableByType = new Dictionary<string, int>();
             MBReadOnlyList<ItemObject> all = MBObjectManager.Instance.GetObjectTypeList<ItemObject>();
             for (int i = 0; i < all.Count; i++)
             {
                 ItemObject item = all[i];
                 if (item == null) continue;
                 if (item.IsUniqueItem) uniqueInCatalog++;
-                if (item.NotMerchandise) unsellableInCatalog++;
+                if (item.NotMerchandise)
+                {
+                    unsellableInCatalog++;
+                    Bump(unsellableByType, item.ItemType.ToString());
+                }
                 if (item.IsCraftedByPlayer) craftedInCatalog++;
             }
 
@@ -2017,6 +2022,9 @@ namespace HeroLoadoutFixer
             ModLog.Info("UNIQUE inCatalog unique=" + uniqueInCatalog
                         + " notMerchandise=" + unsellableInCatalog
                         + " playerCrafted=" + craftedInCatalog);
+            // What the 283 unsellable items actually are. "Noble gear" is an
+            // inference from a twelve-item sample; this is the population.
+            ModLog.Info("UNIQUE " + Tally("notMerchandiseByType", unsellableByType));
             ModLog.Info("UNIQUE protectedLords=" + wearers + " protectedPieces=" + pieces);
 
             // The guard's one real failure mode: a lord frozen into something
