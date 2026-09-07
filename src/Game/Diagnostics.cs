@@ -79,6 +79,7 @@ namespace HeroLoadoutFixer
             ReportWornBySlot();
             ReportUniqueGear();
             ReportWeaponPerks();
+            ReportBanners();
             ReportTierSpread();
             ReportMarkets();
             ReportHeadroom(clanWeight, skillWeight, minimumTier);
@@ -2065,6 +2066,100 @@ namespace HeroLoadoutFixer
         /// type -- couchable lances, polearms that can knock down, swingable
         /// polearms -- and are counted alongside.
         /// </summary>
+        /// <summary>
+        /// Whether banners are a slot the market could ever serve.
+        ///
+        /// Three questions, and any one of them can end it. Do lords carry a
+        /// banner at all, or is the slot empty across the map? Does the
+        /// catalogue hold banners a hero could be sold -- the unsellable-gear
+        /// census counted 52 banners and every one of them NotMerchandise, which
+        /// if it is the whole population means no shop can stock one. And do
+        /// town rosters actually carry any?
+        ///
+        /// Measured before building rather than after, because a purchase
+        /// engine for a slot nothing stocks is a week spent on a feature that
+        /// can never fire once.
+        /// </summary>
+        private static void ReportBanners()
+        {
+            int inCatalog = 0, unsellable = 0;
+            List<int> catalogTiers = new List<int>();
+
+            MBReadOnlyList<ItemObject> all = MBObjectManager.Instance.GetObjectTypeList<ItemObject>();
+            for (int i = 0; i < all.Count; i++)
+            {
+                ItemObject item = all[i];
+                if (item == null || item.ItemType != ItemObject.ItemTypeEnum.Banner) continue;
+
+                inCatalog++;
+                if (item.NotMerchandise) unsellable++;
+                catalogTiers.Add(MarketScanner.TierOf(item));
+            }
+
+            ModLog.Info("BANNER inCatalog=" + inCatalog + " notMerchandise=" + unsellable
+                        + " buyable=" + (inCatalog - unsellable));
+            ModLog.Info("BANNER catalogTier " + Percentiles(catalogTiers));
+
+            // What lords actually carry in the slot.
+            int carrying = 0, empty = 0, shown = 0;
+            List<int> wornTiers = new List<int>();
+            StringBuilder sample = new StringBuilder("BANNER sample");
+
+            foreach (Hero hero in Hero.AllAliveHeroes)
+            {
+                try
+                {
+                    if (!HeroFilter.IsEligible(hero) || hero.BattleEquipment == null) continue;
+
+                    ItemObject banner = hero.BattleEquipment[EquipmentIndex.ExtraWeaponSlot].Item;
+                    if (banner == null) { empty++; continue; }
+
+                    carrying++;
+                    wornTiers.Add(MarketScanner.TierOf(banner));
+                    if (shown < 8)
+                    {
+                        shown++;
+                        sample.Append(' ').Append(hero.Name).Append('/').Append(banner.StringId);
+                    }
+                }
+                catch
+                {
+                    // One unreadable hero must not cost the survey.
+                }
+            }
+
+            ModLog.Info("BANNER lordsCarrying=" + carrying + " lordsWithout=" + empty);
+            ModLog.Info("BANNER wornTier " + Percentiles(wornTiers));
+            if (shown > 0) ModLog.Info(sample.ToString());
+
+            // And whether any town has one on the shelf. Nothing else matters if
+            // this is zero.
+            int townsStocking = 0, bannersInStock = 0;
+            foreach (Settlement settlement in Settlement.All)
+            {
+                try
+                {
+                    if (settlement == null || !settlement.IsTown) continue;
+
+                    List<ItemRosterElement> stock = MarketScanner.Stock(settlement);
+                    int here = 0;
+                    for (int i = 0; i < stock.Count; i++)
+                    {
+                        if (stock[i].EquipmentElement.Item.ItemType == ItemObject.ItemTypeEnum.Banner) here++;
+                    }
+
+                    if (here > 0) townsStocking++;
+                    bannersInStock += here;
+                }
+                catch
+                {
+                    // A settlement mid-transition must not cost the survey.
+                }
+            }
+
+            ModLog.Info("BANNER townsStocking=" + townsStocking + " bannersOnShelves=" + bannersInStock);
+        }
+
         private static void ReportWeaponPerks()
         {
             PerkObject bluntOneHanded = FindPerk("SwiftStrike");

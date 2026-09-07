@@ -297,6 +297,30 @@ El Fian batanio pesa **más** que el catafracto imperial. TaleWorlds quiso a su
 arquero de élite blindado. «Los arqueros van ligeros» no es una regla que este
 juego sostenga, y no había nada que arreglar.
 
+### Estandartes: medido y cerrado, no se puede comprar
+
+```
+BANNER inCatalog=52  notMerchandise=52  buyable=0
+BANNER townsStocking=0  bannersOnShelves=0
+BANNER lordsCarrying=403  lordsWithout=0
+BANNER wornTier  p50=2  p75=2  p90=4  max=6   (el catálogo llega a 6)
+```
+
+**Las 52 banderas del juego son `NotMerchandise` y ninguna ciudad tiene una en
+stock.** El motor de compra no puede tocar esa ranura: no es cuestión de
+implementarlo mejor, es que no hay mercancía. Y **los 403 lores llevan ya
+estandarte**, así que tampoco falta ninguno.
+
+Lo que sí hay es un hueco de calidad: casi todos llevan tier 2 (`phalanx_standard`,
+`standard_of_duty`) mientras el catálogo llega a tier 6. Cerrarlo exigiría
+**concederlos**, no venderlos — y eso es un buff de combate aplicado a todo el
+mapa sobre un objeto que da bonus de formación, en una ranura que vanilla mantiene
+deliberadamente fuera de la economía. **Decidido no hacerlo.**
+
+La ranura del estandarte es `ExtraWeaponSlot` (índice 4) y el motor solo recorre
+`Weapon0..Weapon3`, así que queda fuera de su alcance por construcción. Ver
+`SlotMapping`.
+
 ## Lo que hay que seguir vigilando
 
 **El hueco crece, no encoge.** `tiersBehind p50` sube de 6 a 7 dentro de un
