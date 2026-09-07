@@ -403,16 +403,13 @@ No volver a plantearlo sin datos nuevos.
 
 ## Decisiones tomadas y NO implementadas
 
-1. **Separar maza de una y de dos manos** en el enum del núcleo.
+1. **Separar maza de una y de dos manos** en el enum del núcleo. Ya no es solo
+   higiene: los perks de hacha y maza se preguntan **por mano**, y con el enum
+   colapsado `WeaponPerks.FavoursAxeOrMace` tiene que dejar `Mace` fuera del
+   mapeo para no dirigir la ranura de una mano con el perk de dos.
 2. **Battania deriva y se deja derivar** (decisión del usuario). Solo se corrige
    la montura, no el rol de arma.
-3. **La variedad de objeto la da el mercado.** Condición: el motor de compra debe
-   mirar el inventario de la ciudad concreta, no el catálogo global. `FindBest`
-   escanea el catálogo entero y devuelve el primero del tier más alto, así que
-   dos lores de la misma cultura y techo comprarían la idéntica espada. La
-   concesión ya no tiene ese problema —sortea dentro de la banda— pero la compra
-   sí lo tendría si reutilizase el escaneo global.
-4. **El foco de un roto puede ser arbitrario.** `GetNextSkillToAddFocus` elige por
+3. **El foco de un roto puede ser arbitrario.** `GetNextSkillToAddFocus` elige por
    límite de aprendizaje, y con las skills a cero eso es casi azar. Si aparecen
    reparados con especialidades absurdas, habría que sembrar también un reparto
    de foco coherente con su arquetipo.
