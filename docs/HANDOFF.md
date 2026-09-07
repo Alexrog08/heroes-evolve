@@ -324,6 +324,42 @@ La ranura del estandarte es `ExtraWeaponSlot` (índice 4) y el motor solo recorr
 `Weapon0..Weapon3`, así que queda fuera de su alcance por construcción. Ver
 `SlotMapping`.
 
+## Auditoría de código (doce pasadas)
+
+Hechas de una tirada, cada una con una lente distinta, hasta dejar de encontrar
+cosas. Lo que salió:
+
+**Rendimiento.** `ItemObject.Tier` y `Tierf` **no son campos, son cálculos** —
+`Tierf` cae a `ItemValueModel.CalculateTier` cuando el objeto no trae override, y
+`Tier` redondea y acota encima. El escaneo de mercado pedía los dos por objeto en
+once ranuras: ~11.000 pasadas por esa maquinaria **por cada lord que cruza una
+puerta**. Ahora se miden una vez por visita. El tick semanal hashaba el talento
+una vez por skill y por héroe (~12.000 concatenaciones y hashes por tick) para
+llegar siempre a las mismas dos respuestas. Y la lista de irreparables se
+consultaba **después** de leer el equipo entero del héroe, devolviendo casi todo
+lo que existía para ahorrar.
+
+**Bugs.** El rollback de una compra fallida podía **crear un objeto de la nada**
+si lo que fallaba era la propia retirada del estante — dentro del código escrito
+para garantizar que eso no pasa. La lista de irreparables sobrevivía a su propio
+motivo (los techos suben con la skill, así que un lord irreparable hace un año
+podía dejar de serlo). El robo no filtraba a la víctima: un bandido podía desnudar
+a un errante, **al que la reparación no atiende**, dejándolo desnudo para siempre.
+Y el diálogo de prisionero era el único punto de entrada sin `try` — y su
+condición corre en *cada* conversación del juego.
+
+**Mentiras.** El log decía "rotating file log" y no rotaba nada: 4,2 MB solo de
+pruebas, y creciendo para siempre en una instalación publicada. La línea semanal
+contaba **todos los héroes vivos** —errantes, notables y plantillas— y los
+llamaba a todos crecidos.
+
+**Muerto.** Un método (`BudgetService.SpentToday`), dos públicos sin llamante
+externo. Un barrido sistemático de métodos públicos no encontró nada más.
+
+**Regresión propia.** Cachear los tiers cambió una lista de structs por una de
+clases: cambié 11.000 cálculos por varios cientos de asignaciones en heap por
+visita. `StockEntry` es struct.
+
 ## Lo que hay que seguir vigilando
 
 **El hueco crece, no encoge.** `tiersBehind p50` sube de 6 a 7 dentro de un
