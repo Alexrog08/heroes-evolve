@@ -34,7 +34,8 @@ namespace HeroLoadoutFixer
                                       float skillWeight, int minimumTier)
         {
             int clanTier = hero != null && hero.Clan != null ? hero.Clan.Tier : 0;
-            return TierCeiling.Compute(clanTier, skills.MaxCombatSkill, clanWeight, skillWeight, minimumTier);
+            return TierCeiling.Compute(clanTier, skills.MaxCombatSkill, clanWeight, skillWeight,
+                                       minimumTier, Settings.SkillPerTier);
         }
 
         public static SlotSnapshot ReadEquipment(Equipment equipment)

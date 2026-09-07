@@ -9,6 +9,9 @@ namespace HeroLoadoutFixer
         protected override void OnSubModuleLoad()
         {
             base.OnSubModuleLoad();
+
+            // Before the log line, since it can switch logging off.
+            Settings.Load();
             ModLog.Info("SubModule loaded.");
         }
 

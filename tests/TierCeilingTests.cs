@@ -11,7 +11,7 @@ namespace HeroLoadoutFixer.Tests
             // remeasured once; these cases are about blending, truncation,
             // rounding and clamping, none of which should break when it moves
             // again.
-            const int Step = TierCeiling.SkillPerTier;
+            const int Step = TierCeiling.DefaultSkillPerTier;
 
             // The weights the blend was designed around. Production now passes
             // clanWeight 0 -- a campaign census found clan tier neither

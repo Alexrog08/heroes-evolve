@@ -32,7 +32,7 @@ namespace HeroLoadoutFixer.Core
         public const int MaxTier = 6;
 
         /// <summary>
-        /// Skill points that buy one tier.
+        /// Skill points that buy one tier, when the caller has no opinion.
         ///
         /// DynamicLordGear uses 40, which put the median lord's ceiling at 3 once
         /// clan standing stopped propping it up -- below the 4.4 average tier of
@@ -46,18 +46,30 @@ namespace HeroLoadoutFixer.Core
         /// A tier-6 piece costs about 43,300, so at a tenth of the wallet it
         /// takes a house holding some 433,000 -- which in the young save was no
         /// clan at all and in the mature one was 61 of 82.
+        ///
+        /// Passed in rather than read from a global so the core stays pure and
+        /// the tests can sweep it, exactly as the two weights already are.
         /// </summary>
-        public const int SkillPerTier = 28;
+        public const int DefaultSkillPerTier = 28;
 
         public static int Compute(int clanTier, int maxCombatSkill,
                                   float clanWeight, float skillWeight, int minimumTier)
+        {
+            return Compute(clanTier, maxCombatSkill, clanWeight, skillWeight, minimumTier,
+                           DefaultSkillPerTier);
+        }
+
+        public static int Compute(int clanTier, int maxCombatSkill,
+                                  float clanWeight, float skillWeight, int minimumTier,
+                                  int skillPerTier)
         {
             if (clanTier < 0) clanTier = 0;
             if (maxCombatSkill < 0) maxCombatSkill = 0;
             if (clanWeight < 0f) clanWeight = 0f;
             if (skillWeight < 0f) skillWeight = 0f;
+            if (skillPerTier < 1) skillPerTier = DefaultSkillPerTier;
 
-            int skillTier = maxCombatSkill / SkillPerTier;
+            int skillTier = maxCombatSkill / skillPerTier;
             if (skillTier > MaxTier) skillTier = MaxTier;
 
             float totalWeight = clanWeight + skillWeight;

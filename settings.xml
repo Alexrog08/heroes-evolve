@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!--
+  HeroLoadoutFixer settings.
+
+  Delete this file and the mod runs on the defaults below. Delete a single
+  line and that one value falls back. A value the mod cannot read, or one
+  outside its sane range, is clamped or ignored rather than crashing a
+  campaign.
+
+  Nothing here is stored in your save, so changing it takes effect on the
+  next load and uninstalling the mod leaves no trace.
+-->
+
+<HeroLoadoutFixer>
+
+  <!-- ============ What runs ============ -->
+
+  <!-- Repairs lords the game's come-of-age bug left half-equipped: too few
+       weapons to fight with, or still in civilian clothing. -->
+  <EnableRepair>true</EnableRepair>
+
+  <!-- Grows every lord's skills over the years, so a hero does not end up
+       weaker than the troops he leads. -->
+  <EnableSkillGrowth>true</EnableSkillGrowth>
+
+  <!-- Lets lords buy better gear when they visit a town. Never changes what
+       kind of fighter a lord is: it replaces what he already carries with
+       something better of the same kind, and never touches an empty slot. -->
+  <EnablePurchases>true</EnablePurchases>
+
+  <!-- Writes hlf.log under
+       %LOCALAPPDATA%\Mount and Blade II Bannerlord\logs\ -->
+  <EnableLogging>true</EnableLogging>
+
+
+  <!-- ============ How good a lord's gear may get ============ -->
+
+  <!-- Combat skill points that buy one tier of gear. LOWER MEANS BETTER
+       EQUIPPED LORDS, and this is the setting to reach for first.
+
+       28 puts the average lord one tier above what the game already gave
+       him, which leaves the top end to be decided by his clan's money
+       rather than by this number. 40 was the old value and makes lords
+       noticeably poorer than vanilla dresses them. -->
+  <SkillPerTier>28</SkillPerTier>
+
+  <!-- Weight of clan standing against personal skill in that ceiling.
+
+       Zero, from measurement rather than taste: across a young and a mature
+       campaign, clan tier neither predicted what a lord wears nor separated
+       the population, since by midgame every clan is tier 4 or better. Set
+       it above zero if you want great houses to outfit their lords better
+       regardless of merit. -->
+  <ClanWeight>0.0</ClanWeight>
+  <SkillWeight>1.0</SkillWeight>
+
+  <!-- Nobody is capped below this, however unskilled. -->
+  <MinimumTier>1</MinimumTier>
+
+  <!-- How far a ranged skill must lead a lord's melee skills before the
+       repair commits him to a bow or a crossbow. -->
+  <DominanceMargin>30</DominanceMargin>
+
+
+  <!-- ============ Money ============ -->
+
+  <!-- The share of his wallet a lord may put into ONE purchase. This is what
+       makes wealth matter: at a tenth, a tier-6 piece needs a house holding
+       some 430,000, so young clans are priced out of the best gear and grow
+       into it. Raise it and lords buy above their means; lower it and they
+       stay in cheap kit for longer. -->
+  <SpendingShare>0.10</SpendingShare>
+
+  <!-- Scales the gold held back so buying gear can never stop a clan paying
+       its troops. 1.0 keeps exactly the game's own threshold per war party.
+       Zero removes the safety net. -->
+  <ReserveMultiplier>1.0</ReserveMultiplier>
+
+  <!-- Chance a lord goes shopping when he walks into a town. He buys at most
+       one thing per trip and takes at most one trip a day, so this is the
+       pace of the whole engine. -->
+  <ShopChancePerVisit>0.25</ShopChancePerVisit>
+
+</HeroLoadoutFixer>

@@ -8,7 +8,7 @@ $out  = Join-Path $root "build\out"
 New-Item -ItemType Directory -Force -Path $out | Out-Null
 
 $refs = @(
-  "$fw\mscorlib.dll", "$fw\System.dll", "$fw\System.Core.dll",
+  "$fw\mscorlib.dll", "$fw\System.dll", "$fw\System.Core.dll", "$fw\System.Xml.dll",
   "$bin\mono\lib\mono\4.5\Facades\netstandard.dll",
   "$bin\TaleWorlds.CampaignSystem.dll", "$bin\TaleWorlds.Core.dll",
   "$bin\TaleWorlds.Library.dll", "$bin\TaleWorlds.ObjectSystem.dll",
@@ -32,5 +32,10 @@ if ($LASTEXITCODE -ne 0) { Write-Host "BUILD FAILED"; exit 1 }
 $dest = Join-Path $game "Modules\HeroLoadoutFixer"
 New-Item -ItemType Directory -Force -Path (Join-Path $dest "bin\Win64_Shipping_Client") | Out-Null
 Copy-Item (Join-Path $root "SubModule.xml") $dest -Force
+
+# settings.xml ships alongside, but never over the top of one the player has
+# already edited -- a deploy must not silently reset their configuration.
+$settings = Join-Path $dest "settings.xml"
+if (-not (Test-Path $settings)) { Copy-Item (Join-Path $root "settings.xml") $settings -Force }
 Copy-Item "$out\HeroLoadoutFixer.dll" (Join-Path $dest "bin\Win64_Shipping_Client") -Force
 Write-Host "DEPLOYED to $dest"

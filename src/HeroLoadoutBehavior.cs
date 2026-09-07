@@ -13,16 +13,14 @@ namespace HeroLoadoutFixer
     /// </summary>
     public class HeroLoadoutBehavior : CampaignBehaviorBase
     {
-        // Defaults from the design spec, section 6 and 11, except ClanWeight.
-        //
-        // Clan standing is worth nothing as a predictor of a lord's gear and
-        // stops separating anything by midgame, measured across a young and a
-        // mature campaign -- see TierCeiling. A clan's wealth still decides how
-        // good its lords get, through BudgetService, where a purse belongs.
-        internal const float ClanWeight = 0.0f;
-        internal const float SkillWeight = 1.0f;
-        internal const int MinimumTier = 1;
-        internal const int DominanceMargin = 30;
+        // Every tunable lives in Settings, which reads settings.xml at load and
+        // falls back to the shipped defaults. These forward rather than hold, so
+        // the diagnostics and the console commands cannot drift from what the
+        // live tick is actually using.
+        internal static float ClanWeight { get { return Settings.ClanWeight; } }
+        internal static float SkillWeight { get { return Settings.SkillWeight; } }
+        internal static int MinimumTier { get { return Settings.MinimumTier; } }
+        internal static int DominanceMargin { get { return Settings.DominanceMargin; } }
 
         /// <summary>
         /// How likely a lord is to go shopping on any one town visit.
@@ -33,14 +31,15 @@ namespace HeroLoadoutFixer
         /// engine: a lord converges on the gear he deserves over years, paying
         /// for it, which is the point.
         /// </summary>
-        internal const float ShopChancePerVisit = 0.25f;
+        internal static float ShopChancePerVisit { get { return Settings.ShopChancePerVisit; } }
 
         /// <summary>
         /// The day's gear spending, per clan. Owned here because a behaviour
         /// instance is built fresh per campaign load, which is exactly the
         /// lifetime this ledger should have -- it holds no save data.
         /// </summary>
-        private readonly BudgetService _budget = new BudgetService();
+        private readonly BudgetService _budget =
+            new BudgetService(Settings.ReserveMultiplier, Settings.SpendingShare);
 
         /// <summary>
         /// Who has already been shopping today.
@@ -81,6 +80,8 @@ namespace HeroLoadoutFixer
             // fixes it. The DailyTickHeroEvent path below repairs the same
             // heroes one in-game day later instead, which actually works, so
             // the dead subscription is removed rather than fought.
+            ModLog.Info("SETTINGS in force: " + Settings.Describe());
+
             CampaignEvents.DailyTickHeroEvent.AddNonSerializedListener(this, OnDailyTickHero);
 
             // Weekly, not daily. The peak a lord grows toward takes forty years
@@ -167,6 +168,7 @@ namespace HeroLoadoutFixer
         {
             try
             {
+                if (!Settings.EnablePurchases) return;
                 if (settlement == null || !settlement.IsTown) return;
                 if (party != null && party == MobileParty.MainParty) return;
 
@@ -198,6 +200,8 @@ namespace HeroLoadoutFixer
 
         private void OnWeeklyTick()
         {
+            if (!Settings.EnableSkillGrowth) return;
+
             int grown = 0;
 
             foreach (Hero hero in Hero.AllAliveHeroes)
@@ -225,6 +229,7 @@ namespace HeroLoadoutFixer
         {
             try
             {
+                if (!Settings.EnableRepair) return;
                 if (!HeroFilter.IsEligible(hero)) return;
                 if (!GrantService.NeedsGrant(hero)) return;
 
