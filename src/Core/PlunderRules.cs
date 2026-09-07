@@ -120,7 +120,7 @@ namespace HeroLoadoutFixer.Core
         /// simply do not do this, and a model where everyone eventually does
         /// loses the only thing that makes the mechanic read as character.
         /// </summary>
-        public static float Disposition(int honor, int mercy, int generosity, int calculating, int roguery)
+        private static float Disposition(int honor, int mercy, int generosity, int calculating, int roguery)
         {
             honor = ClampTrait(honor);
             mercy = ClampTrait(mercy);
@@ -156,7 +156,7 @@ namespace HeroLoadoutFixer.Core
         /// relation because a father who has come to hate his son is no longer
         /// protected by being his father.
         /// </summary>
-        public static float Circumstance(int relation, Kinship kinship)
+        private static float Circumstance(int relation, Kinship kinship)
         {
             if (kinship == Kinship.Immediate && relation > FeudRelation) return 0f;
 

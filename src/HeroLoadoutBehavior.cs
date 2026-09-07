@@ -263,22 +263,27 @@ namespace HeroLoadoutFixer
                 // NeedsGrant is loudest about. He is repaired when he gets out.
                 if (hero.IsPrisoner) return;
 
-                if (!GrantService.NeedsGrant(hero)) return;
-
+                // Asked before NeedsGrant, not after. A hero on this list is one
+                // nothing can be done for, and he is looked at again every day
+                // for the rest of the campaign -- reading his whole equipment
+                // first, only to consult the set that says not to bother, gave
+                // back most of what the set was added to save.
                 string id = IdOf(hero);
                 if (id != null && _beyondRepair.Contains(id)) return;
+
+                if (!GrantService.NeedsGrant(hero)) return;
 
                 ModLog.Info("REPAIR hero=" + hero.Name + " reason=" + reason);
                 int granted = GrantService.Grant(hero, ClanWeight, SkillWeight,
                                                  MinimumTier, DominanceMargin);
 
-                // Counted only when something was actually placed: the census
-                // reports this as repairs already made, and an attempt that
-                // changed nothing is not one.
-                if (granted > 0) Diagnostics.NoteRepair();
-
                 if (granted > 0)
                 {
+                    // Counted only when something was actually placed: the
+                    // census reports this as repairs already made, and an
+                    // attempt that changed nothing is not one.
+                    Diagnostics.NoteRepair();
+
                     // Skills as well as kit. The failure that leaves a hero
                     // without weapons leaves him without skills too, and a
                     // well-dressed lord with zero in everything is still useless

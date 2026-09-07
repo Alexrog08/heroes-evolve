@@ -214,13 +214,6 @@ namespace HeroLoadoutFixer
             DayFor(clan).Spent += clanPart;
         }
 
-        /// <summary>What the house has already spent on gear today.</summary>
-        public int SpentToday(Clan clan)
-        {
-            if (clan == null || clan.Leader == null) return 0;
-            return DayFor(clan).Spent;
-        }
-
         /// <summary>
         /// A hero's own money, which for a clan leader is zero because the clan
         /// purse is the same gold. See the class comment.
