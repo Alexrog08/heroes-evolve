@@ -2630,6 +2630,11 @@ namespace HeroLoadoutFixer
             int inTowns = 0, wouldBuy = 0, nothingWanted = 0, pricedOut = 0, pushedDown = 0;
             List<int> foregone = new List<int>();
             BudgetService budget = new BudgetService();
+
+            // One roster read per town rather than one per lord. Lords cluster
+            // in towns, so the same shelves were being measured dozens of times
+            // over for a report that runs across the whole map.
+            Dictionary<string, List<StockEntry>> stockByTown = new Dictionary<string, List<StockEntry>>();
             Dictionary<string, int> blockedBy = new Dictionary<string, int>();
             Dictionary<string, int> buySlots = new Dictionary<string, int>();
             List<int> prices = new List<int>();
@@ -2685,7 +2690,13 @@ namespace HeroLoadoutFixer
                     CultureObject culture = hero.Culture;
                     if (culture == null && hero.Clan != null) culture = hero.Clan.Culture;
 
-                    List<StockEntry> stock = MarketScanner.Stock(settlement);
+                    List<StockEntry> stock;
+                    if (!stockByTown.TryGetValue(settlement.StringId, out stock))
+                    {
+                        stock = MarketScanner.Stock(settlement);
+                        stockByTown[settlement.StringId] = stock;
+                    }
+
                     bool anyRoom = false;
 
                     for (int i = 0; i < SlotSnapshot.WeaponSlotCount; i++)

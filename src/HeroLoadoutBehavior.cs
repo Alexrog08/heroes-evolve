@@ -108,7 +108,8 @@ namespace HeroLoadoutFixer
             // costs one branch per capture when it is not wanted.
             CampaignEvents.HeroPrisonerTaken.AddNonSerializedListener(this, OnHeroPrisonerTaken);
 
-            // Deliberately NOT subscribed to DailyTickEvent to run the census.
+            // The daily tick above carries the ledger reset and nothing else.
+            // The census is deliberately NOT run from it.
             // Measured at 480ms on a 600-lord campaign -- two thousand seven
             // hundred full sweeps of a 3500-item catalogue -- and it changes
             // nothing in the game. Half a second of freeze on the first day of
