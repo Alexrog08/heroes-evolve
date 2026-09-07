@@ -96,19 +96,6 @@ namespace HeroLoadoutFixer
         /// </summary>
         public static float PlunderChance = 1.0f;
 
-        /// <summary>
-        /// Lets the player's own party rob its prisoners too.
-        ///
-        /// Off by default and deliberately a setting rather than a prompt. A
-        /// per-capture menu would ask the same question a hundred times a
-        /// campaign; turning this on asks it once, and that once is the consent
-        /// -- which matters, because robbing costs the robber Honor and Mercy
-        /// and standing with the man he robbed, and no mod should hand a player
-        /// consequences for a decision he never made.
-        ///
-        /// With it off the player can still be robbed. He simply never robs.
-        /// </summary>
-        public static bool PlayerPartyRobs = false;
 
         /// <summary>
         /// Loads settings.xml if it is there. Called once, from OnSubModuleLoad.
@@ -135,7 +122,6 @@ namespace HeroLoadoutFixer
                 EnablePurchases = Flag(root, "EnablePurchases", EnablePurchases);
                 EnableLogging = Flag(root, "EnableLogging", EnableLogging);
                 EnableCaptureLoss = Flag(root, "EnableCaptureLoss", EnableCaptureLoss);
-                PlayerPartyRobs = Flag(root, "PlayerPartyRobs", PlayerPartyRobs);
 
                 ClanWeight = Number(root, "ClanWeight", ClanWeight, 0f, 10f);
                 SkillWeight = Number(root, "SkillWeight", SkillWeight, 0f, 10f);
@@ -176,8 +162,7 @@ namespace HeroLoadoutFixer
                    + " reserveMultiplier=" + ReserveMultiplier
                    + " shopChance=" + ShopChancePerVisit
                    + " captureLoss=" + EnableCaptureLoss
-                   + " plunderChance=" + PlunderChance
-                   + " playerRobs=" + PlayerPartyRobs;
+                   + " plunderChance=" + PlunderChance;
         }
 
         /// <summary>

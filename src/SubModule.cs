@@ -23,6 +23,7 @@ namespace HeroLoadoutFixer
             if (starter == null) return;
 
             starter.AddBehavior(new HeroLoadoutBehavior());
+            PrisonerDialogue.Register(starter);
             ModLog.Info("HeroLoadoutBehavior registered.");
         }
     }

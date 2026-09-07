@@ -78,16 +78,16 @@ namespace HeroLoadoutFixer
             // has no opinion about a prisoner's boots.
             if (!bandit && captor == null) return 0;
 
-            // The player is never made to rob anyone unless he has said so
-            // himself, once, in settings. See the class comment.
-            if (captor != null && captor == Hero.MainHero && !Settings.PlayerPartyRobs) return 0;
+            // The player is never rolled for. He robs by asking, in
+            // conversation -- see PrisonerDialogue.
+            if (captor != null && captor == Hero.MainHero) return 0;
             if (captor == prisoner) return 0;
 
             float chance = ChanceFor(bandit, captor, prisoner);
             if (chance <= 0f) return 0;
             if (MBRandom.RandomFloat > chance) return 0;
 
-            int taken = Strip(captorParty, prisoner);
+            int taken = Take(captorParty, prisoner);
             if (taken == 0) return 0;
 
             // Being robbed is not an act of the victim's, so it never moves
@@ -144,7 +144,7 @@ namespace HeroLoadoutFixer
         /// That is the point of the whole feature: unique gear circulating
         /// because it was taken, rather than sitting in one man's slot forever.
         /// </summary>
-        private static int Strip(PartyBase captorParty, Hero prisoner)
+        public static int Take(PartyBase captorParty, Hero prisoner)
         {
             ItemRoster loot = captorParty.ItemRoster;
             int taken = 0;
@@ -174,21 +174,37 @@ namespace HeroLoadoutFixer
         }
 
         /// <summary>
-        /// What the act does to the man who did it: practice at theft, and a
-        /// mark on his character.
+        /// Whether there is anything on him worth asking for. Keeps the
+        /// conversation option from appearing over a man already stripped bare.
+        /// </summary>
+        public static bool HasAnythingToTake(Hero prisoner)
+        {
+            if (prisoner == null || prisoner.BattleEquipment == null) return false;
+
+            for (int i = 0; i < SlotSnapshot.WeaponSlotCount; i++)
+            {
+                if (prisoner.BattleEquipment[SlotMapping.WeaponSlot(i)].Item != null) return true;
+            }
+            foreach (EquipmentIndex slot in SlotMapping.ArmorSlots)
+            {
+                if (prisoner.BattleEquipment[slot].Item != null) return true;
+            }
+            return prisoner.BattleEquipment[EquipmentIndex.Horse].Item != null
+                   || prisoner.BattleEquipment[EquipmentIndex.HorseHarness].Item != null;
+        }
+
+        /// <summary>
+        /// Practice at theft. A lord who robs gets better at it, and being
+        /// better at it makes him likelier to rob again -- which closes a loop
+        /// the rules already opened through roguery.
         ///
-        /// Roguery is real for anybody, and it closes a loop -- a lord who robs
-        /// gets better at it, and being better at it makes him likelier to rob
-        /// again. The trait cost only exists for the player, because the game
-        /// keeps no trait ledger for anyone else.
+        /// No trait cost here: the game keeps a trait ledger for the player
+        /// alone, and the player never reaches this path. His own reckoning is
+        /// in PrisonerDialogue, where he chose it.
         /// </summary>
         private static void Reward(Hero captor, int pieces)
         {
             captor.AddSkillXp(DefaultSkills.Roguery, RogueryXpPerPiece * pieces);
-
-            if (captor != Hero.MainHero) return;
-
-            TraitLevelingHelper.OnHostileAction(HostileActionXp);
         }
 
         /// <summary>
