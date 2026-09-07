@@ -61,6 +61,10 @@ namespace HeroLoadoutFixer
             if (!hero.IsPrisoner) return false;
             if (!HeldByPlayer(hero)) return false;
 
+            // Same guard the automatic path uses: never leave a hero naked that
+            // nothing in this mod will re-equip. See PlunderService.
+            if (!PlunderService.CanBeStripped(hero)) return false;
+
             return PlunderService.HasAnythingToTake(hero);
         }
 

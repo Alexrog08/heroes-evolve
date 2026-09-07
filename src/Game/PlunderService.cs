@@ -81,6 +81,8 @@ namespace HeroLoadoutFixer
             if (!Settings.EnableCaptureLoss) return 0;
             if (captorParty == null || prisoner == null || prisoner.BattleEquipment == null) return 0;
 
+            if (!CanBeStripped(prisoner)) return 0;
+
             bool bandit = IsBanditParty(captorParty);
             Hero captor = CaptorOf(captorParty);
 
@@ -119,6 +121,24 @@ namespace HeroLoadoutFixer
                         + " worth=" + value);
 
             return taken;
+        }
+
+        /// <summary>
+        /// Whether this prisoner is someone we may leave with nothing.
+        ///
+        /// Only heroes the repair will look after, and the player, who can
+        /// dress himself. Anyone else -- a wandering troubadour, a notable, a
+        /// minor-faction chief -- falls outside what HeroFilter lets the repair
+        /// touch, and the purchase engine only ever improves a slot that is
+        /// already filled. Strip one of those and he is naked for the rest of
+        /// the campaign, with nothing in the mod able to help him. Taking a
+        /// man's gear should cost him a war, not his existence.
+        /// </summary>
+        public static bool CanBeStripped(Hero prisoner)
+        {
+            if (prisoner == null) return false;
+            if (prisoner == Hero.MainHero) return true;
+            return HeroFilter.IsEligible(prisoner);
         }
 
         /// <summary>
