@@ -80,6 +80,22 @@ namespace HeroLoadoutFixer
         /// <summary>Chance a lord goes shopping when he enters a town.</summary>
         public static float ShopChancePerVisit = 0.25f;
 
+        // --- Losing gear ----------------------------------------------------
+
+        /// <summary>
+        /// Lets a captor strip his prisoner. Off by default: it changes the
+        /// feel of every defeat, and that should be a choice.
+        /// </summary>
+        public static bool EnableCaptureLoss = false;
+
+        /// <summary>
+        /// Scales how often a captor robs. Zero is the same as off; one runs
+        /// the rules as written. See PlunderRules -- every weight in there is
+        /// invented, so this is the dial that matters until a campaign has
+        /// measured the rate.
+        /// </summary>
+        public static float PlunderChance = 1.0f;
+
         /// <summary>
         /// Loads settings.xml if it is there. Called once, from OnSubModuleLoad.
         /// </summary>
@@ -104,6 +120,7 @@ namespace HeroLoadoutFixer
                 EnableSkillGrowth = Flag(root, "EnableSkillGrowth", EnableSkillGrowth);
                 EnablePurchases = Flag(root, "EnablePurchases", EnablePurchases);
                 EnableLogging = Flag(root, "EnableLogging", EnableLogging);
+                EnableCaptureLoss = Flag(root, "EnableCaptureLoss", EnableCaptureLoss);
 
                 ClanWeight = Number(root, "ClanWeight", ClanWeight, 0f, 10f);
                 SkillWeight = Number(root, "SkillWeight", SkillWeight, 0f, 10f);
@@ -114,6 +131,7 @@ namespace HeroLoadoutFixer
                 SpendingShare = Number(root, "SpendingShare", SpendingShare, 0f, 1f);
                 ReserveMultiplier = Number(root, "ReserveMultiplier", ReserveMultiplier, 0f, 10f);
                 ShopChancePerVisit = Number(root, "ShopChancePerVisit", ShopChancePerVisit, 0f, 1f);
+                PlunderChance = Number(root, "PlunderChance", PlunderChance, 0f, 5f);
 
                 ModLog.Enabled = EnableLogging;
                 ModLog.Info("SETTINGS loaded from " + path);
@@ -141,7 +159,9 @@ namespace HeroLoadoutFixer
                    + " dominanceMargin=" + DominanceMargin
                    + " spendingShare=" + SpendingShare
                    + " reserveMultiplier=" + ReserveMultiplier
-                   + " shopChance=" + ShopChancePerVisit;
+                   + " shopChance=" + ShopChancePerVisit
+                   + " captureLoss=" + EnableCaptureLoss
+                   + " plunderChance=" + PlunderChance;
         }
 
         /// <summary>

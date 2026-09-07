@@ -82,4 +82,32 @@
        pace of the whole engine. -->
   <ShopChancePerVisit>0.25</ShopChancePerVisit>
 
+
+  <!-- ============ Losing gear ============ -->
+
+  <!-- Lets a captor go through his prisoner's kit and keep it. OFF BY
+       DEFAULT, because it changes the feel of every defeat.
+
+       The gear is moved, never destroyed: it goes into the captor's own
+       inventory, so beating him gets it back. Gear no merchant sells -- a
+       noble sword, a crown -- is left on the prisoner, since a bandit would
+       put it in a shop and vanilla never lets one get there.
+
+       Who robs is character, not dice. Bandits always do. A merciful and
+       generous lord never does. Dishonour, closefistedness and roguery raise
+       the odds; goodwill between the two men lowers them; a father will not
+       strip his son unless the two of them are already at war. A lord who
+       robs loses standing with the man he robbed.
+
+       You are the exception on both sides: nothing decides to rob for you,
+       and your own standing never moves for having been robbed. Relations in
+       this game are yours to earn. -->
+  <EnableCaptureLoss>false</EnableCaptureLoss>
+
+  <!-- Scales how often a captor robs. 0 is the same as off, 1 runs the rules
+       as written, 2 doubles them. Every weight behind this is invented -- no
+       vanilla behaviour exists to calibrate against -- so this is the dial to
+       turn while judging whether the rate feels right. -->
+  <PlunderChance>1.0</PlunderChance>
+
 </HeroLoadoutFixer>

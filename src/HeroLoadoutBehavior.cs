@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.Party;
+using TaleWorlds.CampaignSystem.Roster;
 using TaleWorlds.CampaignSystem.Settlements;
 using TaleWorlds.Core;
 
@@ -98,6 +99,10 @@ namespace HeroLoadoutFixer
             // the note below about what a real daily sweep costs.
             CampaignEvents.DailyTickEvent.AddNonSerializedListener(this, OnDailyTick);
 
+            // Losing gear. Off unless the player asks for it, so the listener
+            // costs one branch per capture when it is not wanted.
+            CampaignEvents.HeroPrisonerTaken.AddNonSerializedListener(this, OnHeroPrisonerTaken);
+
             // Deliberately NOT subscribed to DailyTickEvent to run the census.
             // Measured at 480ms on a 600-lord campaign -- two thousand seven
             // hundred full sweeps of a 3500-item catalogue -- and it changes
@@ -144,6 +149,24 @@ namespace HeroLoadoutFixer
         private void OnDailyTickHero(Hero hero)
         {
             TryRepair(hero, "daily_tick");
+        }
+
+        /// <summary>
+        /// A captor going through his prisoner's kit. Guarded like every other
+        /// per-hero path: one bad capture must not take down an event the whole
+        /// campaign fires.
+        /// </summary>
+        private void OnHeroPrisonerTaken(PartyBase captor, Hero prisoner)
+        {
+            try
+            {
+                PlunderService.TryPlunder(captor, prisoner);
+            }
+            catch (System.Exception ex)
+            {
+                ModLog.Error("plunder failed for " + (prisoner != null ? prisoner.Name : null)
+                             + ": " + ex.GetType().Name + " " + ex.Message);
+            }
         }
 
         /// <summary>Forgets what every clan spent yesterday, and who shopped.</summary>
@@ -231,6 +254,13 @@ namespace HeroLoadoutFixer
             {
                 if (!Settings.EnableRepair) return;
                 if (!HeroFilter.IsEligible(hero)) return;
+
+                // Not while he is somebody's prisoner. Re-equipping a man in a
+                // dungeon would undo a capture within a day of it happening,
+                // and a lord who has just been stripped is exactly the hero
+                // NeedsGrant is loudest about. He is repaired when he gets out.
+                if (hero.IsPrisoner) return;
+
                 if (!GrantService.NeedsGrant(hero)) return;
 
                 string id = IdOf(hero);
