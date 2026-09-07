@@ -1,59 +1,94 @@
 namespace HeroLoadoutFixer.Core
 {
     /// <summary>
-    /// Whether a captor strips his prisoner, and how much of that is character
-    /// rather than dice.
+    /// Whether a captor strips his prisoner.
     ///
-    /// The shape comes from what the game already says about a person: bandits
-    /// have no honour to appeal to, a merciful and generous lord will not do it
-    /// at all, a deceitful or closefisted one is likelier, roguery says he knows
-    /// how, and standing between the two men matters more than any of it. Blood
-    /// outranks everything short of a feud.
+    /// Two stages, because character has to outweigh the dice. A flat roll makes
+    /// the same lord behave differently every time and reads as randomness; this
+    /// asks first what kind of man he is, and only then who he is holding.
     ///
-    /// **Every number below is invented.** Unlike the tier ceiling or the
-    /// spending share, there is no population in the game to measure this
-    /// against -- nothing in vanilla strips a prisoner, so there is no rate to
-    /// compare with. They are a starting shape, exposed to one multiplier in
-    /// settings, and the census reports the rate they actually produce so they
-    /// can be calibrated the way everything else here was.
+    ///   disposition   who he is      -- his traits, stable across the campaign
+    ///   circumstance  who he holds   -- standing and blood, a property of the pair
+    ///
+    /// The trait weighting comes from what the game says each one means, not from
+    /// taste. Honor is "respecting your formal commitments and obeying the law",
+    /// and taking a prisoner's property is the plainest breach of the customs of
+    /// war there is, so it leads. Generosity runs Tightfisted to Munificent and
+    /// is about wanting what is not yours. Mercy is Sadistic to Compassionate,
+    /// and stripping a helpless man is a cruelty, though a small one. Calculating
+    /// is Hotheaded to Cerebral: a man who weighs his long-term interests can see
+    /// what robbing a peer will cost him in standing, and stays his hand.
+    ///
+    /// Valor is left out on purpose. "Risking your life to win glory or wealth"
+    /// says nothing about a disarmed man in a cell.
     /// </summary>
     public static class PlunderRules
     {
-        /// <summary>Bandits take everything. There is nobody to appeal to.</summary>
+        /// <summary>
+        /// Bandits take everything. There is no honour to appeal to, no standing
+        /// to lose and no relation to spend, so none of the rest applies.
+        /// </summary>
         public const float BanditChance = 1.0f;
 
-        /// <summary>Where an unremarkable lord starts before his character moves it.</summary>
-        public const float Base = 0.20f;
-
-        /// <summary>Each point of Honor resists; each point of dishonour invites.</summary>
-        public const float PerHonor = 0.10f;
-
-        /// <summary>Mercy and Generosity pull the same way, more gently.</summary>
-        public const float PerMercy = 0.06f;
-        public const float PerGenerosity = 0.08f;
-
-        /// <summary>Roguery is knowing how, not wanting to. 200 points adds a third.</summary>
-        public const float PerRogueryPoint = 0.0015f;
-
-        /// <summary>Standing between the two men. 50 points of goodwill removes a fifth.</summary>
-        public const float PerRelationPoint = 0.004f;
-
-        /// <summary>A cousin is family, but not the kind you would not rob.</summary>
-        public const float CousinFactor = 0.35f;
+        // --- disposition: who the captor is ---------------------------------
 
         /// <summary>
-        /// Below this, blood has stopped counting. A father will not strip his
-        /// son; a father who hates him will.
+        /// Relative pull of each trait, summing to ten so the weighted score
+        /// stays on the traits' own -2..+2 scale.
         /// </summary>
-        public const int FeudRelation = -40;
+        public const int HonorWeight = 4;
+        public const int GenerosityWeight = 3;
+        public const int MercyWeight = 2;
+        public const int CalculatingWeight = 1;
+
+        /// <summary>
+        /// How sharply disposition falls away from the worst man to the best.
+        ///
+        /// The curve exists because the linear reading puts a lord of wholly
+        /// average character at one capture in two, and Calradia's custom is
+        /// ransom rather than robbery -- a man with no particular vice should be
+        /// an unusual thief, not a coin flip. Cubed puts him at one in eight and
+        /// leaves both ends intact: all four traits at their worst still reaches
+        /// certainty, and all four at their best still reaches never.
+        /// </summary>
+        public const int DispositionCurve = 3;
+
+        /// <summary>
+        /// What the highest roguery in the game adds, as a share of the man's
+        /// own disposition. Multiplied rather than added, so skill at theft
+        /// makes a thief worse and leaves an honest man honest.
+        /// </summary>
+        public const float RogueryReach = 0.5f;
+
+        /// <summary>Roguery at which that full bonus applies.</summary>
+        public const int RogueryScale = 300;
+
+        // --- circumstance: who he is holding --------------------------------
+
+        /// <summary>
+        /// Goodwill protects outright and enmity aggravates by half. The
+        /// asymmetry is deliberate: a man you like is a man you do not rob at
+        /// all, while a man you hate is not thereby someone you rob twice.
+        /// </summary>
+        public const int FriendshipShield = 100;
+        public const int EnmitySpur = 200;
+
+        /// <summary>A clansman is family enough to be a rare victim.</summary>
+        public const float ClanFactor = 0.25f;
+
+        /// <summary>
+        /// Below this, blood has already failed and kinship stops protecting.
+        /// Deep hostility on the game's -100..+100 scale, not a mere quarrel.
+        /// </summary>
+        public const int FeudRelation = -50;
 
         /// <summary>How close two heroes are by blood or marriage.</summary>
         public enum Kinship
         {
             None,
 
-            /// <summary>Cousin, uncle, in-law: family, at a distance.</summary>
-            Distant,
+            /// <summary>Of the same house: family at a remove.</summary>
+            Clan,
 
             /// <summary>Parent, child, sibling, spouse.</summary>
             Immediate
@@ -62,39 +97,85 @@ namespace HeroLoadoutFixer.Core
         /// <summary>
         /// The chance this captor strips this prisoner, from zero to one.
         ///
-        /// Traits arrive on the game's own scale, roughly -2 to +2, and are
-        /// clamped here rather than trusted: a trait a mod has widened must not
-        /// silently produce a certainty.
+        /// Traits arrive on the game's own -2..+2 scale and are clamped rather
+        /// than trusted: a trait some other mod has widened must not quietly
+        /// turn a tendency into a certainty.
         /// </summary>
-        public static float Chance(bool captorIsBandit, int honor, int mercy, int generosity,
+        public static float Chance(bool captorIsBandit, int honor, int mercy, int generosity, int calculating,
                                    int roguery, int relation, Kinship kinship, float multiplier)
         {
             if (captorIsBandit) return Clamp(BanditChance * multiplier);
 
+            float disposition = Disposition(honor, mercy, generosity, calculating, roguery);
+            if (disposition <= 0f) return 0f;
+
+            return Clamp(disposition * Circumstance(relation, kinship) * multiplier);
+        }
+
+        /// <summary>
+        /// How willing this man is to rob anybody, before it matters who.
+        ///
+        /// Zero for a lord who is honourable, munificent, compassionate and
+        /// cerebral all at once -- and zero means zero, not "rarely". Some men
+        /// simply do not do this, and a model where everyone eventually does
+        /// loses the only thing that makes the mechanic read as character.
+        /// </summary>
+        public static float Disposition(int honor, int mercy, int generosity, int calculating, int roguery)
+        {
             honor = ClampTrait(honor);
             mercy = ClampTrait(mercy);
             generosity = ClampTrait(generosity);
+            calculating = ClampTrait(calculating);
 
-            // The one absolute among lords: a man who is both merciful and
-            // generous does not rob a prisoner, whatever his mood or his debts.
-            if (mercy >= 1 && generosity >= 1) return 0f;
+            float score = (HonorWeight * honor
+                           + GenerosityWeight * generosity
+                           + MercyWeight * mercy
+                           + CalculatingWeight * calculating)
+                          / (float)(HonorWeight + GenerosityWeight + MercyWeight + CalculatingWeight);
 
-            // Blood, unless blood has already failed. Checked before the
-            // arithmetic because it is a veto rather than a weight.
+            // Score runs +2 (a paragon) to -2 (a brute); fold it into 0..1 with
+            // the good end at zero, then bend it away from the middle.
+            float linear = (2f - score) / 4f;
+            float disposition = linear;
+            for (int i = 1; i < DispositionCurve; i++) disposition *= linear;
+
+            if (roguery > 0)
+            {
+                float reach = roguery > RogueryScale ? RogueryReach
+                                                     : RogueryReach * roguery / RogueryScale;
+                disposition *= 1f + reach;
+            }
+
+            return disposition < 0f ? 0f : disposition;
+        }
+
+        /// <summary>
+        /// How much this particular prisoner invites or forbids it.
+        ///
+        /// Blood is a veto rather than a weight, and it is checked against the
+        /// relation because a father who has come to hate his son is no longer
+        /// protected by being his father.
+        /// </summary>
+        public static float Circumstance(int relation, Kinship kinship)
+        {
             if (kinship == Kinship.Immediate && relation > FeudRelation) return 0f;
 
-            if (roguery < 0) roguery = 0;
+            float factor;
+            if (relation > 0)
+            {
+                factor = 1f - relation / (float)FriendshipShield;
+                if (factor < 0f) factor = 0f;
+            }
+            else
+            {
+                factor = 1f + (-relation) / (float)EnmitySpur;
+            }
 
-            float chance = Base
-                           - honor * PerHonor
-                           - mercy * PerMercy
-                           - generosity * PerGenerosity
-                           + roguery * PerRogueryPoint
-                           - relation * PerRelationPoint;
+            // A feud strips the veto but not the reticence: robbing your own
+            // brother is still a rarer thing than robbing a stranger.
+            if (kinship == Kinship.Clan || kinship == Kinship.Immediate) factor *= ClanFactor;
 
-            if (kinship == Kinship.Distant) chance *= CousinFactor;
-
-            return Clamp(chance * multiplier);
+            return factor;
         }
 
         private static int ClampTrait(int value)

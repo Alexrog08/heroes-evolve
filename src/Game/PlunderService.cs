@@ -82,7 +82,7 @@ namespace HeroLoadoutFixer
         /// </summary>
         public static float ChanceFor(bool bandit, Hero captor, Hero prisoner)
         {
-            if (bandit) return PlunderRules.Chance(true, 0, 0, 0, 0, 0,
+            if (bandit) return PlunderRules.Chance(true, 0, 0, 0, 0, 0, 0,
                                                    PlunderRules.Kinship.None, Settings.PlunderChance);
             if (captor == null) return 0f;
 
@@ -90,6 +90,7 @@ namespace HeroLoadoutFixer
                                        captor.GetTraitLevel(DefaultTraits.Honor),
                                        captor.GetTraitLevel(DefaultTraits.Mercy),
                                        captor.GetTraitLevel(DefaultTraits.Generosity),
+                                       captor.GetTraitLevel(DefaultTraits.Calculating),
                                        captor.GetSkillValue(DefaultSkills.Roguery),
                                        captor.GetRelation(prisoner),
                                        KinshipBetween(captor, prisoner),
@@ -178,7 +179,7 @@ namespace HeroLoadoutFixer
             // Sharing a house is the workable stand-in for the wider family: the
             // game models cousins and in-laws only loosely, and a clansman is
             // the relation a lord would actually feel.
-            if (captor.Clan != null && captor.Clan == prisoner.Clan) return PlunderRules.Kinship.Distant;
+            if (captor.Clan != null && captor.Clan == prisoner.Clan) return PlunderRules.Kinship.Clan;
 
             return PlunderRules.Kinship.None;
         }

@@ -4,61 +4,102 @@ namespace HeroLoadoutFixer.Tests
 {
     public static class PlunderRulesTests
     {
+        /// <summary>A chance as a whole percent, which is how the design reads.</summary>
+        private static int Percent(int honor, int mercy, int generosity, int calculating,
+                                   int roguery, int relation, PlunderRules.Kinship kinship)
+        {
+            return (int)(PlunderRules.Chance(false, honor, mercy, generosity, calculating,
+                                             roguery, relation, kinship, 1f) * 100f + 0.5f);
+        }
+
         public static void RunAll()
         {
-            const float One = 1.0f;
+            const PlunderRules.Kinship Stranger = PlunderRules.Kinship.None;
 
-            // Bandits take everything, and no trait, relation or kinship of
-            // theirs enters into it -- there is nobody to appeal to.
-            Check.True(PlunderRules.Chance(true, 2, 2, 2, 0, 100, PlunderRules.Kinship.Immediate, One) == 1f,
+            // Bandits take everything, and nothing about them enters into it.
+            Check.True(PlunderRules.Chance(true, 2, 2, 2, 2, 0, 100,
+                                           PlunderRules.Kinship.Immediate, 1f) == 1f,
                        "bandits always strip, whatever the rest says");
 
-            // The one absolute among lords.
-            Check.True(PlunderRules.Chance(false, -2, 1, 1, 300, -100, PlunderRules.Kinship.None, One) == 0f,
-                       "a merciful and generous lord never robs a prisoner");
+            // --- the two ends, which the whole model is anchored on ---
+            // A lord who is honourable, munificent, compassionate and cerebral
+            // does not do this. Zero means zero: a model where everyone
+            // eventually robs loses the only thing that reads as character.
+            Check.Equal(0, Percent(2, 2, 2, 2, 300, -100, Stranger), "a paragon never robs, however provoked");
 
-            // Blood is a veto, not a weight -- until the relation says the blood
-            // has already failed.
-            Check.True(PlunderRules.Chance(false, -2, -2, -2, 300, 0, PlunderRules.Kinship.Immediate, One) == 0f,
-                       "a father does not strip his son");
-            Check.True(PlunderRules.Chance(false, -2, -2, -2, 300, PlunderRules.FeudRelation - 1,
-                                           PlunderRules.Kinship.Immediate, One) > 0f,
-                       "...but a father who hates him will");
+            // And a lord who is deceitful, sadistic, tightfisted and hotheaded
+            // always does.
+            Check.Equal(100, Percent(-2, -2, -2, -2, 0, 0, Stranger), "a brute always robs");
 
-            // Distant family is penalised without being spared.
-            float stranger = PlunderRules.Chance(false, -1, -1, -1, 100, 0, PlunderRules.Kinship.None, One);
-            float cousin = PlunderRules.Chance(false, -1, -1, -1, 100, 0, PlunderRules.Kinship.Distant, One);
-            Check.True(cousin > 0f && cousin < stranger, "a cousin is less likely to be robbed, but not safe");
+            // A lord of wholly unremarkable character is an unusual thief.
+            // Calradia's custom is ransom, and the curve exists to say so: the
+            // linear reading would have put him at one capture in two.
+            int average = Percent(0, 0, 0, 0, 0, 0, Stranger);
+            Check.True(average > 5 && average < 20, "an average lord robs rarely, not half the time");
 
-            // Character moves it in the direction the traits say.
-            float honourable = PlunderRules.Chance(false, 2, 0, 0, 0, 0, PlunderRules.Kinship.None, One);
-            float ordinary = PlunderRules.Chance(false, 0, 0, 0, 0, 0, PlunderRules.Kinship.None, One);
-            float deceitful = PlunderRules.Chance(false, -2, 0, 0, 0, 0, PlunderRules.Kinship.None, One);
-            Check.True(honourable < ordinary, "honour resists");
-            Check.True(deceitful > ordinary, "and dishonour indulges");
+            // --- each trait pulls the way its name says ---
+            Check.True(Percent(-2, 0, 0, 0, 0, 0, Stranger) > average, "Deceitful robs more than average");
+            Check.True(Percent(2, 0, 0, 0, 0, 0, Stranger) < average, "Honorable robs less");
+            Check.True(Percent(0, 0, -2, 0, 0, 0, Stranger) > average, "Tightfisted robs more");
+            Check.True(Percent(0, 0, 2, 0, 0, 0, Stranger) < average, "Munificent robs less");
+            Check.True(Percent(0, -2, 0, 0, 0, 0, Stranger) > average, "Sadistic robs more");
+            Check.True(Percent(0, 0, 0, -2, 0, 0, Stranger) > average, "Hotheaded robs more");
+            Check.True(Percent(0, 0, 0, 2, 0, 0, Stranger) < average, "Cerebral stays his hand");
 
-            // Standing between the two men outweighs a great deal.
-            float friendly = PlunderRules.Chance(false, -2, 0, 0, 0, 60, PlunderRules.Kinship.None, One);
-            float hostile = PlunderRules.Chance(false, -2, 0, 0, 0, -60, PlunderRules.Kinship.None, One);
-            Check.True(friendly < hostile, "goodwill protects a prisoner and a grudge exposes him");
+            // Honor leads, because breaking the customs of war is the act itself
+            // rather than a disposition towards it.
+            int deceitful = Percent(-2, 0, 0, 0, 0, 0, Stranger);
+            int tightfisted = Percent(0, 0, -2, 0, 0, 0, Stranger);
+            int sadistic = Percent(0, -2, 0, 0, 0, 0, Stranger);
+            int hotheaded = Percent(0, 0, 0, -2, 0, 0, Stranger);
+            Check.True(deceitful > tightfisted, "Honor outweighs Generosity");
+            Check.True(tightfisted > sadistic, "Generosity outweighs Mercy");
+            Check.True(sadistic > hotheaded, "and Mercy outweighs Calculating");
 
-            // Roguery is knowing how, not wanting to: it adds, gently.
-            float unskilled = PlunderRules.Chance(false, 0, 0, 0, 0, 0, PlunderRules.Kinship.None, One);
-            float rogue = PlunderRules.Chance(false, 0, 0, 0, 200, 0, PlunderRules.Kinship.None, One);
-            Check.True(rogue > unskilled, "a practised rogue is likelier");
+            // --- roguery is skill, not desire ---
+            Check.True(Percent(-1, 0, 0, 0, 300, 0, Stranger) > Percent(-1, 0, 0, 0, 0, 0, Stranger),
+                       "a practised rogue robs more often");
+            Check.Equal(0, Percent(2, 2, 2, 2, 300, 0, Stranger),
+                        "but skill at theft does not make an honest man a thief");
 
-            // The multiplier is the one dial a player has, and it must reach
-            // both ends: off entirely, and as often as the rules ever allow.
-            Check.True(PlunderRules.Chance(false, -2, -2, -2, 300, -100, PlunderRules.Kinship.None, 0f) == 0f,
+            // --- standing between the two men ---
+            Check.Equal(0, Percent(-2, -2, -2, -2, 0, 100, Stranger),
+                        "a man he is close to is not robbed at all, whatever he is");
+            Check.True(Percent(-1, 0, 0, 0, 0, -80, Stranger) > Percent(-1, 0, 0, 0, 0, 0, Stranger),
+                       "and a man he hates is robbed more readily");
+
+            // Friendship shields absolutely; enmity only aggravates. Being hated
+            // does not make a man twice the thief that being liked makes him
+            // none.
+            int neutral = Percent(-1, -1, -1, -1, 0, 0, Stranger);
+            int hated = Percent(-1, -1, -1, -1, 0, -100, Stranger);
+            Check.True(hated > neutral && hated < neutral * 2, "enmity aggravates by half, not double");
+
+            // --- blood ---
+            Check.Equal(0, Percent(-2, -2, -2, -2, 300, 0, PlunderRules.Kinship.Immediate),
+                        "a father does not strip his son");
+            Check.True(Percent(-2, -2, -2, -2, 0, PlunderRules.FeudRelation - 10,
+                               PlunderRules.Kinship.Immediate) > 0,
+                       "...unless the two of them are already at war");
+
+            int clansman = Percent(-1, -1, -1, -1, 0, 0, PlunderRules.Kinship.Clan);
+            Check.True(clansman > 0 && clansman < neutral, "a clansman is a rare victim, not a safe one");
+
+            // A feud lifts the veto without lifting the reticence.
+            int feudingBrother = Percent(-2, -2, -2, -2, 0, -100, PlunderRules.Kinship.Immediate);
+            int feudingStranger = Percent(-2, -2, -2, -2, 0, -100, Stranger);
+            Check.True(feudingBrother < feudingStranger, "even in a feud, blood is robbed less than a stranger");
+
+            // --- the player's one dial ---
+            Check.True(PlunderRules.Chance(false, -2, -2, -2, -2, 0, -100, Stranger, 0f) == 0f,
                        "a zero multiplier switches the whole thing off");
-            Check.True(PlunderRules.Chance(true, 0, 0, 0, 0, 0, PlunderRules.Kinship.None, 0f) == 0f,
+            Check.True(PlunderRules.Chance(true, 0, 0, 0, 0, 0, 0, Stranger, 0f) == 0f,
                        "...including for bandits");
 
-            // Nothing ever escapes zero-to-one, however absurd the inputs. A
-            // trait a mod has widened must not silently produce a certainty.
+            // Nothing escapes zero-to-one, however absurd the inputs.
             bool bounded = true;
             int[] traits = { -9, -2, 0, 2, 9 };
-            int[] relations = { -200, -40, 0, 100 };
+            int[] relations = { -200, -50, 0, 100, 500 };
             int[] rogueries = { -50, 0, 150, 1000 };
             foreach (int t in traits)
             {
@@ -66,7 +107,7 @@ namespace HeroLoadoutFixer.Tests
                 {
                     foreach (int g in rogueries)
                     {
-                        float value = PlunderRules.Chance(false, t, t, t, g, r, PlunderRules.Kinship.None, 3f);
+                        float value = PlunderRules.Chance(false, t, t, t, t, g, r, Stranger, 3f);
                         if (value < 0f || value > 1f) bounded = false;
                     }
                 }
