@@ -110,4 +110,16 @@
        turn while judging whether the rate feels right. -->
   <PlunderChance>1.0</PlunderChance>
 
+  <!-- Lets YOUR party rob its prisoners too. Off by default.
+
+       A setting rather than a prompt on purpose: asking at every capture
+       would put the same question to you a hundred times a campaign. Turning
+       this on asks it once, and that once is the consent -- because robbing
+       costs the robber Honor and Mercy through the game's own hostile-action
+       penalty, and standing with the man he robbed, and no mod should hand
+       you consequences for a decision you never made.
+
+       With it off you can still be robbed. You simply never rob. -->
+  <PlayerPartyRobs>false</PlayerPartyRobs>
+
 </HeroLoadoutFixer>
