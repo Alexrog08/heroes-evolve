@@ -70,7 +70,8 @@ namespace HeroLoadoutFixer
             Hero hero = Hero.OneToOneConversationHero;
             if (hero == null) return;
 
-            int taken = PlunderService.Take(PartyBase.MainParty, hero);
+            int value;
+            int taken = PlunderService.Take(PartyBase.MainParty, hero, out value);
             if (taken == 0) return;
 
             // Chosen, and therefore paid for. This is the one path where the
@@ -79,9 +80,11 @@ namespace HeroLoadoutFixer
             // make. His relatives hear about it too.
             ChangeRelationAction.ApplyPlayerRelation(hero, PlayerRelationCost, true, true);
             TraitLevelingHelper.OnHostileAction(PlunderService.HostileActionXp);
-            Hero.MainHero.AddSkillXp(DefaultSkills.Roguery, PlunderService.RogueryXpPerPiece * taken);
+            Hero.MainHero.AddSkillXp(DefaultSkills.Roguery, PlunderService.RogueryXpFor(value));
 
-            ModLog.Info("PLUNDER by player prisoner=" + hero.Name + " pieces=" + taken);
+            ModLog.Info("PLUNDER by player prisoner=" + hero.Name
+                        + " pieces=" + taken + " worth=" + value
+                        + " roguery=" + PlunderService.RogueryXpFor(value));
         }
     }
 }

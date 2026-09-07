@@ -55,12 +55,22 @@ namespace HeroLoadoutFixer
         public const int HostileActionXp = -20;
 
         /// <summary>
-        /// Roguery earned per piece taken. A full strip of nine pieces is worth
-        /// a couple of hundred, which is a real gain to a novice thief and
-        /// nothing at all to a practised one -- and it feeds back: roguery
-        /// raises the odds he does it again.
+        /// Denars of loot per point of Roguery experience.
+        ///
+        /// Counted per piece at first, which was worthless and is the same
+        /// mistake this project has made before. The game's own curve, decoded
+        /// from InitializeXpRequiredForSkillLevel, charges 30 + 10L + L(L+1)/2
+        /// to buy the point at level L: 605 at Roguery 25, 1,805 at 50, 6,080
+        /// at 100. A flat 25 per piece made a full strip 12% of one point.
+        ///
+        /// Scaling on what was taken is right for more than arithmetic. A thief
+        /// learns from the score, not from the number of buckles he undid, and
+        /// it self-scales with the campaign: stripping a pauper teaches nothing,
+        /// stripping a king in full harness is a career moment. At a twentieth,
+        /// a well-equipped lord is worth about one point at Roguery 50 and a
+        /// king's kit around three.
         /// </summary>
-        public const int RogueryXpPerPiece = 25;
+        public const int RogueryDenarsPerXp = 20;
 
         /// <summary>
         /// Strips the prisoner if this captor would. Returns how many pieces
@@ -87,7 +97,8 @@ namespace HeroLoadoutFixer
             if (chance <= 0f) return 0;
             if (MBRandom.RandomFloat > chance) return 0;
 
-            int taken = Take(captorParty, prisoner);
+            int value;
+            int taken = Take(captorParty, prisoner, out value);
             if (taken == 0) return 0;
 
             // Being robbed is not an act of the victim's, so it never moves
@@ -99,12 +110,13 @@ namespace HeroLoadoutFixer
                 ChangeRelationAction.ApplyRelationChangeBetweenHeroes(captor, prisoner, RelationCost, false);
             }
 
-            if (captor != null) Reward(captor, taken);
+            if (captor != null) Reward(captor, value);
 
             ModLog.Info("PLUNDER captor=" + (captor != null ? captor.Name.ToString() : "bandits")
                         + " prisoner=" + prisoner.Name
                         + " chance=" + (int)(chance * 100f) + "%"
-                        + " pieces=" + taken);
+                        + " pieces=" + taken
+                        + " worth=" + value);
 
             return taken;
         }
@@ -144,29 +156,35 @@ namespace HeroLoadoutFixer
         /// That is the point of the whole feature: unique gear circulating
         /// because it was taken, rather than sitting in one man's slot forever.
         /// </summary>
-        public static int Take(PartyBase captorParty, Hero prisoner)
+        public static int Take(PartyBase captorParty, Hero prisoner, out int value)
         {
             ItemRoster loot = captorParty.ItemRoster;
             int taken = 0;
+            value = 0;
 
             for (int i = 0; i < SlotSnapshot.WeaponSlotCount; i++)
             {
-                taken += TakeSlot(loot, prisoner, SlotMapping.WeaponSlot(i));
+                taken += TakeSlot(loot, prisoner, SlotMapping.WeaponSlot(i), ref value);
             }
             foreach (EquipmentIndex slot in SlotMapping.ArmorSlots)
             {
-                taken += TakeSlot(loot, prisoner, slot);
+                taken += TakeSlot(loot, prisoner, slot, ref value);
             }
-            taken += TakeSlot(loot, prisoner, EquipmentIndex.Horse);
-            taken += TakeSlot(loot, prisoner, EquipmentIndex.HorseHarness);
+            taken += TakeSlot(loot, prisoner, EquipmentIndex.Horse, ref value);
+            taken += TakeSlot(loot, prisoner, EquipmentIndex.HorseHarness, ref value);
 
             return taken;
         }
 
-        private static int TakeSlot(ItemRoster loot, Hero prisoner, EquipmentIndex slot)
+        private static int TakeSlot(ItemRoster loot, Hero prisoner, EquipmentIndex slot, ref int value)
         {
             EquipmentElement worn = prisoner.BattleEquipment[slot];
             if (worn.Item == null) return 0;
+
+            // ItemValue rather than Item.Value: it accounts for the modifier, so
+            // a fine sword is worth more to take than a rusty one of the same
+            // make, which is the whole idea.
+            value += worn.ItemValue;
 
             prisoner.BattleEquipment[slot] = EquipmentElement.Invalid;
             if (loot != null) loot.AddToCounts(worn, 1);
@@ -194,17 +212,25 @@ namespace HeroLoadoutFixer
         }
 
         /// <summary>
-        /// Practice at theft. A lord who robs gets better at it, and being
-        /// better at it makes him likelier to rob again -- which closes a loop
-        /// the rules already opened through roguery.
+        /// Practice at theft, worth what the theft was worth. A lord who robs
+        /// gets better at it, and being better at it makes him likelier to rob
+        /// again -- which closes a loop the rules already opened through
+        /// roguery.
         ///
         /// No trait cost here: the game keeps a trait ledger for the player
         /// alone, and the player never reaches this path. His own reckoning is
         /// in PrisonerDialogue, where he chose it.
         /// </summary>
-        private static void Reward(Hero captor, int pieces)
+        private static void Reward(Hero captor, int lootValue)
         {
-            captor.AddSkillXp(DefaultSkills.Roguery, RogueryXpPerPiece * pieces);
+            captor.AddSkillXp(DefaultSkills.Roguery, RogueryXpFor(lootValue));
+        }
+
+        /// <summary>Roguery earned for a haul of this value.</summary>
+        public static int RogueryXpFor(int lootValue)
+        {
+            if (lootValue <= 0) return 0;
+            return lootValue / RogueryDenarsPerXp;
         }
 
         /// <summary>
