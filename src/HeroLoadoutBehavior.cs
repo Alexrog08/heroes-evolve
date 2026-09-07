@@ -59,6 +59,11 @@ namespace HeroLoadoutFixer
         {
             // A fresh behaviour instance is built per campaign load, but the
             // diagnostics counter is static and outlives one campaign.
+            // Re-read on every campaign load, not only once at startup, so a
+            // player who edits settings.xml and loads a save sees the change
+            // without restarting the game.
+            Settings.Load();
+
             Diagnostics.ResetSession();
             CultureProfile.Reset();
             CultureArchetypes.Reset();
