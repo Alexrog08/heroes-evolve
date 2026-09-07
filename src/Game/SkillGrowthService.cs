@@ -44,14 +44,21 @@ namespace HeroLoadoutFixer
             return cycles > 0f ? cycles : SkillGrowth.DefaultCyclesPerYear;
         }
 
-        public static void GrowWeekly(Hero hero)
+        /// <summary>
+        /// Grows one hero, and says whether he was one this mod grows at all.
+        ///
+        /// The answer is reported rather than discarded because the weekly log
+        /// line used to count every living hero in the game -- wanderers,
+        /// notables and templates included -- and call them all grown.
+        /// </summary>
+        public static bool GrowWeekly(Hero hero)
         {
-            if (!HeroFilter.IsEligible(hero)) return;
-            if (hero.HeroDeveloper == null || hero.BattleEquipment == null) return;
+            if (!HeroFilter.IsEligible(hero)) return false;
+            if (hero.HeroDeveloper == null || hero.BattleEquipment == null) return false;
 
             float talent = Talent.For(hero.StringId);
             int primaryTarget = SkillGrowth.PrimaryTarget(hero.Age, talent);
-            if (primaryTarget <= 0) return;
+            if (primaryTarget <= 0) return false;
 
             // Ranked by slot, not by current value. The game itself reads the
             // lowest-numbered weapon slot to decide which skill a hero trains in
@@ -73,6 +80,7 @@ namespace HeroLoadoutFixer
             Grant(hero, movement, SkillGrowth.TargetForRank(primaryTarget, MovementRank), talent);
 
             GrowByFocus(hero);
+            return true;
         }
 
         /// <summary>
@@ -92,6 +100,15 @@ namespace HeroLoadoutFixer
         /// </summary>
         private static void GrowByFocus(Hero hero)
         {
+            // Two values for the whole loop, not one per skill. Talent.For
+            // concatenates the domain onto the hero id and hashes it, so asking
+            // inside the loop allocated a string and hashed it once per skill
+            // per hero per week -- some twelve thousand times a tick, to arrive
+            // at the same two answers.
+            float civil = Talent.For(hero.StringId, Talent.Civil);
+            float naval = Talent.For(hero.StringId, Talent.Naval);
+            float age = hero.Age;
+
             foreach (SkillObject skill in TaleWorlds.CampaignSystem.Extensions.Skills.All)
             {
                 if (skill == null) continue;
@@ -100,10 +117,9 @@ namespace HeroLoadoutFixer
                 int focus = hero.HeroDeveloper.GetFocus(skill);
                 if (focus <= 0) continue;
 
-                string domain = IsNavalSkill(skill) ? Talent.Naval : Talent.Civil;
-                float talent = Talent.For(hero.StringId, domain);
+                float talent = IsNavalSkill(skill) ? naval : civil;
 
-                int target = FocusGrowth.TargetFor(hero.Age, talent, focus);
+                int target = FocusGrowth.TargetFor(age, talent, focus);
                 Grant(hero, skill, target, talent);
             }
         }
@@ -171,9 +187,7 @@ namespace HeroLoadoutFixer
         {
             if (level < 0) level = 0;
 
-            CharacterDevelopmentModel model = Campaign.Current != null && Campaign.Current.Models != null
-                ? Campaign.Current.Models.CharacterDevelopmentModel
-                : null;
+            CharacterDevelopmentModel model = DevelopmentModel();
             if (model == null) return 1f;
 
             float here = model.GetXpRequiredForSkillLevel(level);
@@ -181,6 +195,33 @@ namespace HeroLoadoutFixer
 
             float cost = next - here;
             return cost > 1f ? cost : 1f;
+        }
+
+        /// <summary>
+        /// The game's development model, held rather than walked to.
+        ///
+        /// Grant asks for the experience curve once per skill per hero, which
+        /// over a weekly pass is tens of thousands of walks down
+        /// Campaign.Current.Models.CharacterDevelopmentModel for an object that
+        /// does not change. Cached against the campaign it came from, so loading
+        /// a different save picks up that save's model rather than the last
+        /// one's.
+        /// </summary>
+        private static Campaign _modelOwner;
+        private static CharacterDevelopmentModel _model;
+
+        private static CharacterDevelopmentModel DevelopmentModel()
+        {
+            Campaign campaign = Campaign.Current;
+            if (campaign == null) return null;
+
+            if (!ReferenceEquals(campaign, _modelOwner))
+            {
+                _modelOwner = campaign;
+                _model = campaign.Models != null ? campaign.Models.CharacterDevelopmentModel : null;
+            }
+
+            return _model;
         }
 
         /// <summary>

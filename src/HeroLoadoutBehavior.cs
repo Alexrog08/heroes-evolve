@@ -231,8 +231,7 @@ namespace HeroLoadoutFixer
             {
                 try
                 {
-                    SkillGrowthService.GrowWeekly(hero);
-                    grown++;
+                    if (SkillGrowthService.GrowWeekly(hero)) grown++;
                 }
                 catch (System.Exception ex)
                 {
@@ -244,8 +243,11 @@ namespace HeroLoadoutFixer
             }
 
             // Logged once a week rather than per hero: six hundred lines every
-            // seven days would bury everything else in the file.
-            ModLog.Info("GROWTH weekly pass over " + grown + " heroes");
+            // seven days would bury everything else in the file. The count is
+            // the heroes actually grown, not every living hero the loop walked
+            // past -- AllAliveHeroes carries wanderers, notables and templates,
+            // and calling those grown made the line a fiction.
+            ModLog.Info("GROWTH weekly pass grew " + grown + " lords");
         }
 
         private void TryRepair(Hero hero, string reason)
