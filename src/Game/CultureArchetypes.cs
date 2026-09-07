@@ -201,7 +201,8 @@ namespace HeroLoadoutFixer
         {
             return category == WeaponCategory.OneHandedSword
                    || category == WeaponCategory.OneHandedAxe
-                   || category == WeaponCategory.Mace
+                   || category == WeaponCategory.OneHandedMace
+                   || category == WeaponCategory.TwoHandedMace
                    || category == WeaponCategory.TwoHandedSword
                    || category == WeaponCategory.TwoHandedAxe
                    || category == WeaponCategory.Spear

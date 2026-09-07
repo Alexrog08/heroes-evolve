@@ -220,11 +220,12 @@ namespace HeroLoadoutFixer
             {
                 case WeaponCategory.OneHandedSword:
                 case WeaponCategory.OneHandedAxe:
-                case WeaponCategory.Mace:
+                case WeaponCategory.OneHandedMace:
                     return DefaultSkills.OneHanded;
 
                 case WeaponCategory.TwoHandedSword:
                 case WeaponCategory.TwoHandedAxe:
+                case WeaponCategory.TwoHandedMace:
                     return DefaultSkills.TwoHanded;
 
                 case WeaponCategory.Spear:

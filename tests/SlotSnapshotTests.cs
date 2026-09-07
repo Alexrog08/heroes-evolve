@@ -47,7 +47,7 @@ namespace HeroLoadoutFixer.Tests
             // IsMelee had no coverage at all: walk both sides of the boundary.
             Check.True(CategoryRules.IsMelee(WeaponCategory.OneHandedSword), "one-handed sword is melee");
             Check.True(CategoryRules.IsMelee(WeaponCategory.TwoHandedAxe), "two-handed axe is melee");
-            Check.True(CategoryRules.IsMelee(WeaponCategory.Mace), "mace is melee");
+            Check.True(CategoryRules.IsMelee(WeaponCategory.OneHandedMace), "a one-handed mace is melee");
             Check.True(CategoryRules.IsMelee(WeaponCategory.Spear), "spear is melee");
             Check.True(CategoryRules.IsMelee(WeaponCategory.Polearm), "polearm is melee");
             Check.False(CategoryRules.IsMelee(WeaponCategory.Bow), "bow is not melee");

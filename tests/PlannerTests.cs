@@ -186,7 +186,7 @@ namespace HeroLoadoutFixer.Tests
             // and seeing every assertion below still pass.
             //
             // So here the hero instead carries a sword plus two harmless
-            // fillers (Mace, OneHandedAxe -- neither Bow, Arrows, Shield
+            // fillers (OneHandedMace, OneHandedAxe -- neither Bow, Arrows, Shield
             // nor a two-hander, so nothing about them gets consumed by
             // Reconcile or caught by a shield/two-handed guard). `wanted`
             // is now genuinely [Bow, Arrows, Arrows]: Bow costs two slots
@@ -199,7 +199,7 @@ namespace HeroLoadoutFixer.Tests
             // (CountPlanned comes back 1, not 0) and "falls through to
             // TwoHandedSword" (Arrows took the slot instead).
             SlotSnapshot noRoomForAmmo = new SlotSnapshot(
-                new WeaponCategory[] { WeaponCategory.OneHandedSword, WeaponCategory.Mace, WeaponCategory.OneHandedAxe, WeaponCategory.None },
+                new WeaponCategory[] { WeaponCategory.OneHandedSword, WeaponCategory.OneHandedMace, WeaponCategory.OneHandedAxe, WeaponCategory.None },
                 false, false, true, true, true, true, false);
             List<PlannedSlot> pNoRoom = LoadoutPlanner.Plan(dedicatedArcherSkills, noRoomForAmmo, all, 30, false);
             Check.False(Plans(pNoRoom, WeaponCategory.Bow), "a ranged weapon is never placed when its ammunition would not also fit");

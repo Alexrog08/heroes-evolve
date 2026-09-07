@@ -327,7 +327,7 @@ namespace HeroLoadoutFixer
         /// not when the hero already carries a two-handed sword: the one-handed
         /// slot exists so the shield hand is free, and a second two-hander adds
         /// nothing. The same reasoning applies to axes, which have their own
-        /// bastard variants. The mapping itself lives in
+        /// bastard variants, and so do maces. The mapping itself lives in
         /// CategoryRules.TwoHandedPartner, which the market shares; what is
         /// local here is looking in the plan as well as in what is worn, since
         /// the partner may be something this same repair is about to hand over.

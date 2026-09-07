@@ -99,8 +99,8 @@ namespace HeroLoadoutFixer.Tests
                        "a one-handed sword must not double a two-handed one");
             Check.True(CategoryRules.TwoHandedPartner(WeaponCategory.OneHandedAxe) == WeaponCategory.TwoHandedAxe,
                        "nor a one-handed axe");
-            Check.True(CategoryRules.TwoHandedPartner(WeaponCategory.Mace) == WeaponCategory.None,
-                       "maces have no partner while the enum collapses both kinds");
+            Check.True(CategoryRules.TwoHandedPartner(WeaponCategory.OneHandedMace) == WeaponCategory.TwoHandedMace,
+                       "nor a one-handed mace, now that the enum can say which is which");
             Check.True(CategoryRules.TwoHandedPartner(WeaponCategory.Bow) == WeaponCategory.None,
                        "and a bow has nothing to duplicate");
         }

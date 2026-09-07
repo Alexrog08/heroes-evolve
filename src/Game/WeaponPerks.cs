@@ -36,9 +36,10 @@ namespace HeroLoadoutFixer
         /// True when this hero is rewarded for carrying an axe or a mace in the
         /// handedness the given category belongs to.
         ///
-        /// Asked per handedness, never in general: the core enum collapses one-
-        /// and two-handed maces, so a hero with only the two-handed perk must
-        /// not have his one-handed slot steered by it.
+        /// Asked per handedness, never in general: a hero holding only the
+        /// two-handed perk must not have his one-handed slot steered by it. The
+        /// melee families answer which handedness a category belongs to, so
+        /// adding a weapon class only has to be done in one place.
         /// </summary>
         public static bool FavoursAxeOrMace(Hero hero, WeaponCategory category)
         {
@@ -47,18 +48,15 @@ namespace HeroLoadoutFixer
             Resolve();
 
             PerkObject perk = null;
-            if (category == WeaponCategory.OneHandedSword || category == WeaponCategory.OneHandedAxe)
+            if (CategoryRules.SameFamily(WeaponCategory.OneHandedSword, category))
             {
                 perk = _oneHandedAxesAndMaces;
             }
-            else if (category == WeaponCategory.TwoHandedSword || category == WeaponCategory.TwoHandedAxe)
+            else if (CategoryRules.SameFamily(WeaponCategory.TwoHandedSword, category))
             {
                 perk = _twoHandedAxesAndMaces;
             }
 
-            // Mace is deliberately absent: a hero already carrying one needs no
-            // steering towards them, and the collapsed enum cannot say which
-            // handedness his is.
             if (perk == null) return false;
 
             return hero.GetPerkValue(perk);

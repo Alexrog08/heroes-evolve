@@ -11,7 +11,8 @@ namespace HeroLoadoutFixer.Core
         TwoHandedSword,
         OneHandedAxe,
         TwoHandedAxe,
-        Mace,
+        OneHandedMace,
+        TwoHandedMace,
         Spear,
         Polearm,
         Bow,
@@ -56,7 +57,8 @@ namespace HeroLoadoutFixer.Core
                 case WeaponCategory.TwoHandedSword:
                 case WeaponCategory.OneHandedAxe:
                 case WeaponCategory.TwoHandedAxe:
-                case WeaponCategory.Mace:
+                case WeaponCategory.OneHandedMace:
+                case WeaponCategory.TwoHandedMace:
                 case WeaponCategory.Spear:
                 case WeaponCategory.Polearm:
                     return true;
@@ -81,17 +83,15 @@ namespace HeroLoadoutFixer.Core
         /// handed. Everything else says "one handed weapons" or "polearms" and
         /// cannot tell a sword from an axe.
         ///
-        /// The enum collapses one- and two-handed maces into a single Mace, so
-        /// Mace answers for both handednesses here. That is imprecise in the one
-        /// place it could matter -- a one-handed hero with the two-handed perk
-        /// would see a one-handed mace as favoured -- and the caller guards it
-        /// by only asking about the handedness the hero is shopping for.
+        /// Both handednesses of both weapons, since the caller already knows
+        /// which handedness it is asking about.
         /// </summary>
         public static bool IsAxeOrMace(WeaponCategory category)
         {
             return category == WeaponCategory.OneHandedAxe
                 || category == WeaponCategory.TwoHandedAxe
-                || category == WeaponCategory.Mace;
+                || category == WeaponCategory.OneHandedMace
+                || category == WeaponCategory.TwoHandedMace;
         }
 
         /// <summary>
@@ -101,16 +101,14 @@ namespace HeroLoadoutFixer.Core
         /// A bastard sword is a fine answer to a one-handed request, but not to
         /// a hero already carrying a two-handed sword: the one-handed slot
         /// exists to leave the shield hand free, and a second two-hander adds
-        /// nothing. Axes have their own bastard variants and behave the same.
-        ///
-        /// Maces are deliberately absent: this enum collapses one- and
-        /// two-handed maces into a single Mace, so the rule cannot be expressed
-        /// for them until that is split.
+        /// nothing. Axes and maces have their own bastard variants and behave
+        /// the same way.
         /// </summary>
         public static WeaponCategory TwoHandedPartner(WeaponCategory wanted)
         {
             if (wanted == WeaponCategory.OneHandedSword) return WeaponCategory.TwoHandedSword;
             if (wanted == WeaponCategory.OneHandedAxe) return WeaponCategory.TwoHandedAxe;
+            if (wanted == WeaponCategory.OneHandedMace) return WeaponCategory.TwoHandedMace;
             return WeaponCategory.None;
         }
 
@@ -131,8 +129,8 @@ namespace HeroLoadoutFixer.Core
         /// the category happens to spell out "OneHandedSword".
         ///
         /// Families:
-        ///   one-handed melee: OneHandedSword, OneHandedAxe, Mace
-        ///   two-handed melee: TwoHandedSword, TwoHandedAxe
+        ///   one-handed melee: OneHandedSword, OneHandedAxe, OneHandedMace
+        ///   two-handed melee: TwoHandedSword, TwoHandedAxe, TwoHandedMace
         ///   polearm:          Spear, Polearm
         /// Bow, Crossbow, Throwing, Shield, Arrows and Bolts each stand
         /// alone -- notably Arrows and Bolts are NOT a family: arrows cannot
@@ -155,13 +153,14 @@ namespace HeroLoadoutFixer.Core
         {
             return category == WeaponCategory.OneHandedSword
                 || category == WeaponCategory.OneHandedAxe
-                || category == WeaponCategory.Mace;
+                || category == WeaponCategory.OneHandedMace;
         }
 
         private static bool IsTwoHandedMeleeFamily(WeaponCategory category)
         {
             return category == WeaponCategory.TwoHandedSword
-                || category == WeaponCategory.TwoHandedAxe;
+                || category == WeaponCategory.TwoHandedAxe
+                || category == WeaponCategory.TwoHandedMace;
         }
 
         private static bool IsPolearmFamily(WeaponCategory category)

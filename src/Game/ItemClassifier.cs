@@ -41,8 +41,8 @@ namespace HeroLoadoutFixer
                 case WeaponClass.TwoHandedSword: return WeaponCategory.TwoHandedSword;
                 case WeaponClass.OneHandedAxe: return WeaponCategory.OneHandedAxe;
                 case WeaponClass.TwoHandedAxe: return WeaponCategory.TwoHandedAxe;
-                case WeaponClass.Mace: return WeaponCategory.Mace;
-                case WeaponClass.TwoHandedMace: return WeaponCategory.Mace;
+                case WeaponClass.Mace: return WeaponCategory.OneHandedMace;
+                case WeaponClass.TwoHandedMace: return WeaponCategory.TwoHandedMace;
                 case WeaponClass.OneHandedPolearm: return WeaponCategory.Spear;
                 case WeaponClass.TwoHandedPolearm: return WeaponCategory.Polearm;
                 case WeaponClass.LowGripPolearm: return WeaponCategory.Polearm;
