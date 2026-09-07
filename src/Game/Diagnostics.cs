@@ -1985,6 +1985,7 @@ namespace HeroLoadoutFixer
             }
 
             int wearers = 0, pieces = 0, shown = 0;
+            List<int> protectedTiers = new List<int>();
             StringBuilder sample = new StringBuilder("UNIQUE sample");
 
             foreach (Hero hero in Hero.AllAliveHeroes)
@@ -1996,14 +1997,14 @@ namespace HeroLoadoutFixer
                     bool any = false;
                     for (int i = 0; i < SlotSnapshot.WeaponSlotCount; i++)
                     {
-                        any |= NoteUnique(hero, SlotMapping.WeaponSlot(i), ref pieces, ref shown, sample);
+                        any |= NoteUnique(hero, SlotMapping.WeaponSlot(i), ref pieces, ref shown, sample, protectedTiers);
                     }
                     foreach (EquipmentIndex slot in SlotMapping.ArmorSlots)
                     {
-                        any |= NoteUnique(hero, slot, ref pieces, ref shown, sample);
+                        any |= NoteUnique(hero, slot, ref pieces, ref shown, sample, protectedTiers);
                     }
-                    any |= NoteUnique(hero, EquipmentIndex.Horse, ref pieces, ref shown, sample);
-                    any |= NoteUnique(hero, EquipmentIndex.HorseHarness, ref pieces, ref shown, sample);
+                    any |= NoteUnique(hero, EquipmentIndex.Horse, ref pieces, ref shown, sample, protectedTiers);
+                    any |= NoteUnique(hero, EquipmentIndex.HorseHarness, ref pieces, ref shown, sample, protectedTiers);
 
                     if (any) wearers++;
                 }
@@ -2017,16 +2018,22 @@ namespace HeroLoadoutFixer
                         + " notMerchandise=" + unsellableInCatalog
                         + " playerCrafted=" + craftedInCatalog);
             ModLog.Info("UNIQUE protectedLords=" + wearers + " protectedPieces=" + pieces);
+
+            // The guard's one real failure mode: a lord frozen into something
+            // bad. Refusing to replace a noble sword costs him nothing, but
+            // refusing to replace a tier-1 rag would strand him in it forever.
+            ModLog.Info("UNIQUE protectedPieceTier " + Percentiles(protectedTiers));
             if (shown > 0) ModLog.Info(sample.ToString());
         }
 
         private static bool NoteUnique(Hero hero, EquipmentIndex slot, ref int pieces, ref int shown,
-                                       StringBuilder sample)
+                                       StringBuilder sample, List<int> protectedTiers)
         {
             ItemObject worn = hero.BattleEquipment[slot].Item;
             if (!ItemCatalog.IsIrreplaceable(worn)) return false;
 
             pieces++;
+            protectedTiers.Add(MarketScanner.TierOf(worn));
             if (shown < 12)
             {
                 shown++;
