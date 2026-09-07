@@ -123,12 +123,21 @@ namespace HeroLoadoutFixer
             }
 
             ItemObject mount = hero.BattleEquipment[EquipmentIndex.Horse].Item;
-            if (mount != null && !ItemCatalog.IsIrreplaceable(mount))
+            if (mount != null)
             {
-                List<MarketOffer> mounts = MarketScanner.Mounts(stock, settlement, hero, culture,
-                                                                ceiling, FineOf(mount), skills);
-                best = Better(best, EquipmentIndex.Horse, mounts, mount, limit);
+                if (!ItemCatalog.IsIrreplaceable(mount))
+                {
+                    List<MarketOffer> mounts = MarketScanner.Mounts(stock, settlement, hero, culture,
+                                                                    ceiling, FineOf(mount), skills);
+                    best = Better(best, EquipmentIndex.Horse, mounts, mount, limit);
+                }
 
+                // The harness hangs off the mount only for the family match -- a
+                // saddle cut for a horse cannot dress a camel. It is a separate
+                // slot, so a lord riding a noble horse he may not sell can still
+                // buy a better saddle for it. Nesting this inside the mount's
+                // own guard froze both, and noble horses are common enough that
+                // it would have frozen most of the map's saddles.
                 ItemObject harness = hero.BattleEquipment[EquipmentIndex.HorseHarness].Item;
                 if (harness != null && !ItemCatalog.IsIrreplaceable(harness))
                 {

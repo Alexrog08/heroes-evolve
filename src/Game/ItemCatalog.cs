@@ -201,15 +201,21 @@ namespace HeroLoadoutFixer
         /// hold.
         ///
         /// The test is not "is it special" but "could we have sold it to him".
-        /// An item no merchant stocks cannot be bought back: sell it once and
-        /// it is gone from that hero, and possibly from the campaign. That is a
-        /// different kind of loss from swapping one purchasable sword for
-        /// another, and it is the one worth refusing.
         ///
-        /// It covers what TaleWorlds hung on a named character -- Caladog's
-        /// gilded armour and horned helm are the whole of how he reads on a
-        /// battlefield -- and it covers the sword a player forged and handed to
-        /// a companion, which is the same argument from the other direction.
+        /// The loss is not only the hero's. Selling gear back is the one way
+        /// this mod ever puts an item on a shelf, and an item the game marks
+        /// unsellable is one vanilla never lets reach a shop at all. Let a lord
+        /// trade in his noble sword and it is in Praven's market the same
+        /// afternoon, for anyone to buy -- so the exclusivity of noble arms,
+        /// armour and horses would be dismantled one purchase at a time, for the
+        /// whole campaign, by a mod nobody installed for that.
+        ///
+        /// It is also irreversible for the hero: no merchant stocks a
+        /// replacement, so what he sells he can never buy again. That covers
+        /// what TaleWorlds hung on a named character -- Caladog's gilded armour
+        /// and horned helm are the whole of how he reads on a battlefield -- and
+        /// the sword a player forged for a companion, by the same argument from
+        /// the other direction.
         ///
         /// IsUniqueItem is checked as well and is, at least in this install,
         /// dead weight: a census found it false for every item in the game. It
