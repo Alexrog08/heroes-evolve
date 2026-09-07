@@ -1,12 +1,15 @@
 # Estado
 
 Rama: `feat/diagnostics` (sale de `feat/core-and-grant`, que sale de `master`).
-Nada fusionado. 392 tests del núcleo en verde, build desplegado, API verificada
+Nada fusionado. 399 tests del núcleo en verde, build desplegado, API verificada
 contra v1.4.8 con control negativo.
 
-Dos sistemas terminados y verificados en campaña: **reparación de equipo** y
-**desarrollo de skills**. El **motor de compra** está escrito entero y no se ha
-visto correr todavía.
+**Fases 1 y 2 cerradas y verificadas en campaña.** Tres sistemas: reparación de
+equipo, desarrollo de skills y motor de compra. Este último con 460 compras
+reales y cero transacciones fallidas, medido en dos campañas de edades opuestas.
+
+Lo que queda sin verificar está en su propia sección al final; lo que se midió y
+se decidió no hacer, también, para no volver a plantearlo sin datos nuevos.
 
 ## Lo que hace
 
