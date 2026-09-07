@@ -2,6 +2,7 @@ using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.Actions;
 using TaleWorlds.CampaignSystem.CharacterDevelopment;
 using TaleWorlds.CampaignSystem.Party;
+using TaleWorlds.CampaignSystem.Settlements;
 using TaleWorlds.Core;
 
 namespace HeroLoadoutFixer
@@ -57,12 +58,29 @@ namespace HeroLoadoutFixer
             if (hero == null || hero == Hero.MainHero) return false;
             if (hero.BattleEquipment == null) return false;
 
-            // His, and mine to take: a prisoner in somebody else's dungeon is
-            // not something this option should reach.
             if (!hero.IsPrisoner) return false;
-            if (hero.PartyBelongedToAsPrisoner != PartyBase.MainParty) return false;
+            if (!HeldByPlayer(hero)) return false;
 
             return PlunderService.HasAnythingToTake(hero);
+        }
+
+        /// <summary>
+        /// Whether this prisoner is the player's to take from: travelling with
+        /// him, or locked in a keep his clan holds.
+        ///
+        /// Both, because they are the same thing to everyone but the code. A
+        /// lord in your dungeon is your prisoner in every sense the fiction
+        /// cares about, and offering the option for one and not the other would
+        /// be an accident of which roster he happens to sit in.
+        /// </summary>
+        private static bool HeldByPlayer(Hero hero)
+        {
+            PartyBase holder = hero.PartyBelongedToAsPrisoner;
+            if (holder == null) return false;
+            if (holder == PartyBase.MainParty) return true;
+
+            Settlement settlement = holder.Settlement;
+            return settlement != null && settlement.OwnerClan == Clan.PlayerClan;
         }
 
         private static void Strip()
@@ -70,8 +88,13 @@ namespace HeroLoadoutFixer
             Hero hero = Hero.OneToOneConversationHero;
             if (hero == null) return;
 
+            // Into whatever is holding him: your saddlebags on the road, the
+            // keep's stores if he is in a cell. The gear stays where the man is.
+            PartyBase holder = hero.PartyBelongedToAsPrisoner;
+            if (holder == null) return;
+
             int value;
-            int taken = PlunderService.Take(PartyBase.MainParty, hero, out value);
+            int taken = PlunderService.Take(holder, hero, out value);
             if (taken == 0) return;
 
             // Chosen, and therefore paid for. This is the one path where the
