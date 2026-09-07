@@ -99,9 +99,16 @@ namespace HeroLoadoutFixer
         /// <summary>
         /// Everything the prisoner is wearing, into the captor's inventory.
         ///
-        /// Gear a merchant would never have sold him stays on him: the same rule
-        /// the market keeps, and for a stronger reason here. A bandit who takes
-        /// a noble sword sells it, and vanilla never lets one reach a shop.
+        /// Everything, with no exception for the gilded and the unsellable. A
+        /// lord will not part with his heirloom, and the market respects that --
+        /// but a man robbing him is not asking. The armour then travels: the
+        /// captor has no use for a cuirass of the wrong culture and sells it,
+        /// and it turns up on a shelf somewhere for its owner to buy back, or
+        /// for whoever walks into that town first. Caladog would never sell his
+        /// gilded plate. He can still lose it, and then it is anybody's.
+        ///
+        /// That is the point of the whole feature: unique gear circulating
+        /// because it was taken, rather than sitting in one man's slot forever.
         /// </summary>
         private static int Strip(PartyBase captorParty, Hero prisoner)
         {
@@ -126,7 +133,6 @@ namespace HeroLoadoutFixer
         {
             EquipmentElement worn = prisoner.BattleEquipment[slot];
             if (worn.Item == null) return 0;
-            if (ItemCatalog.IsIrreplaceable(worn.Item)) return 0;
 
             prisoner.BattleEquipment[slot] = EquipmentElement.Invalid;
             if (loot != null) loot.AddToCounts(worn, 1);

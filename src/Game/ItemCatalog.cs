@@ -238,16 +238,33 @@ namespace HeroLoadoutFixer
         /// </summary>
         public static bool PassesCommonFilters(ItemObject item, CultureObject culture, int maxTier)
         {
+            // Provenance, and only the free grant asks about it. Conjuring a
+            // hero a crown out of the catalogue invents something the game never
+            // put in circulation. Finding one on a shelf does not.
             if (item == null) return false;
             if (item.NotMerchandise) return false;
             if (item.IsCraftedByPlayer) return false;
-
-            // A unique item belongs to whoever TaleWorlds gave it to. Caladog's
-            // gilded armour and horned helm are the whole of how that character
-            // reads on a battlefield, and a mod that hands them to a passing
-            // Vlandian because a shop had one has destroyed something it cannot
-            // put back.
             if (item.IsUniqueItem) return false;
+
+            return PassesMarketFilters(item, culture, maxTier);
+        }
+
+        /// <summary>
+        /// Culture and tier, and nothing about where the item came from.
+        ///
+        /// What is on a shelf is for sale, whatever it is. An item only reaches
+        /// a town roster because somebody put it there, so once a gilded helm
+        /// has been taken off its owner and sold on, buying it is an ordinary
+        /// transaction -- for the lord it was stolen from, for a lord of another
+        /// house, or for whoever walks into that town first.
+        ///
+        /// Refusing here would strand that gear in whatever inventory it landed
+        /// in, which is the opposite of what taking it was for.
+        /// </summary>
+        public static bool PassesMarketFilters(ItemObject item, CultureObject culture, int maxTier)
+        {
+            if (item == null) return false;
+
             // TierCeiling speaks 1-based tiers (1..6); ItemObject.Tier is the 0-based
             // ItemTiers enum (Tier1 = 0 .. Tier6 = 5). Convert rather than letting the
             // two vocabularies meet raw.
@@ -264,7 +281,22 @@ namespace HeroLoadoutFixer
         public static bool IsEligible(ItemObject item, WeaponCategory category, CultureObject culture,
                                       int maxTier, SkillProfile skills, Hero hero, bool mounted)
         {
-            if (!PassesCommonFilters(item, culture, maxTier)) return false;
+            return IsEligible(item, category, culture, maxTier, skills, hero, mounted, true);
+        }
+
+        /// <summary>
+        /// As above, but the caller says whether provenance matters. The grant
+        /// asks, because it conjures items out of the catalogue; the market does
+        /// not, because it is reading a real shelf.
+        /// </summary>
+        public static bool IsEligible(ItemObject item, WeaponCategory category, CultureObject culture,
+                                      int maxTier, SkillProfile skills, Hero hero, bool mounted,
+                                      bool requireMerchandise)
+        {
+            bool passes = requireMerchandise
+                ? PassesCommonFilters(item, culture, maxTier)
+                : PassesMarketFilters(item, culture, maxTier);
+            if (!passes) return false;
             // A skill governs a family of weapons, not one exact WeaponClass
             // (see CategoryRules.SameFamily): an exact match here meant no
             // hero could ever receive an axe, a mace or a two-handed

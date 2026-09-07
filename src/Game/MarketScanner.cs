@@ -80,7 +80,7 @@ namespace HeroLoadoutFixer
             {
                 ItemObject item = stock[i].EquipmentElement.Item;
                 if (!MarketRules.IsUpgrade(wornFine, FineTierOf(item), TierOf(item), ceiling)) continue;
-                if (!ItemCatalog.IsEligible(item, category, culture, ceiling, skills, hero, mounted)) continue;
+                if (!ItemCatalog.IsEligible(item, category, culture, ceiling, skills, hero, mounted, false)) continue;
                 if (avoidAlsoServing != WeaponCategory.None
                     && ItemClassifier.AlsoServesTwoHanded(item, avoidAlsoServing)) continue;
 
@@ -109,7 +109,7 @@ namespace HeroLoadoutFixer
                 ItemObject item = stock[i].EquipmentElement.Item;
                 if (item.ItemType != wanted) continue;
                 if (!MarketRules.IsUpgrade(wornFine, FineTierOf(item), TierOf(item), ceiling)) continue;
-                if (!ItemCatalog.PassesCommonFilters(item, culture, ceiling)) continue;
+                if (!ItemCatalog.PassesMarketFilters(item, culture, ceiling)) continue;
 
                 Offer(offers, settlement, hero, stock[i], true);
             }
@@ -135,7 +135,7 @@ namespace HeroLoadoutFixer
                 if (item.ItemType != ItemObject.ItemTypeEnum.Horse) continue;
                 if (!MarketRules.IsUpgrade(wornFine, FineTierOf(item), TierOf(item), ceiling)) continue;
                 if (!ItemCatalog.IsWarMount(item)) continue;
-                if (!ItemCatalog.PassesCommonFilters(item, culture, ceiling)) continue;
+                if (!ItemCatalog.PassesMarketFilters(item, culture, ceiling)) continue;
                 if (!ItemClassifier.MeetsDifficulty(item, skills)) continue;
 
                 Offer(offers, settlement, hero, stock[i], true);
@@ -165,7 +165,7 @@ namespace HeroLoadoutFixer
                 if (item.ItemType != ItemObject.ItemTypeEnum.HorseHarness) continue;
                 if (!MarketRules.IsUpgrade(wornFine, FineTierOf(item), TierOf(item), ceiling)) continue;
                 if (!item.HasArmorComponent || item.ArmorComponent.FamilyType != family) continue;
-                if (!ItemCatalog.PassesCommonFilters(item, culture, ceiling)) continue;
+                if (!ItemCatalog.PassesMarketFilters(item, culture, ceiling)) continue;
 
                 Offer(offers, settlement, hero, stock[i], true);
             }
