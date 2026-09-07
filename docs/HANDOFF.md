@@ -215,6 +215,84 @@ peor que la normal. Distinguirlas exigiría un modelo propio de calidad de arma
 que contradijese el tier del propio juego, y esa es exactamente la clase de
 criterio inventado que este proyecto evita.
 
+## Los cuatro refinamientos del cierre
+
+### El salto es media tier, medida sobre el tier fraccionario
+
+El tier entero es un **redondeo**: desensamblado, `Tier = Clamp(Round(Tierf), 0, 6) − 1`.
+Exigir un tier entero dejaba pasar una mejora de **0,02** que cruzaba la frontera
+de redondeo (3,49 → 3,51) y rechazaba una de **0,98** que no la cruzaba
+(3,51 → 4,49). El filtro dejaba pasar lo insignificante y bloqueaba lo grande.
+
+Las compras comparan ahora `Tierf` en centésimas y exigen **50** de ganancia. Ese
+número no es de gusto: es el punto medio entre lo que la regla vieja ya permitía
+y lo que ya rechazaba. Más estricta en lo marginal, más laxa en lo grande.
+
+El **orden** conserva el tier entero como primer criterio aunque el fraccionario
+sea más preciso, y es deliberado: es lo que crea los empates que necesita la
+regla de clase de arma. Ordenando por centésimas, una espada a 4,20 nunca empata
+con un hacha a 4,35, el hacha gana siempre, y la espada del lord se vuelve maza.
+**Grueso, carácter, precisión, precio.**
+
+### Los perks de hacha y maza
+
+De los **164 perks de arma** del juego, exactamente **dos** miran qué arma de una
+categoría lleva el héroe en vez de la categoría: *Swift Strike* (una mano) y *On
+The Edge* (dos manos), ambos «damage with axes and maces». Todos los demás dicen
+«one handed weapons» o «polearms» y no distinguen una espada de un hacha.
+
+No son una curiosidad: **202 y 184 lores de 403** los tienen. El perk **redefine
+qué significa «su propia clase»** en el orden, en vez de añadir un quinto
+criterio: sin perk la clase favorecida es la que lleva, con perk es el hacha o la
+maza y la espada pasa a ser la deriva. Él eligió el perk; la espada se la dieron.
+
+Se pregunta **por mano**, nunca en general: el enum del núcleo colapsa maza de
+una y de dos manos, así que un lord con solo el perk de dos manos no debe ver
+dirigida su ranura de una mano.
+
+### El equipo que las tiendas no venden
+
+`ItemObject.IsUniqueItem` **es falso para los 3.725 objetos del juego**. El primer
+blindaje se construyó sobre ese flag y no protegía absolutamente nada;
+instrumentarlo en vez de confiar en él es lo único que lo destapó.
+
+La marca buena es `NotMerchandise`, y la pregunta no es «¿es especial?» sino
+**«¿se lo podríamos haber vendido nosotros?»**. Son 283 objetos:
+
+```
+Banner=52  OneHandedWeapon=59  HeadArmor=46  Thrown=33  Horse=23
+Polearm=13  TwoHandedWeapon=13  HorseHarness=8  ...  LegArmor=1
+```
+
+La reventa es **el único camino por el que este mod pone algo en un estante**. Que
+un lord cambie su espada noble y esa espada esté esa tarde en el mercado de
+Praven desmonta la exclusividad del equipo noble compra a compra, para toda la
+campaña. Esa es la razón, más que la pérdida del héroe.
+
+Medido: **366 lores, 622 piezas protegidas**, y un A/B sobre el mismo guardado
+dice que el coste es **una compra de 48**. Esas piezas ya están cerca del techo y
+el mercado no tenía nada mejor que ofrecer por ellas.
+
+Y el modo de fallo del blindaje —dejar a alguien congelado en harapos— **no
+ocurre**: `protectedPieceTier min=3 p50=6`. Ni una pieza protegida por debajo de
+tier 3.
+
+### El peso de la armadura: medido y descartado
+
+Se planteó un tope de peso por arquetipo, tomando de referencia la tropa de élite
+correspondiente, para que un arquero no acabara con la cota de un caballero.
+**Medido y descartado**: la referencia dice lo contrario.
+
+```
+battania/elite  battanian_fian_champion   Ranged   37,00 kg   Body=23,00
+empire/elite    imperial_elite_cataphract Cavalry  31,90 kg
+vlandia/elite   vlandian_banner_knight    Cavalry  37,40 kg
+```
+
+El Fian batanio pesa **más** que el catafracto imperial. TaleWorlds quiso a su
+arquero de élite blindado. «Los arqueros van ligeros» no es una regla que este
+juego sostenga, y no había nada que arreglar.
+
 ## Lo que hay que seguir vigilando
 
 **El hueco crece, no encoge.** `tiersBehind p50` sube de 6 a 7 dentro de un
