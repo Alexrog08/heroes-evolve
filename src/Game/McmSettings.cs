@@ -1,6 +1,8 @@
+using System;
 using MCM.Abstractions.Attributes;
 using MCM.Abstractions.Attributes.v2;
 using MCM.Abstractions.Base.Global;
+using TaleWorlds.CampaignSystem;
 
 namespace HeroLoadoutFixer
 {
@@ -53,5 +55,51 @@ namespace HeroLoadoutFixer
                      + "still circulates.")]
         [SettingPropertyGroup("Capture")]
         public float PlunderChance { get; set; } = 1.0f;
+
+        /// <summary>
+        /// The census, without the developer console.
+        ///
+        /// Worth having for a reason that took a live campaign to notice. The
+        /// console only opens with cheat_mode = 1 in engine_config.txt, and
+        /// cheat mode is not a quiet flag: PartyScreenHelper.OpenScreenAsNormal
+        /// diverts to OpenScreenAsCheat and fills the party screen from
+        /// GetRosterWithAllGameTroops, while the inventory screen stocks its
+        /// far side with the whole item catalogue. Turning the console on to
+        /// read a diagnostic therefore turns the game into a sandbox, which is
+        /// a steep price for a log file. This button costs nothing and leaves
+        /// cheat mode off.
+        /// </summary>
+        [SettingPropertyButton("Write a census to hlf.log",
+            Content = "Run",
+            RequireRestart = false,
+            HintText = "Surveys every lord in the campaign -- tiers, gear, skills, what the engine "
+                     + "would change -- and writes the report to hlf.log in the Bannerlord logs "
+                     + "folder. Reads only; nothing in the campaign is modified. Takes about half a "
+                     + "second on a mature save.")]
+        [SettingPropertyGroup("Diagnostics")]
+        public Action RunCensus { get; set; } = Census;
+
+        /// <summary>
+        /// Guarded the same way every other entry point in this mod is: a
+        /// diagnostic must never be the thing that takes a campaign down.
+        /// </summary>
+        private static void Census()
+        {
+            try
+            {
+                if (Campaign.Current == null)
+                {
+                    ModLog.Info("CENSUS refused: no campaign is running");
+                    return;
+                }
+
+                Diagnostics.RunCensus(HeroLoadoutBehavior.ClanWeight, HeroLoadoutBehavior.SkillWeight,
+                                      HeroLoadoutBehavior.MinimumTier, HeroLoadoutBehavior.DominanceMargin);
+            }
+            catch (Exception ex)
+            {
+                ModLog.Error("census failed: " + ex.GetType().Name + " " + ex.Message);
+            }
+        }
     }
 }
