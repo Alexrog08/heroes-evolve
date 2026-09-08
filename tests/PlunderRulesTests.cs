@@ -123,8 +123,8 @@ namespace HeroLoadoutFixer.Tests
             // The whole point: asking again gives the same answer, so a lord
             // walking into his own keep for the fiftieth time re-asks rather
             // than re-rolls.
-            float first = PlunderRules.Draw("lord_a", "prisoner_b");
-            Check.True(first == PlunderRules.Draw("lord_a", "prisoner_b"),
+            float first = PlunderRules.Draw("lord_a", "prisoner_b", 1L);
+            Check.True(first == PlunderRules.Draw("lord_a", "prisoner_b", 1L),
                        "the same pair always draws the same number");
 
             // A probability, and nothing else.
@@ -135,7 +135,7 @@ namespace HeroLoadoutFixer.Tests
             {
                 foreach (string p in prisoners)
                 {
-                    float draw = PlunderRules.Draw(c, p);
+                    float draw = PlunderRules.Draw(c, p, 1L);
                     if (draw < 0f || draw >= 1f) bounded = false;
                 }
             }
@@ -143,20 +143,36 @@ namespace HeroLoadoutFixer.Tests
 
             // Different men, different answers -- otherwise one hash would
             // decide the fate of every prisoner in the campaign at once.
-            Check.False(PlunderRules.Draw("lord_a", "prisoner_b")
-                        == PlunderRules.Draw("lord_a", "prisoner_c"),
+            Check.False(PlunderRules.Draw("lord_a", "prisoner_b", 1L)
+                        == PlunderRules.Draw("lord_a", "prisoner_c", 1L),
                         "one captor judges two prisoners differently");
-            Check.False(PlunderRules.Draw("lord_a", "prisoner_b")
-                        == PlunderRules.Draw("lord_c", "prisoner_b"),
+            Check.False(PlunderRules.Draw("lord_a", "prisoner_b", 1L)
+                        == PlunderRules.Draw("lord_c", "prisoner_b", 1L),
                         "two captors judge one prisoner differently");
 
             // The pair is ordered: robbing is not symmetrical.
-            Check.False(PlunderRules.Draw("a", "b") == PlunderRules.Draw("b", "a"),
+            Check.False(PlunderRules.Draw("a", "b", 1L) == PlunderRules.Draw("b", "a", 1L),
                         "captor and prisoner are not interchangeable");
 
             // No name, no robbery.
-            Check.True(PlunderRules.Draw(null, "b") == 1f, "a missing captor never robs");
-            Check.True(PlunderRules.Draw("a", "") == 1f, "nor does a missing prisoner get robbed");
+            Check.True(PlunderRules.Draw(null, "b", 1L) == 1f, "a missing captor never robs");
+            Check.True(PlunderRules.Draw("a", "", 1L) == 1f, "nor does a missing prisoner get robbed");
+
+            // And the part that keeps "settled" from meaning "for ever". Each
+            // spell in the cells is its own question: a lord who spared a man
+            // in one captivity is not bound to spare him in the next.
+            Check.False(PlunderRules.Draw("lord_a", "prisoner_b", 100L)
+                        == PlunderRules.Draw("lord_a", "prisoner_b", 200L),
+                        "a new captivity is a new question");
+            Check.True(PlunderRules.Draw("lord_a", "prisoner_b", 100L)
+                       == PlunderRules.Draw("lord_a", "prisoner_b", 100L),
+                       "...and the same captivity is still the same answer");
+
+            // Adjacent episodes must not correlate: captivities an hour apart
+            // would otherwise share a fate.
+            Check.False(PlunderRules.Draw("lord_a", "prisoner_b", 5000L)
+                        == PlunderRules.Draw("lord_a", "prisoner_b", 5001L),
+                        "one hour apart is a different draw");
         }
 
         private static void ReprisalFollowsTheExecutionModel()

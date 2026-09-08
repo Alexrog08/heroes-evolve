@@ -277,7 +277,19 @@ namespace HeroLoadoutFixer
 
                 float chance = ChanceFor(false, visitor, prisoner);
                 if (chance <= 0f) continue;
-                if (PlunderRules.Draw(visitor.StringId, prisoner.StringId) > chance) continue;
+                // Seeded on this spell in the cells, not on the two men alone:
+                // Hero.CaptivityStartTime is written by TakePrisonerAction on
+                // every capture, so being freed and taken again is a fresh
+                // question rather than the same verdict for ever.
+                //
+                // Hours because NumTicks is not public and ToHours is, and it
+                // is an absolute campaign time rather than one measured against
+                // now -- ElapsedHoursUntilNow would change the answer every
+                // hour he sat in the cell, which is the one thing this must not
+                // do. Two captivities of the same pair are always many days
+                // apart, so the coarseness costs nothing.
+                long episode = (long)prisoner.CaptivityStartTime.ToHours;
+                if (PlunderRules.Draw(visitor.StringId, prisoner.StringId, episode) > chance) continue;
 
                 int value;
                 int taken = Take(party.Party, prisoner, out value);

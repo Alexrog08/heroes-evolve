@@ -217,11 +217,12 @@ namespace HeroLoadoutFixer.Core
         /// answer and would also be the first save data this mod has ever
         /// written.
         ///
-        /// So the die is not thrown, it is read. The same pair of names always
-        /// gives the same number, and revisiting simply asks the same question
-        /// again -- which is the third time this project has replaced a ledger
-        /// with a property of the thing itself, after Talent.For and
-        /// GrantTier.Choose, and it uses their hash.
+        /// So the die is not thrown, it is read. The same captor, the same
+        /// prisoner and the same spell in the cells always give the same
+        /// number, and revisiting simply asks the same question again -- which
+        /// is the third time this project has replaced a ledger with a property
+        /// of the thing itself, after Talent.For and GrantTier.Choose, and it
+        /// uses their hash.
         ///
         /// What does move is the bar the number has to clear. Chance rises with
         /// his Roguery and falls as the two men warm to each other, so a man he
@@ -231,16 +232,24 @@ namespace HeroLoadoutFixer.Core
         /// a man twice, because after the first time there is nothing left on
         /// him to take.
         ///
+        /// The episode is what keeps "for ever" from meaning it. Hashing two
+        /// names alone made the answer a fact about the pair rather than about
+        /// the captivity: a lord who spared a man once would never rob him
+        /// again in forty years of war, which is a hash pretending to be
+        /// character. Feeding in the moment his captivity began -- a number the
+        /// game already keeps and rewrites on every capture -- makes each spell
+        /// in the cells its own question, settled once and then left alone.
+        ///
         /// One in ten thousand, which is finer than any chance this model
         /// produces. Missing names give 1.0 -- never robbed -- since the only
         /// captors with certainty are bandits, and bandits hold no keeps.
         /// </summary>
-        public static float Draw(string captorId, string prisonerId)
+        public static float Draw(string captorId, string prisonerId, long episode)
         {
             if (string.IsNullOrEmpty(captorId) || string.IsNullOrEmpty(prisonerId)) return 1f;
 
             uint hash = 2166136261u;
-            string text = captorId + "/" + prisonerId;
+            string text = captorId + "/" + prisonerId + "/" + episode;
             for (int i = 0; i < text.Length; i++)
             {
                 hash ^= text[i];
