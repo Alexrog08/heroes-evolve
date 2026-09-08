@@ -178,6 +178,53 @@ namespace HeroLoadoutFixer.Core
             return factor;
         }
 
+        /// <summary>
+        /// What a reprisal costs against what an unprovoked robbery costs.
+        ///
+        /// Borrowed whole from the game's own answer to the same question.
+        /// DefaultExecutionRelationModel asks exactly one thing before pricing
+        /// an execution -- does the executed man have negative Honor -- and if
+        /// he does, every figure halves: -60 with his clan becomes -30, -30
+        /// with his friends becomes -15, -10 with his faction becomes -5. Only
+        /// the uninvolved honourable noble, who would otherwise take -10,
+        /// stops caring altogether.
+        ///
+        /// Half rather than nothing, and that is the part worth copying. The
+        /// game never says a killing was free because the dead man was a
+        /// villain; it says it was cheaper. Stripping a thief is still
+        /// stripping a beaten prisoner, and the man who does it should still
+        /// pay something for it.
+        ///
+        /// Negative Honor is the test because it is the game's test, and
+        /// because it asks nothing of the past. A ledger of who robbed whom
+        /// would be the first save data this mod has ever written, and would
+        /// buy less than it looks: Honor is the heaviest term in Disposition,
+        /// weighted 4, so the lords who rob prisoners are overwhelmingly the
+        /// ones already below zero. A paragon robs at 0%, a deceitful man at
+        /// 61%. The trait is not a record of what he did to you; it is a
+        /// description of the sort of man who would.
+        /// </summary>
+        public const int ReprisalDivisor = 2;
+
+        /// <summary>
+        /// Whether taking this man's gear answers his own conduct rather than
+        /// beginning something.
+        /// </summary>
+        public static bool IsReprisal(int victimHonor)
+        {
+            return victimHonor < 0;
+        }
+
+        /// <summary>
+        /// A cost after the reprisal discount, when one applies. Integer
+        /// division truncates toward zero, so a cost never grows and never
+        /// changes sign on the way through.
+        /// </summary>
+        public static int AfterReprisal(int cost, bool reprisal)
+        {
+            return reprisal ? cost / ReprisalDivisor : cost;
+        }
+
         private static int ClampTrait(int value)
         {
             if (value < -2) return -2;

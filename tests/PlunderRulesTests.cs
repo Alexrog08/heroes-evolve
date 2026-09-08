@@ -113,6 +113,32 @@ namespace HeroLoadoutFixer.Tests
                 }
             }
             Check.True(bounded, "the chance is always a probability");
+
+            ReprisalFollowsTheExecutionModel();
+        }
+
+        private static void ReprisalFollowsTheExecutionModel()
+        {
+            // The game's test, and only the game's test: negative Honor.
+            Check.True(PlunderRules.IsReprisal(-1), "a dishonourable man invites it");
+            Check.True(PlunderRules.IsReprisal(-2), "and the worst of them the more so");
+            Check.False(PlunderRules.IsReprisal(0), "a neutral man does not");
+            Check.False(PlunderRules.IsReprisal(2), "and an honourable one certainly does not");
+
+            // Half, matching DefaultExecutionRelationModel's own halving:
+            // -60/-30/-10 become -30/-15/-5 when the victim had it coming.
+            Check.Equal(-6, PlunderRules.AfterReprisal(-12, true), "relation halves");
+            Check.Equal(-10, PlunderRules.AfterReprisal(-20, true), "the trait charge halves");
+
+            // Never free. Halving a cost is not waiving it.
+            Check.True(PlunderRules.AfterReprisal(-12, true) < 0, "a reprisal still costs");
+            Check.True(PlunderRules.AfterReprisal(-1, true) == 0
+                       || PlunderRules.AfterReprisal(-1, true) < 0,
+                       "and rounds toward zero rather than away");
+
+            // Unprovoked, nothing changes.
+            Check.Equal(-12, PlunderRules.AfterReprisal(-12, false), "full price otherwise");
+            Check.Equal(-20, PlunderRules.AfterReprisal(-20, false), "for the traits too");
         }
     }
 }

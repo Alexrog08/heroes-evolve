@@ -1,3 +1,4 @@
+using HeroLoadoutFixer.Core;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.Actions;
 using TaleWorlds.CampaignSystem.CharacterDevelopment;
@@ -36,7 +37,7 @@ namespace HeroLoadoutFixer
                                   "hero_main_options",
                                   "hlf_strip_prisoner_reply",
                                   "{=hlf_strip}Hand over your arms and armour.",
-                                  CanStrip, null, 100, null);
+                                  CanStripUnprovoked, null, 100, null);
 
             starter.AddDialogLine("hlf_strip_prisoner_reply",
                                   "hlf_strip_prisoner_reply",
@@ -44,17 +45,55 @@ namespace HeroLoadoutFixer
                                   "{=hlf_strip_reply}You would strip a beaten man of his own harness? "
                                   + "Take them, then. My kin will hear of this.",
                                   null, Strip, 100, null);
+
+            // The same act against a man who trades in it. Said differently
+            // because it is a different thing, and it costs half -- see
+            // PlunderRules.AfterReprisal.
+            starter.AddPlayerLine("hlf_strip_prisoner_reprisal",
+                                  "hero_main_options",
+                                  "hlf_strip_prisoner_reprisal_reply",
+                                  "{=hlf_strip_reprisal}You have stripped better men than me. "
+                                  + "Hand over your arms and armour.",
+                                  CanStripInReprisal, null, 100, null);
+
+            starter.AddDialogLine("hlf_strip_prisoner_reprisal_reply",
+                                  "hlf_strip_prisoner_reprisal_reply",
+                                  "close_window",
+                                  "{=hlf_strip_reprisal_reply}I have, and I would again. Take them, "
+                                  + "then, and be quick. There is not a man alive who would name this "
+                                  + "dishonour in you.",
+                                  null, Strip, 100, null);
+        }
+
+        /// <summary>
+        /// The plain demand: offered for a prisoner whose own conduct does not
+        /// answer for you.
+        /// </summary>
+        private static bool CanStripUnprovoked()
+        {
+            return CanStrip(false);
+        }
+
+        /// <summary>
+        /// The reprisal: offered for a prisoner who is himself dishonourable.
+        /// Mutually exclusive with the line above, so exactly one of the two
+        /// ever appears.
+        /// </summary>
+        private static bool CanStripInReprisal()
+        {
+            return CanStrip(true);
         }
 
         /// <summary>
         /// Offered only for a lord you are actually holding, who still has
-        /// something to hand over.
+        /// something to hand over, and only on the branch that matches him.
         /// </summary>
-        private static bool CanStrip()
+        private static bool CanStrip(bool wantReprisal)
         {
             try
             {
-                return CanStripCore();
+                if (!CanStripCore()) return false;
+                return IsReprisal(Hero.OneToOneConversationHero) == wantReprisal;
             }
             catch (System.Exception ex)
             {
@@ -135,13 +174,33 @@ namespace HeroLoadoutFixer
             // player's own standing moves, and it is right that it does: the
             // objection was ever only to consequences for decisions he did not
             // make. His relatives hear about it too.
-            ChangeRelationAction.ApplyPlayerRelation(hero, PlayerRelationCost, true, true);
-            TraitLevelingHelper.OnHostileAction(PlunderService.HostileActionXp);
+            //
+            // Half of it when the man had it coming, which is the game's own
+            // arithmetic for the same situation and not a courtesy invented
+            // here -- an execution costs half against a dishonourable victim.
+            bool reprisal = IsReprisal(hero);
+
+            ChangeRelationAction.ApplyPlayerRelation(
+                hero, PlunderRules.AfterReprisal(PlayerRelationCost, reprisal), true, true);
+            TraitLevelingHelper.OnHostileAction(
+                PlunderRules.AfterReprisal(PlunderService.HostileActionXp, reprisal));
             Hero.MainHero.AddSkillXp(DefaultSkills.Roguery, PlunderService.RogueryXpFor(value));
 
             ModLog.Info("PLUNDER by player prisoner=" + hero.Name
                         + " pieces=" + taken + " worth=" + value
+                        + " reprisal=" + reprisal
                         + " roguery=" + PlunderService.RogueryXpFor(value));
+        }
+
+        /// <summary>
+        /// Whether robbing this man answers his own trade. The game's test for
+        /// the same question about executions: negative Honor, read now, with
+        /// no record of what he has done kept anywhere.
+        /// </summary>
+        private static bool IsReprisal(Hero hero)
+        {
+            if (hero == null) return false;
+            return PlunderRules.IsReprisal(hero.GetTraitLevel(DefaultTraits.Honor));
         }
     }
 }
