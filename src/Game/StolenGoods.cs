@@ -170,35 +170,29 @@ namespace HeroLoadoutFixer
         /// <summary>
         /// Whether this winner is the one who ends up with the stranded gear.
         ///
-        /// It goes to one party rather than being shared out, because a stolen
-        /// helm is one object and the man who took the field takes it. Which
-        /// party is worth getting right, though, because the event fires once
-        /// per winner and the first answer decides.
+        /// The man who commanded the winning side. It goes to one party rather
+        /// than being shared out, because a stolen helm is one object; and it
+        /// goes to the commander because that is who the spoils of a field
+        /// belong to. Ride in another man's army and they are his, which is the
+        /// arrangement everyone in this game already lives under.
         ///
-        /// The player, whenever he fought on the winning side. His own harness
-        /// should come back to him and not to whichever ally an army happens to
-        /// list first, and his party is the one the game guarantees this event
-        /// fires for -- the guard in LootDefeatedPartyItems skips a winner whose
-        /// loot roster is empty unless that winner is MainParty. Keying on the
-        /// side's leader instead, which is what this did first, quietly robbed
-        /// him again whenever he rode in somebody else's army.
+        /// Named without reference to the player, deliberately. A version of
+        /// this handed the gear to MainParty whenever the player fought on the
+        /// winning side, on the grounds that his own harness should come back to
+        /// him -- but no AI lord gets that courtesy about his own harness, and a
+        /// rule that reads differently depending on who is looking at it is not
+        /// a rule. The player is one more character on the map; the only thing
+        /// unusual about him is who decides what he does.
         ///
-        /// Otherwise the first winner handed loot takes it. Between two lords
-        /// with nobody watching it hardly matters which, and the transfer
-        /// empties the losers' baggage, so the next winner through finds nothing
-        /// left to take twice.
+        /// Technically sound for both. The event's guard in
+        /// LootDefeatedPartyItems skips a winner whose loot roster is empty
+        /// unless that winner is MainParty -- and for an NPC that roster IS his
+        /// own ItemRoster, which a party on the march is never short of. So a
+        /// commander of either kind is reached.
         /// </summary>
         private static bool Claims(PartyBase winner, MapEvent mapEvent)
         {
-            PartyBase player = PartyBase.MainParty;
-
-            if (player != null && player.MapEvent == mapEvent
-                && mapEvent.PlayerSide == mapEvent.WinningSide)
-            {
-                return winner == player;
-            }
-
-            return true;
+            return winner == mapEvent.GetLeaderParty(mapEvent.WinningSide);
         }
 
         /// <summary>
