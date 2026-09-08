@@ -330,8 +330,17 @@ namespace HeroLoadoutFixer
             int delivered, asked;
             SkillGrowthService.TakeDelivered(out delivered, out asked);
 
+            // The calendar too, because a growth rate means nothing without it.
+            // Every rate in SkillGrowth is annual and divided by the cycles a
+            // year actually holds, which is the fix for an old bug: FastMode
+            // runs fewer, longer weeks, and a per-cycle ceiling let it deliver a
+            // third of what stock delivered. The fix has never been watched
+            // working. If this number is 12 in a stock campaign and smaller
+            // under FastMode, and asked-per-lord holds steady between them, it
+            // is doing its job.
             ModLog.Info("GROWTH weekly pass grew " + grown + " lords"
-                        + " asked=" + asked + " delivered=" + delivered);
+                        + " asked=" + asked + " delivered=" + delivered
+                        + " cyclesPerYear=" + (int)SkillGrowthService.CyclesPerYear());
         }
 
         private void TryRepair(Hero hero, string reason)

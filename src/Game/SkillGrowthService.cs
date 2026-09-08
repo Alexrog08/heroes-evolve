@@ -35,7 +35,7 @@ namespace HeroLoadoutFixer
         /// ticks there against twelve in stock -- and a growth rate written
         /// against one calendar runs at the wrong speed on the other.
         /// </summary>
-        private static float CyclesPerYear()
+        public static float CyclesPerYear()
         {
             float daysInWeek = CampaignTime.DaysInWeek;
             if (daysInWeek <= 0f) return SkillGrowth.DefaultCyclesPerYear;
