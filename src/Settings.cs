@@ -96,6 +96,38 @@ namespace HeroLoadoutFixer
         /// </summary>
         public static float PlunderChance = 1.0f;
 
+        /// <summary>
+        /// Item ids this campaign refuses to buy or grant, however good they
+        /// are. Empty by default.
+        ///
+        /// This exists because the mod shops in a catalogue it does not own. A
+        /// purchase engine that hunts for the best thing on the shelf is only
+        /// as balanced as the shelf, and any mod can add an outlier -- so the
+        /// player needs a way to say "not that one" without waiting on a
+        /// release. ItemCatalog.IsIncendiary covers the class of outlier the
+        /// game's own data identifies; this covers the rest.
+        ///
+        /// Matched case-insensitively against ItemObject.StringId, which is the
+        /// id written in the mod's own XML.
+        /// </summary>
+        private static string[] _excludedItems = new string[0];
+
+        /// <summary>Whether the player has struck this item from his campaign.</summary>
+        public static bool IsExcluded(string itemId)
+        {
+            if (string.IsNullOrEmpty(itemId)) return false;
+
+            for (int i = 0; i < _excludedItems.Length; i++)
+            {
+                if (string.Equals(_excludedItems[i], itemId, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
 
         /// <summary>
         /// Loads settings.xml if it is there. Called once, from OnSubModuleLoad.
@@ -134,6 +166,8 @@ namespace HeroLoadoutFixer
                 ShopChancePerVisit = Number(root, "ShopChancePerVisit", ShopChancePerVisit, 0f, 1f);
                 PlunderChance = Number(root, "PlunderChance", PlunderChance, 0f, 5f);
 
+                _excludedItems = List(root, "ExcludedItems");
+
                 ModLog.Enabled = EnableLogging;
                 ModLog.Info("SETTINGS loaded from " + path);
                 ModLog.Info("SETTINGS " + Describe());
@@ -162,7 +196,8 @@ namespace HeroLoadoutFixer
                    + " reserveMultiplier=" + ReserveMultiplier
                    + " shopChance=" + ShopChancePerVisit
                    + " captureLoss=" + EnableCaptureLoss
-                   + " plunderChance=" + PlunderChance;
+                   + " plunderChance=" + PlunderChance
+                   + " excludedItems=" + _excludedItems.Length;
         }
 
         /// <summary>
@@ -198,6 +233,22 @@ namespace HeroLoadoutFixer
         {
             XmlNode node = root.SelectSingleNode(name);
             return node == null ? null : node.InnerText;
+        }
+
+        /// <summary>
+        /// A list of ids from one element, separated by commas or whitespace so
+        /// the player may write it on one line or on many without being told
+        /// which. Missing or empty gives an empty array, never null.
+        /// </summary>
+        private static string[] List(XmlNode root, string name)
+        {
+            string text = Text(root, name);
+            if (string.IsNullOrEmpty(text)) return new string[0];
+
+            char[] separators = new char[] { ',', ' ', '\t', '\r', '\n' };
+            string[] parts = text.Split(separators, StringSplitOptions.RemoveEmptyEntries);
+            for (int i = 0; i < parts.Length; i++) parts[i] = parts[i].Trim();
+            return parts;
         }
 
         private static bool Flag(XmlNode root, string name, bool fallback)

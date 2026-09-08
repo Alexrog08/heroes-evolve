@@ -89,8 +89,8 @@
        DEFAULT, because it changes the feel of every defeat.
 
        The gear is moved, never destroyed: it goes into the captor's own
-       inventory, so beating him gets it back. Gear no merchant sells -- a
-       noble sword, a crown -- is left on the prisoner, since a bandit would
+       inventory, so beating him gets it back. Gear no merchant sells — a
+       noble sword, a crown — is left on the prisoner, since a bandit would
        put it in a shop and vanilla never lets one get there.
 
        Who robs is character, not dice. Bandits always do. A merciful and
@@ -105,8 +105,8 @@
   <EnableCaptureLoss>false</EnableCaptureLoss>
 
   <!-- Scales how often a captor robs. 0 is the same as off, 1 runs the rules
-       as written, 2 doubles them. Every weight behind this is invented -- no
-       vanilla behaviour exists to calibrate against -- so this is the dial to
+       as written, 2 doubles them. Every weight behind this is invented — no
+       vanilla behaviour exists to calibrate against — so this is the dial to
        turn while judging whether the rate feels right. -->
   <PlunderChance>1.0</PlunderChance>
 
@@ -116,7 +116,30 @@
        and it costs you Honor and Mercy through the game's own hostile-action
        penalty, standing with him and with his kin, and it earns you Roguery.
 
-       AI lords have no such conversation, so their roll IS their decision --
+       AI lords have no such conversation, so their roll IS their decision —
        made by their character, which is the whole point of the rules above. -->
+
+  <!-- Item ids this mod will never buy or grant, separated by commas or
+       newlines. Empty by default.
+
+       This is here because the mod shops in a catalogue it does not own. It
+       hunts for the best thing on a town's shelf, which makes it only as
+       balanced as the shelf: any mod can add an outlier, and five hundred
+       lords will find it faster than you will.
+
+       One whole class of outlier is already handled without this list. Any
+       weapon carrying an incendiary physics material is refused outright —
+       see ItemCatalog.IsIncendiary. Every such item in the game is meant to be
+       off the market (siege pots, burning ballista bolts, the cheirosiphon and
+       its ammunition), and Open Source Weaponry's "Calradic Fire Pots" was the
+       single exception in the whole catalogue: 200 blunt damage in stacks of
+       five, on sale for 36,842. Lords bought it. They no longer can, and
+       nothing needs listing here for that.
+
+       Use this for anything else you would rather your lords never carried.
+       The id is the one in the mod's own XML, matched case-insensitively:
+
+         AR_naptha_pot, some_other_item                                    -->
+  <ExcludedItems></ExcludedItems>
 
 </HeroLoadoutFixer>

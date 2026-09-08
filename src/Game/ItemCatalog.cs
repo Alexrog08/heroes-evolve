@@ -275,7 +275,76 @@ namespace HeroLoadoutFixer
             // ItemTiers enum (Tier1 = 0 .. Tier6 = 5). Convert rather than letting the
             // two vocabularies meet raw.
             if ((int)item.Tier + 1 > maxTier) return false;
+            if (IsRefused(item)) return false;
             return true;
+        }
+
+        /// <summary>
+        /// Whether a weapon is one the game itself keeps off the battlefield.
+        ///
+        /// Read off the game's own data rather than a list of names, because
+        /// the data says it unambiguously. Every item across the shipped
+        /// catalogue and the installed mods that carries an incendiary physics
+        /// material -- siege pots, burning ballista bolts, mangonel pots, and
+        /// the cheirosiphon's own ammunition -- is marked is_merchandise=false
+        /// and cannot reach a shelf. Fourteen of them; every one off the market.
+        ///
+        /// Except one. Open Source Weaponry's "Calradic Fire Pots"
+        /// (AR_naptha_pot) carries physics_material="burning_jar", 200 blunt
+        /// damage in stacks of five, and IS merchandise. The same author marked
+        /// eight of his own items unsellable, the cheirosiphon among them, so
+        /// this is a choice rather than an oversight -- but it is a choice about
+        /// what a player may buy, and this mod decides what five hundred AI
+        /// lords will hunt for. Measured against the census: difficulty 120
+        /// falls between the 75th and 90th percentile of lords' Throwing, so
+        /// about a fifth of the map clears it, and the 36,842-denar price is a
+        /// third of the median lord's per-purchase allowance. They would buy it,
+        /// and in a previous campaign under another mod they did.
+        ///
+        /// Naming the material rather than the item is what makes this a rule.
+        /// The next mod that adds a firebomb is covered without anyone editing
+        /// anything.
+        ///
+        /// Every usage is checked, not only the primary: an item can be wielded
+        /// more than one way and only one of them need be the ugly one.
+        /// </summary>
+        public static bool IsIncendiary(ItemObject item)
+        {
+            if (item == null || !item.HasWeaponComponent) return false;
+
+            for (int i = 0; i < item.Weapons.Count; i++)
+            {
+                string material = item.Weapons[i].PhysicsMaterial;
+                if (string.IsNullOrEmpty(material)) continue;
+                if (material.IndexOf("burning", System.StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Everything this mod will not put in a lord's hands, whatever its
+        /// tier and whatever he can afford.
+        ///
+        /// Two layers answering two different questions. IsIncendiary is a rule
+        /// about the game's own data and needs no maintenance. Settings.
+        /// IsExcluded is the player's own list, because this mod shops in a
+        /// catalogue it does not control: any mod can add an outlier, and the
+        /// honest tool for "not in MY campaign" is a line in settings.xml, not
+        /// a judgement baked in here.
+        ///
+        /// Consulted from PassesMarketFilters, which PassesCommonFilters calls
+        /// in turn, so a refused item cannot arrive through the back door of a
+        /// free grant either.
+        /// </summary>
+        public static bool IsRefused(ItemObject item)
+        {
+            if (item == null) return true;
+            if (IsIncendiary(item)) return true;
+            return Settings.IsExcluded(item.StringId);
         }
 
         /// <summary>
