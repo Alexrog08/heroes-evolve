@@ -207,6 +207,50 @@ namespace HeroLoadoutFixer.Core
         public const int ReprisalDivisor = 2;
 
         /// <summary>
+        /// The die for one captor and one prisoner, cast once and for all.
+        ///
+        /// A lord walks into his own keep as often as he likes, and a fresh
+        /// random roll on each visit would make the chance meaningless: an
+        /// eight-percent man visiting fifty times strips everyone, and the
+        /// character model that decides who robs would be describing nothing.
+        /// Remembering who has already been considered would be the obvious
+        /// answer and would also be the first save data this mod has ever
+        /// written.
+        ///
+        /// So the die is not thrown, it is read. The same pair of names always
+        /// gives the same number, and revisiting simply asks the same question
+        /// again -- which is the third time this project has replaced a ledger
+        /// with a property of the thing itself, after Talent.For and
+        /// GrantTier.Choose, and it uses their hash.
+        ///
+        /// What does move is the bar the number has to clear. Chance rises with
+        /// his Roguery and falls as the two men warm to each other, so a man he
+        /// spared at fifty may not be safe from him at a hundred. That reads
+        /// exactly right: the decision was never re-rolled, the lord simply
+        /// became more of a thief. And it can never run backwards into robbing
+        /// a man twice, because after the first time there is nothing left on
+        /// him to take.
+        ///
+        /// One in ten thousand, which is finer than any chance this model
+        /// produces. Missing names give 1.0 -- never robbed -- since the only
+        /// captors with certainty are bandits, and bandits hold no keeps.
+        /// </summary>
+        public static float Draw(string captorId, string prisonerId)
+        {
+            if (string.IsNullOrEmpty(captorId) || string.IsNullOrEmpty(prisonerId)) return 1f;
+
+            uint hash = 2166136261u;
+            string text = captorId + "/" + prisonerId;
+            for (int i = 0; i < text.Length; i++)
+            {
+                hash ^= text[i];
+                hash *= 16777619u;
+            }
+
+            return (hash % 10000u) / 10000f;
+        }
+
+        /// <summary>
         /// Whether taking this man's gear answers his own conduct rather than
         /// beginning something.
         /// </summary>

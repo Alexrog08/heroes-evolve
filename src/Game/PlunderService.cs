@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.Actions;
 using TaleWorlds.CampaignSystem.CharacterDevelopment;
@@ -97,6 +98,16 @@ namespace HeroLoadoutFixer
 
             if (!CanBeStripped(prisoner)) return 0;
 
+            // A keep decides nothing, and it has no character to decide with.
+            // When a town or castle takes prisoners directly -- war declared,
+            // a clan changing kingdom, a settlement changing hands, all of them
+            // PrisonerCaptureCampaignBehavior.HandleSettlementHeroes -- the men
+            // go into the cells dressed as they are. Robbing them there meant
+            // reading the traits of an owner who was three hundred miles away,
+            // which is not a decision anyone made. Whoever holds the keys robs
+            // them, or does not, when he next walks in. See PlunderPrisonersOf.
+            if (captorParty.IsSettlement) return 0;
+
             bool bandit = IsBanditParty(captorParty);
             Hero captor = CaptorOf(captorParty);
 
@@ -178,70 +189,126 @@ namespace HeroLoadoutFixer
         /// Whose baggage a stripped prisoner's kit goes into, or null when
         /// there is no such baggage and therefore no robbery.
         ///
-        /// The gear goes where the man is, into an inventory somebody owns.
-        /// Those two together are the whole rule, and the code originally kept
-        /// neither: it emptied the prisoner into whoever the event named as
-        /// holding him, and when that is a settlement, Settlement.ItemRoster is
-        /// literally Settlement.Party.ItemRoster -- for a town, its market
-        /// stock. Harnesses went onto the shelves for nothing.
+        /// The man who decided it receives it, into an inventory somebody owns.
+        /// Bannerlord keeps item rosters on parties and not on people, so a
+        /// captor with nowhere to put it does not take it: somebody receives
+        /// the gear, or the gear is not taken.
         ///
-        /// A settlement can hold a prisoner directly, which is worth knowing
-        /// because it is not the ordinary case and is easy to assume away.
-        /// Battlefield captures run through MapEvent.CaptureDefeatedPartyMembers
-        /// and make the man a noble's. But PrisonerCaptureCampaignBehavior.
-        /// HandleSettlementHeroes calls TakePrisonerAction.Apply(hero.Current-
-        /// Settlement.Party, hero) on OnWarDeclared, OnClanChangedKingdom and
-        /// OnSettlementOwnerChanged -- so every partyless lord sitting in a town
-        /// when war breaks out becomes that town's prisoner, with no noble in
-        /// between. That is the same population a released prisoner joins, since
-        /// the game parks him partyless in settlements for days.
+        /// No settlement reaches here. It used to, and Settlement.ItemRoster is
+        /// literally Settlement.Party.ItemRoster -- for a town its market stock
+        /// -- so a keep full of prisoners emptied their harnesses onto the
+        /// shelves for nothing. That whole path now goes through
+        /// PlunderPrisonersOf instead, where a man with a party does the
+        /// robbing and has somewhere to put it.
         ///
-        /// For that case the garrison is the answer, not the settlement and not
-        /// the absent owner. The keep's own baggage train is a real inventory
-        /// that belongs to somebody, it is not the shop, and it does not
-        /// teleport a man's armour across the map to a lord who is besieging
-        /// somewhere else. Beat that garrison and Recover hands the gear to
-        /// whoever storms the walls, which is the right way for it to come back
-        /// out.
-        ///
-        /// And when there is no inventory at all -- a village, a settlement with
-        /// no garrison -- nobody robs him. Bannerlord keeps item rosters on
-        /// parties, not on people, so a captor with nowhere to put it does not
-        /// take it. Somebody receives the gear or the gear is not taken.
+        /// A bandit band has no leader hero, so the captor is null, but its
+        /// baggage train is a real inventory and is where the loot belongs.
         /// </summary>
         private static PartyBase SpoilsFor(PartyBase captorParty, Hero captor)
         {
-            if (captorParty != null && captorParty.IsSettlement)
-            {
-                return GarrisonOf(captorParty.Settlement);
-            }
-
             if (captor != null && captor.PartyBelongedTo != null)
             {
                 return captor.PartyBelongedTo.Party;
             }
 
-            // A bandit band has no leader hero, so the captor is null, but its
-            // baggage train is a real inventory and is where the loot belongs.
             if (captorParty != null && captorParty.IsMobile) return captorParty;
 
             return null;
         }
 
         /// <summary>
-        /// The baggage of the men actually holding the keep, or null for a
-        /// settlement that has none.
+        /// A lord walks into a keep he holds and looks over the men in its
+        /// cells.
         ///
-        /// Settlement.Town covers towns and castles alike -- a castle is a Town
-        /// with IsCastle set -- and is null for a village, which has no garrison
-        /// and no business holding a lord prisoner.
+        /// This is where a settlement's prisoners are robbed, and it is
+        /// deliberately not the moment of capture. A town has no character to
+        /// roll against, and its owner is usually nowhere near it; deciding
+        /// then meant a man was stripped by a lord who was besieging somewhere
+        /// else. Here the lord is standing in his own hall, the prisoners are
+        /// downstairs, and the decision is his to make face to face -- the same
+        /// standing that lets him free them in vanilla, which is the test the
+        /// player's own conversation uses.
+        ///
+        /// One prisoner at a time and each judged on his own, so a lord may
+        /// strip the man he despises and leave the one he respects. The die is
+        /// PlunderRules.Draw rather than a roll, so walking in and out again
+        /// re-asks the question instead of re-rolling it -- see there for why
+        /// that is a rule rather than a saving.
+        ///
+        /// The whole haul is tried on once at the end. Doing it per prisoner
+        /// would have him re-dressing between cells.
         /// </summary>
-        private static PartyBase GarrisonOf(Settlement settlement)
+        public static int PlunderPrisonersOf(Settlement settlement, Hero visitor)
         {
-            if (settlement == null || settlement.Town == null) return null;
+            if (!Settings.EnableCaptureLoss) return 0;
+            if (settlement == null || visitor == null) return 0;
 
-            MobileParty garrison = settlement.Town.GarrisonParty;
-            return garrison != null ? garrison.Party : null;
+            // He robs by asking, in conversation. See PrisonerDialogue.
+            if (visitor == Hero.MainHero) return 0;
+
+            // The man with the keys, and nobody else in his household.
+            if (settlement.Owner != visitor) return 0;
+
+            MobileParty party = visitor.PartyBelongedTo;
+            if (party == null || party.Party == null) return 0;
+
+            PartyBase prison = settlement.Party;
+            if (prison == null || prison.PrisonRoster == null) return 0;
+
+            // Collected before anything is taken: robbing a man edits his
+            // equipment, and the roster is walked to find him.
+            List<Hero> prisoners = new List<Hero>();
+            for (int i = 0; i < prison.PrisonRoster.Count; i++)
+            {
+                CharacterObject character = prison.PrisonRoster.GetCharacterAtIndex(i);
+                if (character == null || !character.IsHero) continue;
+                if (character.HeroObject != null) prisoners.Add(character.HeroObject);
+            }
+
+            int robbed = 0;
+            int worth = 0;
+
+            for (int i = 0; i < prisoners.Count; i++)
+            {
+                Hero prisoner = prisoners[i];
+                if (prisoner == visitor) continue;
+                if (!CanBeStripped(prisoner)) continue;
+                if (!HasAnythingToTake(prisoner)) continue;
+
+                float chance = ChanceFor(false, visitor, prisoner);
+                if (chance <= 0f) continue;
+                if (PlunderRules.Draw(visitor.StringId, prisoner.StringId) > chance) continue;
+
+                int value;
+                int taken = Take(party.Party, prisoner, out value);
+                if (taken == 0) continue;
+
+                robbed += taken;
+                worth += value;
+
+                if (prisoner != Hero.MainHero)
+                {
+                    ChangeRelationAction.ApplyRelationChangeBetweenHeroes(visitor, prisoner,
+                                                                          RelationCost, false);
+                }
+
+                ModLog.Info("PLUNDER captor=" + visitor.Name
+                            + " captorHonor=" + visitor.GetTraitLevel(DefaultTraits.Honor)
+                            + " prisoner=" + prisoner.Name
+                            + " prisonerHonor=" + prisoner.GetTraitLevel(DefaultTraits.Honor)
+                            + " chance=" + (int)(chance * 100f) + "%"
+                            + " pieces=" + taken
+                            + " worth=" + value
+                            + " at=" + settlement.Name);
+            }
+
+            if (robbed == 0) return 0;
+
+            Reward(visitor, worth);
+            LootFitting.Equip(visitor, party.Party.ItemRoster,
+                              Settings.ClanWeight, Settings.SkillWeight, Settings.MinimumTier);
+
+            return robbed;
         }
 
         /// <summary>

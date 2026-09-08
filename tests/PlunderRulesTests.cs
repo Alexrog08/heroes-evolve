@@ -115,6 +115,48 @@ namespace HeroLoadoutFixer.Tests
             Check.True(bounded, "the chance is always a probability");
 
             ReprisalFollowsTheExecutionModel();
+            TheDieIsCastOncePerPair();
+        }
+
+        private static void TheDieIsCastOncePerPair()
+        {
+            // The whole point: asking again gives the same answer, so a lord
+            // walking into his own keep for the fiftieth time re-asks rather
+            // than re-rolls.
+            float first = PlunderRules.Draw("lord_a", "prisoner_b");
+            Check.True(first == PlunderRules.Draw("lord_a", "prisoner_b"),
+                       "the same pair always draws the same number");
+
+            // A probability, and nothing else.
+            bool bounded = true;
+            string[] captors = { "a", "lord_vlandia_1", "CharacterObject_7937", "z" };
+            string[] prisoners = { "b", "lord_battania_9", "CharacterObject_23172", "y" };
+            foreach (string c in captors)
+            {
+                foreach (string p in prisoners)
+                {
+                    float draw = PlunderRules.Draw(c, p);
+                    if (draw < 0f || draw >= 1f) bounded = false;
+                }
+            }
+            Check.True(bounded, "every draw is in [0,1)");
+
+            // Different men, different answers -- otherwise one hash would
+            // decide the fate of every prisoner in the campaign at once.
+            Check.False(PlunderRules.Draw("lord_a", "prisoner_b")
+                        == PlunderRules.Draw("lord_a", "prisoner_c"),
+                        "one captor judges two prisoners differently");
+            Check.False(PlunderRules.Draw("lord_a", "prisoner_b")
+                        == PlunderRules.Draw("lord_c", "prisoner_b"),
+                        "two captors judge one prisoner differently");
+
+            // The pair is ordered: robbing is not symmetrical.
+            Check.False(PlunderRules.Draw("a", "b") == PlunderRules.Draw("b", "a"),
+                        "captor and prisoner are not interchangeable");
+
+            // No name, no robbery.
+            Check.True(PlunderRules.Draw(null, "b") == 1f, "a missing captor never robs");
+            Check.True(PlunderRules.Draw("a", "") == 1f, "nor does a missing prisoner get robbed");
         }
 
         private static void ReprisalFollowsTheExecutionModel()

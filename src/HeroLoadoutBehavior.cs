@@ -232,8 +232,17 @@ namespace HeroLoadoutFixer
         {
             try
             {
-                if (settlement == null || !settlement.IsTown) return;
+                if (settlement == null) return;
                 if (party != null && party == MobileParty.MainParty) return;
+
+                // A lord who holds this place looks over its cells before he
+                // does anything else. Towns and castles both, which is why this
+                // sits above the IsTown gate -- most prisoners are in castles.
+                Hero keyholder = hero;
+                if (keyholder == null && party != null) keyholder = party.LeaderHero;
+                PlunderService.PlunderPrisonersOf(settlement, keyholder);
+
+                if (!settlement.IsTown) return;
 
                 // Offloading the loot comes first and answers to nothing else.
                 // It used to sit below the once-a-day gate and the shopping
