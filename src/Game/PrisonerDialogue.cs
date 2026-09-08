@@ -196,6 +196,7 @@ namespace HeroLoadoutFixer
             Hero.MainHero.AddSkillXp(DefaultSkills.Roguery, PlunderService.RogueryXpFor(value));
 
             ModLog.Info("PLUNDER by player prisoner=" + hero.Name
+                        + " prisonerHonor=" + hero.GetTraitLevel(DefaultTraits.Honor)
                         + " pieces=" + taken + " worth=" + value
                         + " reprisal=" + reprisal
                         + " roguery=" + PlunderService.RogueryXpFor(value));

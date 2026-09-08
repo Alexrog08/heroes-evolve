@@ -136,8 +136,18 @@ namespace HeroLoadoutFixer
                                   Settings.ClanWeight, Settings.SkillWeight, Settings.MinimumTier);
             }
 
+            // Honor on both sides, because it is the trait the whole feature
+            // turns on and neither the census nor the game's own UI puts it
+            // where a log reader can see it. The captor's is the heaviest term
+            // in his chance to rob at all; the prisoner's is what decides
+            // whether robbing him back would be a reprisal. Without these two
+            // numbers a line like "chance=8%" cannot be checked against the
+            // model that produced it.
             ModLog.Info("PLUNDER captor=" + (captor != null ? captor.Name.ToString() : "bandits")
+                        + " captorHonor=" + (captor != null
+                            ? captor.GetTraitLevel(DefaultTraits.Honor).ToString() : "-")
                         + " prisoner=" + prisoner.Name
+                        + " prisonerHonor=" + prisoner.GetTraitLevel(DefaultTraits.Honor)
                         + " chance=" + (int)(chance * 100f) + "%"
                         + " pieces=" + taken
                         + " worth=" + value);
