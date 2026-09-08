@@ -18,7 +18,34 @@ namespace HeroLoadoutFixer
             if (hero.IsHumanPlayerCharacter) return false;
             if (hero == Hero.MainHero) return false;
             if (hero.IsChild) return false;
-            if (!hero.IsLord) return false;
+
+            // Lords, and hired companions, and nobody else. A companion given a
+            // caravan or a war party is a campaign actor with a loadout to keep
+            // up exactly like a lord: he fights, he trains the weapons he
+            // carries, and if bandits strip him he needs dressing again before
+            // anyone will take him back. CompanionOf is what separates him from
+            // the wanderers sitting in taverns, who belong to nobody and have
+            // no kit to maintain -- and from notables, who are not fighters at
+            // all.
+            if (!hero.IsLord && hero.CompanionOf == null) return false;
+
+            // The line is the party, not the clan. Anyone riding inside the
+            // player's own party is under his hand: he outfits them out of his
+            // inventory, and gear changing without him asking is the exact
+            // complaint that started this mod. A hero leading a party of his
+            // own is not -- a lord sent off with troops, a companion running a
+            // caravan -- and the mod looks after him like any other.
+            //
+            // The same line IsEligibleToShop already drew, now drawn once for
+            // both. Before this, the repair keyed on "is he a lord", which is a
+            // different question and answered the wrong one: it let the mod
+            // fiddle with a clan brother riding at the player's shoulder while
+            // refusing to dress his caravan master after bandits took
+            // everything the man owned.
+            if (hero.PartyBelongedTo != null && hero.PartyBelongedTo == MobileParty.MainParty)
+            {
+                return false;
+            }
 
             // Hero.AllAliveHeroes (which drives DailyTickHeroEvent) includes
             // template heroes. Vanilla's own AgingCampaignBehavior.DailyTickHero
