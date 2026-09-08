@@ -33,12 +33,15 @@ namespace HeroLoadoutFixer
         /// </summary>
         public static void Attach()
         {
-            if (_bound) return;
-
             try
             {
+                // Not guarded by _bound, and that was a real bug. RegisterEvents
+                // runs Settings.Load on every campaign load, which resets every
+                // field to what settings.xml says; returning early here left the
+                // second and every later campaign of a session running on the
+                // file while the options screen showed something else. The
+                // subscription is what must happen once, not the copy.
                 Bind();
-                _bound = true;
                 ModLog.Info("MCM attached; the capture settings are live in the options screen");
             }
             catch (Exception ex)
@@ -55,8 +58,16 @@ namespace HeroLoadoutFixer
             McmSettings settings = McmSettings.Instance;
             if (settings == null) throw new InvalidOperationException("MCM holds no settings instance");
 
+            // Always copy; subscribe once. MCM keeps one settings instance for
+            // the process, so subscribing again would fire Pull twice for every
+            // slider the player moves.
             Pull(settings);
-            settings.PropertyChanged += OnChanged;
+
+            if (!_bound)
+            {
+                settings.PropertyChanged += OnChanged;
+                _bound = true;
+            }
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]

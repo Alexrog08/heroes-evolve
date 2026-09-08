@@ -112,14 +112,24 @@ namespace HeroLoadoutFixer
             if (chance <= 0f) return 0;
             if (MBRandom.RandomFloat > chance) return 0;
 
+            PartyBase spoils = SpoilsFor(captorParty, captor);
+
             int value;
-            int taken = Take(captorParty, prisoner, out value);
+            int taken = Take(spoils, prisoner, out value);
             if (taken == 0) return 0;
 
-            // Being robbed is not an act of the victim's, so it never moves
-            // his standing. Doing the robbing is, so it always moves the
-            // robber's -- including the player's, on the one path where he
-            // reaches this at all.
+            // Doing the robbing costs the robber standing with the man he
+            // robbed. Being robbed costs the victim nothing, because it is not
+            // an act of his.
+            //
+            // The player is excluded as the victim, and that is forced rather
+            // than chosen: Bannerlord keeps one relation number per pair of
+            // heroes, so charging the captor and moving the player's number are
+            // the same write. They cannot be separated, and of the two the
+            // player's number is the one that should only ever move for things
+            // he did. He is not excluded as the captor here -- he cannot reach
+            // this line at all, the guard above returns before it. His own
+            // reckoning is in PrisonerDialogue, where he chose it.
             if (captor != null && prisoner != Hero.MainHero)
             {
                 ChangeRelationAction.ApplyRelationChangeBetweenHeroes(captor, prisoner, RelationCost, false);
@@ -132,8 +142,18 @@ namespace HeroLoadoutFixer
                 // And then he tries it on. Taking a man's harness and never
                 // looking at it would be odd; the market's own rules decide
                 // whether any of it suits him, which usually it does not.
-                LootFitting.Equip(captor, captorParty.ItemRoster,
-                                  Settings.ClanWeight, Settings.SkillWeight, Settings.MinimumTier);
+                //
+                // Over a baggage train only. The fitting reads the whole roster
+                // it is handed, and a settlement's roster is not a pile of loot
+                // -- it is the town's stock. Running it there would let the
+                // owner of a castle dress himself out of the shelves for
+                // nothing, eleven pieces at a time, every time he took a
+                // prisoner.
+                if (spoils.IsMobile)
+                {
+                    LootFitting.Equip(captor, spoils.ItemRoster,
+                                      Settings.ClanWeight, Settings.SkillWeight, Settings.MinimumTier);
+                }
             }
 
             // Honor on both sides, because it is the trait the whole feature
@@ -153,6 +173,34 @@ namespace HeroLoadoutFixer
                         + " worth=" + value);
 
             return taken;
+        }
+
+        /// <summary>
+        /// Where a stripped prisoner's kit goes.
+        ///
+        /// The captor's own baggage whenever he leads a party, and the holding
+        /// party's stores only when he does not. This matters more than it
+        /// looks, and it was wrong: a prisoner taken into a town or castle is
+        /// held by that settlement's own party, and Settlement.ItemRoster is
+        /// literally Settlement.Party.ItemRoster -- for a town, the market
+        /// stock. Emptying a lord into it put his harness on sale for nothing,
+        /// out of the captor's reach and into everybody else's, and left
+        /// StolenGoods with nothing to sell and Recover with nothing to win
+        /// back.
+        ///
+        /// A lord with no party at all still has somewhere to put it: the keep
+        /// he is sitting in. That case keeps the old behaviour, which is right
+        /// for a castle and merely odd for a town, and the fitting is skipped
+        /// there so nothing can be taken back out.
+        /// </summary>
+        private static PartyBase SpoilsFor(PartyBase captorParty, Hero captor)
+        {
+            if (captor != null && captor.PartyBelongedTo != null)
+            {
+                return captor.PartyBelongedTo.Party;
+            }
+
+            return captorParty;
         }
 
         /// <summary>
@@ -200,7 +248,8 @@ namespace HeroLoadoutFixer
         /// Everything, with no exception for the gilded and the unsellable. A
         /// lord will not part with his heirloom, and the market respects that --
         /// but a man robbing him is not asking. The armour then travels: the
-        /// captor has no use for a cuirass of the wrong culture and sells it,
+        /// captor usually has no use for a cuirass cut for another people and
+        /// sells it,
         /// and it turns up on a shelf somewhere for its owner to buy back, or
         /// for whoever walks into that town first. Caladog would never sell his
         /// gilded plate. He can still lose it, and then it is anybody's.
@@ -210,9 +259,17 @@ namespace HeroLoadoutFixer
         /// </summary>
         public static int Take(PartyBase captorParty, Hero prisoner, out int value)
         {
-            ItemRoster loot = captorParty.ItemRoster;
             int taken = 0;
             value = 0;
+
+            // Nowhere to put it means nobody takes it, and this guard is the
+            // difference between a failed robbery and a destroyed harness.
+            // TakeSlot empties the slot before it hands the piece on, so a
+            // missing roster would have left the prisoner bare and the gear
+            // nowhere at all -- against the one promise this whole feature
+            // rests on, that gear is moved and never destroyed.
+            ItemRoster loot = captorParty != null ? captorParty.ItemRoster : null;
+            if (loot == null || prisoner == null || prisoner.BattleEquipment == null) return 0;
 
             for (int i = 0; i < SlotSnapshot.WeaponSlotCount; i++)
             {
@@ -231,13 +288,7 @@ namespace HeroLoadoutFixer
         private static int TakeSlot(ItemRoster loot, Hero prisoner, EquipmentIndex slot, ref int value)
         {
             EquipmentElement worn = prisoner.BattleEquipment[slot];
-            if (worn.Item == null) return 0;
-
-            // A quest item is not loot. Taking one could strand the quest that
-            // put it there, and the game excludes them from its own looting for
-            // the same reason. Banners need no check: they sit in
-            // ExtraWeaponSlot, which nothing in this mod reaches.
-            if (worn.IsQuestItem) return 0;
+            if (!Takeable(worn)) return 0;
 
             // ItemValue rather than Item.Value: it accounts for the modifier, so
             // a fine sword is worth more to take than a rusty one of the same
@@ -245,8 +296,25 @@ namespace HeroLoadoutFixer
             value += worn.ItemValue;
 
             prisoner.BattleEquipment[slot] = EquipmentElement.Invalid;
-            if (loot != null) loot.AddToCounts(worn, 1);
+            loot.AddToCounts(worn, 1);
             return 1;
+        }
+
+        /// <summary>
+        /// Whether one worn piece may change hands.
+        ///
+        /// A quest item is not loot. Taking one could strand the quest that put
+        /// it there, and the game excludes them from its own looting for the
+        /// same reason. Banners need no check: they sit in ExtraWeaponSlot,
+        /// which nothing in this mod reaches.
+        ///
+        /// Shared with HasAnythingToTake so the conversation cannot offer a
+        /// demand that Take will then decline -- a lord carrying nothing but a
+        /// quest sword used to hear "take them, then" and hand over nothing.
+        /// </summary>
+        private static bool Takeable(EquipmentElement worn)
+        {
+            return worn.Item != null && !worn.IsQuestItem;
         }
 
         /// <summary>
@@ -259,14 +327,14 @@ namespace HeroLoadoutFixer
 
             for (int i = 0; i < SlotSnapshot.WeaponSlotCount; i++)
             {
-                if (prisoner.BattleEquipment[SlotMapping.WeaponSlot(i)].Item != null) return true;
+                if (Takeable(prisoner.BattleEquipment[SlotMapping.WeaponSlot(i)])) return true;
             }
             foreach (EquipmentIndex slot in SlotMapping.ArmorSlots)
             {
-                if (prisoner.BattleEquipment[slot].Item != null) return true;
+                if (Takeable(prisoner.BattleEquipment[slot])) return true;
             }
-            return prisoner.BattleEquipment[EquipmentIndex.Horse].Item != null
-                   || prisoner.BattleEquipment[EquipmentIndex.HorseHarness].Item != null;
+            return Takeable(prisoner.BattleEquipment[EquipmentIndex.Horse])
+                   || Takeable(prisoner.BattleEquipment[EquipmentIndex.HorseHarness]);
         }
 
         /// <summary>

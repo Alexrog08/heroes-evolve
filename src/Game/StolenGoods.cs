@@ -40,16 +40,26 @@ namespace HeroLoadoutFixer
         /// Sells everything in this party's baggage that no merchant would have
         /// stocked, at the town it has just entered.
         ///
-        /// The lord has no use for a cuirass of the wrong culture and no way to
-        /// carry it forever, so he does what anyone would: turns it into coin at
-        /// the first market.
+        /// He usually has no use for a cuirass cut for another people and no
+        /// way to carry it forever, so he does what anyone would: turns it into
+        /// coin at the first market.
         ///
         /// A town that cannot afford a piece does not get it. Paying what little
         /// it holds and taking the goods anyway would have lords handing over
         /// forty-thousand-denar harnesses for nothing, which is not a sale, and
         /// the piece is better off staying in the baggage until a richer market
-        /// comes along. The purse is drawn down as it goes, so one visit cannot
-        /// empty a town twice over.
+        /// comes along.
+        ///
+        /// The running total is kept here rather than read back off the town,
+        /// and that is not tidiness. SettlementComponent.Gold is its own field
+        /// and nothing in a sale touches it: GiveGoldAction.ApplyForSettlement-
+        /// ToCharacter moves gold off the settlement's PartyBase, and vanilla's
+        /// own SellItemsAction skips ChangeGold entirely on the branch where a
+        /// settlement is the buyer. So re-reading component.Gold after each
+        /// piece returns the same number it did before, and the guard would have
+        /// let one lord sell a whole baggage train to a town holding a hundred
+        /// denars. Counting what has been spent in this visit is what makes the
+        /// rule mean anything.
         /// </summary>
         public static int SellAt(Settlement settlement, PartyBase party)
         {
@@ -61,10 +71,11 @@ namespace HeroLoadoutFixer
             if (component == null || shelf == null || baggage == null) return 0;
 
             List<ItemRosterElement> stranded = Stranded(baggage);
-            if (stranded.Count == 0) return 0;
+            if (stranded == null) return 0;
 
             Hero seller = party.LeaderHero;
             int sold = 0;
+            int spent = 0;
 
             for (int i = 0; i < stranded.Count; i++)
             {
@@ -77,7 +88,8 @@ namespace HeroLoadoutFixer
                     if (price < 0) price = 0;
 
                     // No money, no sale. He keeps it and tries the next town.
-                    if (price > component.Gold) break;
+                    if (spent + price > component.Gold) break;
+                    spent += price;
 
                     baggage.AddToCounts(element, -1);
                     shelf.AddToCounts(element, 1);
@@ -94,7 +106,7 @@ namespace HeroLoadoutFixer
             if (sold > 0)
             {
                 ModLog.Info("STOLENSOLD party=" + party.Name + " town=" + settlement.Name
-                            + " pieces=" + sold);
+                            + " pieces=" + sold + " paid=" + spent);
             }
 
             return sold;
@@ -163,7 +175,7 @@ namespace HeroLoadoutFixer
                 if (loser == null || loser.ItemRoster == null) continue;
 
                 List<ItemRosterElement> stranded = Stranded(loser.ItemRoster);
-                if (stranded.Count == 0) continue;
+                if (stranded == null) continue;
 
                 // Asked once per defeated party, as the game asks it: the
                 // shares depend on who was beaten, not only on who won.
@@ -183,7 +195,7 @@ namespace HeroLoadoutFixer
                         MapEventParty taker = Draw(shares);
                         if (taker == null) break;
 
-                        ItemRoster pile = taker.RosterToReceiveLootItems;
+                        ItemRoster pile = PileOf(taker);
                         if (pile == null) continue;
 
                         loser.ItemRoster.AddToCounts(element, -1);
@@ -199,6 +211,30 @@ namespace HeroLoadoutFixer
             }
 
             return taken;
+        }
+
+        /// <summary>
+        /// A winner's loot pile, or null if it cannot be reached.
+        ///
+        /// Wrapped because the property is not a field. For an NPC it returns
+        /// the party's own ItemRoster and cannot fail, but for the player's
+        /// party it reaches through PlayerEncounter.Current, and a null
+        /// encounter there throws rather than returning null. That would abort
+        /// the recovery for the whole battle -- every loser's stranded gear,
+        /// not just this one piece -- so it is caught here and the piece stays
+        /// where it is, which is the safe direction.
+        /// </summary>
+        private static ItemRoster PileOf(MapEventParty taker)
+        {
+            try
+            {
+                return taker.RosterToReceiveLootItems;
+            }
+            catch (System.Exception ex)
+            {
+                ModLog.Error("loot pile unreachable: " + ex.GetType().Name + " " + ex.Message);
+                return null;
+            }
         }
 
         /// <summary>
@@ -245,10 +281,17 @@ namespace HeroLoadoutFixer
         /// handles are two halves of one whole, with nothing counted twice and
         /// nothing missed. Quest items and banners are left where they are:
         /// they are stranded by design, not by accident.
+        ///
+        /// Returns null rather than an empty list, and the callers check for it.
+        /// Ordinarily that would be a poor trade for a little garbage, but this
+        /// runs on every party entering every town and the answer is almost
+        /// always "nothing" -- a baggage train holding stolen gear is the rare
+        /// case, not the common one. Allocating a list to say so, hundreds of
+        /// times a day, is the kind of cost that only shows up as a stutter.
         /// </summary>
         private static List<ItemRosterElement> Stranded(ItemRoster roster)
         {
-            List<ItemRosterElement> found = new List<ItemRosterElement>();
+            List<ItemRosterElement> found = null;
 
             for (int i = 0; i < roster.Count; i++)
             {
@@ -259,6 +302,7 @@ namespace HeroLoadoutFixer
                 if (item == null || !item.NotMerchandise) continue;
                 if (element.EquipmentElement.IsQuestItem || item.IsBannerItem) continue;
 
+                if (found == null) found = new List<ItemRosterElement>();
                 found.Add(element);
             }
 

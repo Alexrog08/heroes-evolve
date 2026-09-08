@@ -217,7 +217,8 @@ namespace HeroLoadoutFixer
         }
 
         /// <summary>
-        /// A lord walks into a town and may buy one thing.
+        /// A lord walks into a town: he offloads any loot he is carrying, and
+        /// may buy one thing.
         ///
         /// Villages are skipped: their roster is food and trade goods, and the
         /// scan would find nothing while running for every party on the map.
@@ -231,9 +232,26 @@ namespace HeroLoadoutFixer
         {
             try
             {
-                if (!Settings.EnablePurchases) return;
                 if (settlement == null || !settlement.IsTown) return;
                 if (party != null && party == MobileParty.MainParty) return;
+
+                // Offloading the loot comes first and answers to nothing else.
+                // It used to sit below the once-a-day gate and the shopping
+                // roll, which meant a lord carrying somebody else's cuirass sold
+                // it on one town visit in four, and never at all if purchases
+                // were switched off -- so stolen gear stalled in baggage trains
+                // instead of circulating, which is the entire point of taking
+                // it. A man walking into a market with loot sells it because he
+                // is standing there, not because he felt like buying something.
+                //
+                // A leader is required: SellAt pays party.LeaderHero, and a
+                // leaderless party would hand the goods over for nothing.
+                if (Settings.EnableCaptureLoss && party != null && party.LeaderHero != null)
+                {
+                    StolenGoods.SellAt(settlement, party.Party);
+                }
+
+                if (!Settings.EnablePurchases) return;
 
                 Hero shopper = hero;
                 if (shopper == null && party != null) shopper = party.LeaderHero;
@@ -249,14 +267,6 @@ namespace HeroLoadoutFixer
                 // shopping trip; walking out empty-handed still used it up, and
                 // re-rolling at the next gate would quietly multiply the rate.
                 if (id != null) _shoppedToday.Add(id);
-
-                // Before buying: turn the loot he cannot use into coin, which
-                // both funds the purchase and puts the piece on a shelf where
-                // its owner -- or anybody else -- may find it again.
-                if (Settings.EnableCaptureLoss && party != null)
-                {
-                    StolenGoods.SellAt(settlement, party.Party);
-                }
 
                 ShoppingTrip.Shop(shopper, settlement, _budget, ClanWeight, SkillWeight, MinimumTier);
             }

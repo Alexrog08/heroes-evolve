@@ -2555,7 +2555,7 @@ namespace HeroLoadoutFixer
         /// help -- there are 108 leg armours in the whole game against 1125
         /// helmets. If it holds them but all at the wrong tier, the engine is
         /// right and the lord has to wait for a better town. If it holds them at
-        /// the right tier and the culture rule rejects them, that is a policy
+        /// the right tier and nothing fits his skills or usage, that is a policy
         /// decision showing its cost, and it is the one worth revisiting.
         ///
         /// The predicates are the scanner's own, called in the scanner's order,

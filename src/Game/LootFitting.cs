@@ -9,16 +9,17 @@ namespace HeroLoadoutFixer
     /// A captor trying on what he has just taken.
     ///
     /// The same rules as buying, with the money removed: the same category he
-    /// already carries, half a tier better, inside his ceiling, of a culture he
-    /// can wear, and only into a slot he already fills. Nothing here re-decides
-    /// what kind of fighter he is, exactly as nothing in the market does.
+    /// already carries, enough better to be worth the swap, inside his ceiling,
+    /// and only into a slot he already fills. Nothing here re-decides what kind
+    /// of fighter he is, exactly as nothing in the market does.
     ///
-    /// Most of the time he can use none of it, and that is right. A Vlandian who
-    /// strips a Khuzait is holding Khuzait gear, which the culture rule keeps off
-    /// him; he will sell it, and it will turn up on a shelf somewhere. But when
-    /// the loot does fit -- a neighbour of the same culture, a piece with no
-    /// culture at all -- he wears it, which is what anyone would do and what
-    /// makes taking it worth the standing it cost him.
+    /// Most of the time he keeps almost none of it, and that is right -- but the
+    /// reason changed when culture stopped being a wall. A Vlandian who strips a
+    /// Khuzait is holding Khuzait gear, and MarketRules.CulturePreference makes
+    /// him want a full tier and a half of it before he will take off his own
+    /// people's harness for it. So he wears the odd piece that is genuinely
+    /// better and sells the rest, which is what anyone would do and what makes
+    /// taking it worth the standing it cost him.
     ///
     /// Several pieces, not one. The trip through a town is capped at a single
     /// purchase to pace the spending; there is no spending here, and a man who

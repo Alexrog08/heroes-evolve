@@ -170,13 +170,20 @@ namespace HeroLoadoutFixer
             Hero hero = Hero.OneToOneConversationHero;
             if (hero == null) return;
 
-            // Into whatever is holding him: your saddlebags on the road, the
-            // keep's stores if he is in a cell. The gear stays where the man is.
+            // He must still be somebody's prisoner for this to mean anything.
             PartyBase holder = hero.PartyBelongedToAsPrisoner;
             if (holder == null) return;
 
+            // Into your own baggage, not into whatever is holding him. You are
+            // standing in front of the man, so your party is right there -- and
+            // the alternative is worse than it sounds: a prisoner in one of your
+            // towns is held by that town's party, whose ItemRoster is the
+            // market stock. Taking his gear would have put it on sale in your
+            // own shop, for you to buy back. See PlunderService.SpoilsFor.
+            PartyBase spoils = PartyBase.MainParty != null ? PartyBase.MainParty : holder;
+
             int value;
-            int taken = PlunderService.Take(holder, hero, out value);
+            int taken = PlunderService.Take(spoils, hero, out value);
             if (taken == 0) return;
 
             // Chosen, and therefore paid for. This is the one path where the
