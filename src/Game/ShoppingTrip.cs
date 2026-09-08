@@ -38,17 +38,35 @@ namespace HeroLoadoutFixer
             public MarketOffer Offer;
             public int WornTier;
             public int WornFine;
+            public bool WornOwnCulture;
 
-            /// <summary>Whole tiers gained. The reason this slot beats another.</summary>
+            /// <summary>
+            /// Whole tiers gained, as this hero values them. The reason this
+            /// slot beats another.
+            ///
+            /// Effective on both sides, so the culture preference competes on
+            /// the term the ordering actually leads on. Left raw, a foreign
+            /// piece one tier better would outrank a same-tier piece in his own
+            /// colours every time, and the preference would never once decide
+            /// anything -- see MarketRules.CulturePreference.
+            /// </summary>
             public int Gain
             {
-                get { return Offer.Tier - WornTier; }
+                get
+                {
+                    return MarketRules.EffectiveTier(Offer.Tier, Offer.OwnCulture)
+                         - MarketRules.EffectiveTier(WornTier, WornOwnCulture);
+                }
             }
 
             /// <summary>The same gain in hundredths, which breaks ties.</summary>
             public int FineGain
             {
-                get { return Offer.FineTier - WornFine; }
+                get
+                {
+                    return MarketRules.Effective(Offer.FineTier, Offer.OwnCulture)
+                         - MarketRules.Effective(WornFine, WornOwnCulture);
+                }
             }
         }
 
@@ -121,9 +139,11 @@ namespace HeroLoadoutFixer
                 bool prefersBlunt = WeaponPerks.FavoursAxeOrMace(hero, category);
 
                 List<MarketOffer> offers = MarketScanner.Weapons(stock, settlement, hero, category, culture,
-                                                                 ceiling, FineOf(worn), skills, mounted, partner,
+                                                                 ceiling, FineOf(worn),
+                                                                 ItemCatalog.IsOwnCulture(worn, culture),
+                                                                 skills, mounted, partner,
                                                                  prefersBlunt);
-                best = Better(best, slot, offers, worn, limit);
+                best = Better(best, slot, offers, worn, culture, limit);
             }
 
             foreach (EquipmentIndex slot in SlotMapping.ArmorSlots)
@@ -133,8 +153,9 @@ namespace HeroLoadoutFixer
                 if (ItemCatalog.IsIrreplaceable(worn)) continue;
 
                 List<MarketOffer> offers = MarketScanner.Armor(stock, settlement, hero, worn.ItemType,
-                                                               culture, ceiling, FineOf(worn));
-                best = Better(best, slot, offers, worn, limit);
+                                                               culture, ceiling, FineOf(worn),
+                                                               ItemCatalog.IsOwnCulture(worn, culture));
+                best = Better(best, slot, offers, worn, culture, limit);
             }
 
             ItemObject mount = hero.BattleEquipment[EquipmentIndex.Horse].Item;
@@ -143,8 +164,10 @@ namespace HeroLoadoutFixer
                 if (!ItemCatalog.IsIrreplaceable(mount))
                 {
                     List<MarketOffer> mounts = MarketScanner.Mounts(stock, settlement, hero, culture,
-                                                                    ceiling, FineOf(mount), skills);
-                    best = Better(best, EquipmentIndex.Horse, mounts, mount, limit);
+                                                                    ceiling, FineOf(mount),
+                                                                    ItemCatalog.IsOwnCulture(mount, culture),
+                                                                    skills);
+                    best = Better(best, EquipmentIndex.Horse, mounts, mount, culture, limit);
                 }
 
                 // The harness hangs off the mount only for the family match -- a
@@ -157,8 +180,9 @@ namespace HeroLoadoutFixer
                 if (harness != null && !ItemCatalog.IsIrreplaceable(harness))
                 {
                     List<MarketOffer> harnesses = MarketScanner.Harnesses(stock, settlement, hero, mount,
-                                                                          culture, ceiling, FineOf(harness));
-                    best = Better(best, EquipmentIndex.HorseHarness, harnesses, harness, limit);
+                                                                          culture, ceiling, FineOf(harness),
+                                                                          ItemCatalog.IsOwnCulture(harness, culture));
+                    best = Better(best, EquipmentIndex.HorseHarness, harnesses, harness, culture, limit);
                 }
             }
 
@@ -218,7 +242,8 @@ namespace HeroLoadoutFixer
         /// perfectly good cheaper upgrade sat on the same shelf.
         /// </summary>
         private static Candidate Better(Candidate best, EquipmentIndex slot,
-                                        List<MarketOffer> offers, ItemObject worn, int limit)
+                                        List<MarketOffer> offers, ItemObject worn,
+                                        CultureObject culture, int limit)
         {
             if (offers == null || offers.Count == 0) return best;
 
@@ -231,11 +256,16 @@ namespace HeroLoadoutFixer
 
             int wornTier = TierOf(worn);
             int wornFine = FineOf(worn);
+            bool wornOwn = ItemCatalog.IsOwnCulture(worn, culture);
 
             MarketOffer offer = offers[chosen];
+            int gain = MarketRules.EffectiveTier(offer.Tier, offer.OwnCulture)
+                     - MarketRules.EffectiveTier(wornTier, wornOwn);
+            int fineGain = MarketRules.Effective(offer.FineTier, offer.OwnCulture)
+                         - MarketRules.Effective(wornFine, wornOwn);
+
             if (best != null
-                && MarketRules.Compare(offer.Tier - wornTier, offer.OwnClass,
-                                       offer.FineTier - wornFine, offer.Price,
+                && MarketRules.Compare(gain, offer.OwnClass, fineGain, offer.Price,
                                        best.Gain, best.Offer.OwnClass, best.FineGain, best.Offer.Price) >= 0)
             {
                 return best;
@@ -246,6 +276,7 @@ namespace HeroLoadoutFixer
             candidate.Offer = offer;
             candidate.WornTier = wornTier;
             candidate.WornFine = wornFine;
+            candidate.WornOwnCulture = wornOwn;
             return candidate;
         }
 

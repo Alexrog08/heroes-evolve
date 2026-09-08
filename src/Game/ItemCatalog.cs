@@ -250,7 +250,13 @@ namespace HeroLoadoutFixer
         }
 
         /// <summary>
-        /// Culture and tier, and nothing about where the item came from.
+        /// Tier, and nothing about where the item came from or whose colours
+        /// it wears.
+        ///
+        /// Culture used to be refused here and is now a preference inside
+        /// MarketRules instead -- see CulturePreference for why the wall had to
+        /// come down. The grant still refuses across cultures, and should: that
+        /// is a lord's own people handing him his first kit, not a shelf.
         ///
         /// What is on a shelf is for sale, whatever it is. An item only reaches
         /// a town roster because somebody put it there, so once a gilded helm
@@ -269,8 +275,20 @@ namespace HeroLoadoutFixer
             // ItemTiers enum (Tier1 = 0 .. Tier6 = 5). Convert rather than letting the
             // two vocabularies meet raw.
             if ((int)item.Tier + 1 > maxTier) return false;
-            if (item.Culture != null && culture != null && item.Culture.StringId != culture.StringId) return false;
             return true;
+        }
+
+        /// <summary>
+        /// Whether this item is dressed in the hero's own colours.
+        ///
+        /// An item with no culture is not: it belongs to nobody in particular
+        /// and suits everybody equally, which is exactly the neutral case the
+        /// preference should leave alone.
+        /// </summary>
+        public static bool IsOwnCulture(ItemObject item, CultureObject culture)
+        {
+            if (item == null || item.Culture == null || culture == null) return false;
+            return item.Culture.StringId == culture.StringId;
         }
 
         /// <summary>

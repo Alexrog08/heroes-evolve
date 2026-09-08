@@ -39,6 +39,13 @@ namespace HeroLoadoutFixer
         /// </summary>
         public bool OwnClass;
 
+        /// <summary>
+        /// True when the item is dressed in the hero's own culture's colours.
+        /// Both the upgrade gate and the ordering read it -- see
+        /// MarketRules.CulturePreference.
+        /// </summary>
+        public bool OwnCulture;
+
         public MarketOffer(EquipmentElement element, int price, int tier, int fineTier, bool ownClass)
         {
             Element = element;

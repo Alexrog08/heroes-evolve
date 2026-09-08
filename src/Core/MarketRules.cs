@@ -34,6 +34,68 @@ namespace HeroLoadoutFixer.Core
         public const int MinimumGain = 50;
 
         /// <summary>
+        /// What a man will give up to be dressed like his own people, in the
+        /// same hundredths as everything else here. One whole tier.
+        ///
+        /// This replaces a hard culture filter, and the filter was wrong in a
+        /// way only a live campaign showed. Armour in this game is always
+        /// culture-stamped -- measured on the shipped catalogue: of 656 body
+        /// armours, 107 leg, 90 hand and 1079 head, exactly two carry no
+        /// culture at all. So a Battanian lord holding a conquered Khuzait fief
+        /// could buy a sword and never, for the rest of the campaign, buy a
+        /// cuirass. And nothing would send him home: Hero.UpdateHomeSettlement
+        /// follows holdings, never culture, and the only AI behaviour in the
+        /// game that reads Culture to pick a destination is bandits choosing a
+        /// hideout. He would simply stand in Khuzait lands in his shirt.
+        ///
+        /// A preference has none of that failure mode and keeps everything the
+        /// filter was for. Applied to what is worn as well as to what is
+        /// offered, so MinimumGain keeps its meaning, the arithmetic comes out
+        /// exactly as intended:
+        ///
+        ///   offered >= worn + 0.5 tier   for a foreigner replacing a foreigner
+        ///   offered >= worn - 0.5 tier   for his own culture replacing a foreigner
+        ///   offered >= worn + 1.5 tiers  for a foreigner replacing his own
+        ///
+        /// So abroad he wears what he can get; at home he trades back into his
+        /// own colours for the same tier, or half a tier worse; and once he is
+        /// dressed as his people dress, only a very large improvement moves him
+        /// out again. Nobody is stranded and the map still looks like itself.
+        ///
+        /// One hundred rather than fifty because fifty makes culture a
+        /// tiebreak only -- it would never buy a downgrade, and the whole point
+        /// is that a Battanian in Battania should be willing to take a slightly
+        /// plainer Battanian helm over the fine Khuzait one he is wearing.
+        /// A constant rather than a setting until a census says what it should
+        /// be; it is one number and the build takes thirty seconds.
+        /// </summary>
+        public const int CulturePreference = 100;
+
+        /// <summary>
+        /// A fine tier as this hero values it, rather than as the game scores
+        /// it. Neutral items get nothing: they are equally acceptable to
+        /// everyone, and paying them the bonus would rank a generic helm above
+        /// a hero's own culture's.
+        /// </summary>
+        public static int Effective(int fine, bool ownCulture)
+        {
+            return ownCulture ? fine + CulturePreference : fine;
+        }
+
+        /// <summary>
+        /// The same, in whole tiers, for the coarse term the ordering leads on.
+        ///
+        /// Derived from the one constant rather than given a second, so the two
+        /// halves of the comparison cannot drift apart. At a preference of 100
+        /// his own culture is worth a whole rank; at 50 it is worth none, and
+        /// culture decides only ties. That is the honest shape of the knob.
+        /// </summary>
+        public static int EffectiveTier(int tier, bool ownCulture)
+        {
+            return ownCulture ? tier + CulturePreference / 100 : tier;
+        }
+
+        /// <summary>
         /// True when an offer is enough better than what is worn to be worth
         /// buying.
         ///
@@ -57,11 +119,19 @@ namespace HeroLoadoutFixer.Core
         /// lords lost their naphtha pots to a 141-denar javelin before this
         /// existed.
         /// </summary>
-        public static bool IsUpgrade(int wornFine, int offeredFine, int offeredTier, int ceiling)
+        public static bool IsUpgrade(int wornFine, bool wornOwnCulture,
+                                     int offeredFine, bool offeredOwnCulture,
+                                     int offeredTier, int ceiling)
         {
             if (wornFine < 1 || offeredFine < 1) return false;
             if (offeredTier < 1 || offeredTier > ceiling) return false;
-            return offeredFine - wornFine >= MinimumGain;
+
+            // Both sides through the same transform. Applying the preference to
+            // the offer alone would let a lord churn his own culture's gear for
+            // trivial gains, because every same-culture swap would start a whole
+            // tier ahead -- MinimumGain would stop meaning half a tier.
+            return Effective(offeredFine, offeredOwnCulture)
+                 - Effective(wornFine, wornOwnCulture) >= MinimumGain;
         }
 
         /// <summary>

@@ -93,7 +93,8 @@ namespace HeroLoadoutFixer
         /// </summary>
         public static List<MarketOffer> Weapons(List<StockEntry> stock, Settlement settlement, Hero hero,
                                                 WeaponCategory category, CultureObject culture,
-                                                int ceiling, int wornFine, SkillProfile skills, bool mounted,
+                                                int ceiling, int wornFine, bool wornOwnCulture,
+                                                SkillProfile skills, bool mounted,
                                                 WeaponCategory avoidAlsoServing, bool preferAxeOrMace)
         {
             List<MarketOffer> offers = new List<MarketOffer>();
@@ -102,7 +103,9 @@ namespace HeroLoadoutFixer
             for (int i = 0; i < stock.Count; i++)
             {
                 StockEntry entry = stock[i];
-                if (!MarketRules.IsUpgrade(wornFine, entry.FineTier, entry.Tier, ceiling)) continue;
+                bool own = ItemCatalog.IsOwnCulture(entry.Item, culture);
+                if (!MarketRules.IsUpgrade(wornFine, wornOwnCulture, entry.FineTier, own,
+                                           entry.Tier, ceiling)) continue;
 
                 ItemObject item = entry.Item;
                 if (!ItemCatalog.IsEligible(item, category, culture, ceiling, skills, hero, mounted, false)) continue;
@@ -114,7 +117,7 @@ namespace HeroLoadoutFixer
                     ? CategoryRules.IsAxeOrMace(offered)
                     : offered == category;
 
-                Offer(offers, settlement, hero, entry, favoured);
+                Offer(offers, settlement, hero, entry, favoured, own);
             }
 
             offers.Sort(MarketOfferOrder.Instance);
@@ -124,7 +127,7 @@ namespace HeroLoadoutFixer
         /// <summary>Offers that would upgrade one armour slot.</summary>
         public static List<MarketOffer> Armor(List<StockEntry> stock, Settlement settlement, Hero hero,
                                               ItemObject.ItemTypeEnum wanted, CultureObject culture,
-                                              int ceiling, int wornFine)
+                                              int ceiling, int wornFine, bool wornOwnCulture)
         {
             List<MarketOffer> offers = new List<MarketOffer>();
             if (stock == null) return offers;
@@ -133,10 +136,12 @@ namespace HeroLoadoutFixer
             {
                 StockEntry entry = stock[i];
                 if (entry.Type != wanted) continue;
-                if (!MarketRules.IsUpgrade(wornFine, entry.FineTier, entry.Tier, ceiling)) continue;
+                bool own = ItemCatalog.IsOwnCulture(entry.Item, culture);
+                if (!MarketRules.IsUpgrade(wornFine, wornOwnCulture, entry.FineTier, own,
+                                           entry.Tier, ceiling)) continue;
                 if (!ItemCatalog.PassesMarketFilters(entry.Item, culture, ceiling)) continue;
 
-                Offer(offers, settlement, hero, entry, true);
+                Offer(offers, settlement, hero, entry, true, own);
             }
 
             offers.Sort(MarketOfferOrder.Instance);
@@ -149,7 +154,8 @@ namespace HeroLoadoutFixer
         /// not be sold a mule, however high its tier.
         /// </summary>
         public static List<MarketOffer> Mounts(List<StockEntry> stock, Settlement settlement, Hero hero,
-                                               CultureObject culture, int ceiling, int wornFine, SkillProfile skills)
+                                               CultureObject culture, int ceiling, int wornFine,
+                                               bool wornOwnCulture, SkillProfile skills)
         {
             List<MarketOffer> offers = new List<MarketOffer>();
             if (stock == null) return offers;
@@ -158,14 +164,16 @@ namespace HeroLoadoutFixer
             {
                 StockEntry entry = stock[i];
                 if (entry.Type != ItemObject.ItemTypeEnum.Horse) continue;
-                if (!MarketRules.IsUpgrade(wornFine, entry.FineTier, entry.Tier, ceiling)) continue;
+                bool own = ItemCatalog.IsOwnCulture(entry.Item, culture);
+                if (!MarketRules.IsUpgrade(wornFine, wornOwnCulture, entry.FineTier, own,
+                                           entry.Tier, ceiling)) continue;
 
                 ItemObject item = entry.Item;
                 if (!ItemCatalog.IsWarMount(item)) continue;
                 if (!ItemCatalog.PassesMarketFilters(item, culture, ceiling)) continue;
                 if (!ItemClassifier.MeetsDifficulty(item, skills)) continue;
 
-                Offer(offers, settlement, hero, entry, true);
+                Offer(offers, settlement, hero, entry, true, own);
             }
 
             offers.Sort(MarketOfferOrder.Instance);
@@ -178,7 +186,8 @@ namespace HeroLoadoutFixer
         /// cannot dress a camel.
         /// </summary>
         public static List<MarketOffer> Harnesses(List<StockEntry> stock, Settlement settlement, Hero hero,
-                                                  ItemObject mount, CultureObject culture, int ceiling, int wornFine)
+                                                  ItemObject mount, CultureObject culture, int ceiling,
+                                                  int wornFine, bool wornOwnCulture)
         {
             List<MarketOffer> offers = new List<MarketOffer>();
             if (stock == null) return offers;
@@ -190,13 +199,15 @@ namespace HeroLoadoutFixer
             {
                 StockEntry entry = stock[i];
                 if (entry.Type != ItemObject.ItemTypeEnum.HorseHarness) continue;
-                if (!MarketRules.IsUpgrade(wornFine, entry.FineTier, entry.Tier, ceiling)) continue;
+                bool own = ItemCatalog.IsOwnCulture(entry.Item, culture);
+                if (!MarketRules.IsUpgrade(wornFine, wornOwnCulture, entry.FineTier, own,
+                                           entry.Tier, ceiling)) continue;
 
                 ItemObject item = entry.Item;
                 if (!item.HasArmorComponent || item.ArmorComponent.FamilyType != family) continue;
                 if (!ItemCatalog.PassesMarketFilters(item, culture, ceiling)) continue;
 
-                Offer(offers, settlement, hero, entry, true);
+                Offer(offers, settlement, hero, entry, true, own);
             }
 
             offers.Sort(MarketOfferOrder.Instance);
@@ -213,7 +224,7 @@ namespace HeroLoadoutFixer
         /// entry, not that the item is free, so it is dropped.
         /// </summary>
         private static void Offer(List<MarketOffer> offers, Settlement settlement, Hero hero,
-                                  StockEntry entry, bool ownClass)
+                                  StockEntry entry, bool ownClass, bool ownCulture)
         {
             // No settlement means nobody is selling: this is a man looking
             // through what he already owns. The item's own worth stands in for

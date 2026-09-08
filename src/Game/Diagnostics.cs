@@ -2502,18 +2502,21 @@ namespace HeroLoadoutFixer
             List<MarketOffer> offers;
             if (slot == EquipmentIndex.Horse)
             {
-                offers = MarketScanner.Mounts(stock, settlement, hero, culture, ceiling, wornFine, skills);
+                offers = MarketScanner.Mounts(stock, settlement, hero, culture, ceiling, wornFine,
+                                              ItemCatalog.IsOwnCulture(worn, culture), skills);
             }
             else if (slot == EquipmentIndex.HorseHarness)
             {
                 offers = MarketScanner.Harnesses(stock, settlement, hero,
                                                  hero.BattleEquipment[EquipmentIndex.Horse].Item,
-                                                 culture, ceiling, wornFine);
+                                                 culture, ceiling, wornFine,
+                                                 ItemCatalog.IsOwnCulture(worn, culture));
             }
             else if (slot == EquipmentIndex.Head || slot == EquipmentIndex.Body || slot == EquipmentIndex.Leg
                      || slot == EquipmentIndex.Gloves || slot == EquipmentIndex.Cape)
             {
-                offers = MarketScanner.Armor(stock, settlement, hero, worn.ItemType, culture, ceiling, wornFine);
+                offers = MarketScanner.Armor(stock, settlement, hero, worn.ItemType, culture, ceiling,
+                                             wornFine, ItemCatalog.IsOwnCulture(worn, culture));
             }
             else
             {
@@ -2523,7 +2526,8 @@ namespace HeroLoadoutFixer
                 if (partner != WeaponCategory.None && !current.Contains(partner)) partner = WeaponCategory.None;
 
                 offers = MarketScanner.Weapons(stock, settlement, hero, category, culture,
-                                               ceiling, wornFine, skills, mounted, partner,
+                                               ceiling, wornFine, ItemCatalog.IsOwnCulture(worn, culture),
+                                               skills, mounted, partner,
                                                WeaponPerks.FavoursAxeOrMace(hero, category));
             }
 
@@ -2560,17 +2564,16 @@ namespace HeroLoadoutFixer
         private static string WhyNothing(List<StockEntry> stock, ItemObject worn,
                                          CultureObject culture, int ceiling, int wornFine)
         {
-            int sameKind, rightTier, wrongCulture;
+            int sameKind, rightTier, foreign;
             string reason = Blocker(stock, worn, culture, ceiling, wornFine,
-                                    out sameKind, out rightTier, out wrongCulture);
+                                    out sameKind, out rightTier, out foreign);
 
             if (reason == "emptyShelf") return "the town stocks none of that kind at all";
             if (reason == "wrongTier") return sameKind + " of that kind, none in the tier band";
-            if (wrongCulture == rightTier) return rightTier + " at the right tier, ALL rejected on culture";
-            if (wrongCulture > 0)
+            if (foreign > 0)
             {
-                return rightTier + " at the right tier, " + wrongCulture
-                       + " rejected on culture, the rest on skill or usage";
+                return rightTier + " at the right tier (" + foreign
+                       + " of them foreign), rejected on skill or usage";
             }
             return rightTier + " at the right tier, rejected on skill or usage";
         }
@@ -2582,11 +2585,13 @@ namespace HeroLoadoutFixer
         /// </summary>
         private static string Blocker(List<StockEntry> stock, ItemObject worn, CultureObject culture,
                                       int ceiling, int wornFine,
-                                      out int sameKind, out int rightTier, out int wrongCulture)
+                                      out int sameKind, out int rightTier, out int foreign)
         {
             sameKind = 0;
             rightTier = 0;
-            wrongCulture = 0;
+            foreign = 0;
+
+            bool wornOwn = ItemCatalog.IsOwnCulture(worn, culture);
 
             for (int i = 0; i < stock.Count; i++)
             {
@@ -2594,19 +2599,23 @@ namespace HeroLoadoutFixer
                 if (item.ItemType != worn.ItemType) continue;
                 sameKind++;
 
-                if (!MarketRules.IsUpgrade(wornFine, MarketScanner.FineTierOf(item),
+                bool own = ItemCatalog.IsOwnCulture(item, culture);
+                if (!MarketRules.IsUpgrade(wornFine, wornOwn,
+                                           MarketScanner.FineTierOf(item), own,
                                            MarketScanner.TierOf(item), ceiling)) continue;
                 rightTier++;
 
-                if (item.Culture != null && culture != null && item.Culture.StringId != culture.StringId)
-                {
-                    wrongCulture++;
-                }
+                // Counted, not blamed. Culture stopped refusing anything when it
+                // became a preference -- see MarketRules.CulturePreference -- so
+                // a foreign offer that got this far is eligible, merely less
+                // attractive than a local one would have been. "culture" is no
+                // longer a blocker this can return, and the census will stop
+                // reporting it.
+                if (!own) foreign++;
             }
 
             if (sameKind == 0) return "emptyShelf";
             if (rightTier == 0) return "wrongTier";
-            if (wrongCulture == rightTier) return "culture";
             return "skillOrUsage";
         }
 
@@ -2744,9 +2753,9 @@ namespace HeroLoadoutFixer
             int wornTier = MarketScanner.TierOf(worn);
             if (wornTier >= ceiling) return false;
 
-            int sameKind, rightTier, wrongCulture;
+            int sameKind, rightTier, foreign;
             Bump(blockedBy, Blocker(stock, worn, culture, ceiling, MarketScanner.FineTierOf(worn),
-                                    out sameKind, out rightTier, out wrongCulture));
+                                    out sameKind, out rightTier, out foreign));
             return true;
         }
 

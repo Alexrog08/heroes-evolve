@@ -12,37 +12,83 @@ namespace HeroLoadoutFixer.Tests
             const int Step = MarketRules.MinimumGain;
 
             // Half a tier is the bar. Anything less is not worth a purchase.
-            Check.True(MarketRules.IsUpgrade(350, 350 + Step, 4, 6), "half a tier better is worth buying");
-            Check.False(MarketRules.IsUpgrade(350, 350 + Step - 1, 4, 6), "one hundredth short is not");
-            Check.False(MarketRules.IsUpgrade(350, 350, 4, 6), "the same item is not an upgrade");
-            Check.False(MarketRules.IsUpgrade(400, 350, 3, 6), "a worse item is never an upgrade");
+            Check.True(MarketRules.IsUpgrade(350, false, 350 + Step, false, 4, 6), "half a tier better is worth buying");
+            Check.False(MarketRules.IsUpgrade(350, false, 350 + Step - 1, false, 4, 6), "one hundredth short is not");
+            Check.False(MarketRules.IsUpgrade(350, false, 350, false, 4, 6), "the same item is not an upgrade");
+            Check.False(MarketRules.IsUpgrade(400, false, 350, false, 3, 6), "a worse item is never an upgrade");
 
             // The case the old whole-tier rule got backwards. 349 and 351 sit in
             // different whole tiers and are two hundredths apart; buying that was
             // spending real gold for nothing.
-            Check.False(MarketRules.IsUpgrade(349, 351, 4, 6), "straddling a rounding boundary is not an upgrade");
+            Check.False(MarketRules.IsUpgrade(349, false, 351, false, 4, 6), "straddling a rounding boundary is not an upgrade");
 
             // ...and the case it refused. Both of these are whole tier 3
             // (round(2.75) and round(3.30)), and the gap between them is larger
             // than the one above that it allowed.
-            Check.True(MarketRules.IsUpgrade(275, 330, 3, 6), "a real gain inside one whole tier is an upgrade");
+            Check.True(MarketRules.IsUpgrade(275, false, 330, false, 3, 6), "a real gain inside one whole tier is an upgrade");
 
             // The ceiling is a purchase cap in whole tiers, and it outranks the
             // gain: a lord who has outgrown his merit stops buying.
-            Check.False(MarketRules.IsUpgrade(300, 500, 5, 4), "nothing above the ceiling is bought");
-            Check.True(MarketRules.IsUpgrade(300, 400, 4, 4), "the ceiling itself is reachable");
+            Check.False(MarketRules.IsUpgrade(300, false, 500, false, 5, 4), "nothing above the ceiling is bought");
+            Check.True(MarketRules.IsUpgrade(300, false, 400, false, 4, 4), "the ceiling itself is reachable");
 
             // A ceiling below what he wears leaves him alone rather than
             // downgrading him: the mod never takes gear off a lord.
-            Check.False(MarketRules.IsUpgrade(500, 300, 3, 3), "a fallen ceiling does not strip a lord");
+            Check.False(MarketRules.IsUpgrade(500, false, 300, false, 3, 3), "a fallen ceiling does not strip a lord");
 
             // Below the bottom of the scale is outside the model. Naphtha pots
             // score there, and reading them as "worse than everything" had a
             // 141-denar javelin replacing three lords' pots in a live campaign.
-            Check.False(MarketRules.IsUpgrade(0, 400, 4, 6), "an item below the scale is left alone");
-            Check.False(MarketRules.IsUpgrade(0, 600, 6, 6), "...not even for something good");
-            Check.False(MarketRules.IsUpgrade(300, 0, 1, 6), "and nothing below the scale is ever bought");
-            Check.False(MarketRules.IsUpgrade(300, 400, 0, 6), "nor anything whose whole tier is below one");
+            Check.False(MarketRules.IsUpgrade(0, false, 400, false, 4, 6), "an item below the scale is left alone");
+            Check.False(MarketRules.IsUpgrade(0, false, 600, false, 6, 6), "...not even for something good");
+            Check.False(MarketRules.IsUpgrade(300, false, 0, false, 1, 6), "and nothing below the scale is ever bought");
+            Check.False(MarketRules.IsUpgrade(300, false, 400, false, 0, 6), "nor anything whose whole tier is below one");
+
+            // --- culture as a preference, not a wall ---
+            // The wall came down because armour is always culture-stamped: two
+            // of 2,332 pieces in the shipped catalogue carry no culture, so a
+            // lord abroad could buy a sword and never a cuirass. See
+            // MarketRules.CulturePreference.
+
+            // Abroad, nothing changes. He is held to the ordinary bar.
+            Check.True(MarketRules.IsUpgrade(400, false, 450, false, 5, 6),
+                       "a foreigner still needs half a tier");
+            Check.False(MarketRules.IsUpgrade(400, false, 440, false, 5, 6),
+                        "and does not get it for less");
+
+            // At home his own colours are worth the swap at the same tier...
+            Check.True(MarketRules.IsUpgrade(400, false, 400, true, 4, 6),
+                       "his own culture at the same tier is worth the swap");
+
+            // ...and at half a tier worse, which is the whole point: a lord
+            // trades a fine foreign helm for a plainer one of his own people.
+            Check.True(MarketRules.IsUpgrade(400, false, 350, true, 4, 6),
+                       "half a tier worse in his own colours still is");
+            Check.False(MarketRules.IsUpgrade(400, false, 349, true, 4, 6),
+                        "one hundredth further is not");
+
+            // Once dressed as his people dress, it takes a great deal to move
+            // him out again.
+            Check.False(MarketRules.IsUpgrade(400, true, 500, false, 5, 6),
+                        "a whole tier of foreign gear does not tempt him");
+            Check.True(MarketRules.IsUpgrade(400, true, 550, false, 6, 6),
+                       "a tier and a half does");
+
+            // Symmetry, which is what keeps MinimumGain meaning half a tier.
+            // Applied to the offer alone, every same-culture swap would start a
+            // whole tier ahead and lords would churn their own kit for nothing.
+            Check.False(MarketRules.IsUpgrade(400, true, 420, true, 5, 6),
+                        "own-to-own still needs half a tier");
+            Check.True(MarketRules.IsUpgrade(400, true, 450, true, 5, 6),
+                       "and gets it at half a tier, exactly as before");
+
+            // A neutral item belongs to nobody and gets no thumb on the scale.
+            Check.Equal(400, MarketRules.Effective(400, false), "a neutral item is valued as scored");
+            Check.Equal(400 + MarketRules.CulturePreference, MarketRules.Effective(400, true),
+                        "his own is valued higher");
+            Check.Equal(5, MarketRules.EffectiveTier(4, true),
+                        "and a whole rank higher, at a preference of one tier");
+            Check.Equal(4, MarketRules.EffectiveTier(4, false), "a foreign one is not");
 
             // --- ordering ---
             // Whole tier first: a real step up beats a cheaper or more
