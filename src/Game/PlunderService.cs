@@ -112,7 +112,9 @@ namespace HeroLoadoutFixer
             if (chance <= 0f) return 0;
             if (MBRandom.RandomFloat > chance) return 0;
 
+            // Nobody to hand it to, nobody robs him. See SpoilsFor.
             PartyBase spoils = SpoilsFor(captorParty, captor);
+            if (spoils == null) return 0;
 
             int value;
             int taken = Take(spoils, prisoner, out value);
@@ -143,17 +145,13 @@ namespace HeroLoadoutFixer
                 // looking at it would be odd; the market's own rules decide
                 // whether any of it suits him, which usually it does not.
                 //
-                // Over a baggage train only. The fitting reads the whole roster
-                // it is handed, and a settlement's roster is not a pile of loot
-                // -- it is the town's stock. Running it there would let the
-                // owner of a castle dress himself out of the shelves for
-                // nothing, eleven pieces at a time, every time he took a
-                // prisoner.
-                if (spoils.IsMobile)
-                {
-                    LootFitting.Equip(captor, spoils.ItemRoster,
-                                      Settings.ClanWeight, Settings.SkillWeight, Settings.MinimumTier);
-                }
+                // Safe to hand the whole roster over because SpoilsFor only ever
+                // returns a baggage train. It used to be able to return a
+                // settlement, and the fitting -- which reads everything it is
+                // given as "the pile he just took" -- then dressed the owner out
+                // of his own town's shelves, eleven pieces at a time.
+                LootFitting.Equip(captor, spoils.ItemRoster,
+                                  Settings.ClanWeight, Settings.SkillWeight, Settings.MinimumTier);
             }
 
             // Honor on both sides, because it is the trait the whole feature
@@ -176,22 +174,30 @@ namespace HeroLoadoutFixer
         }
 
         /// <summary>
-        /// Where a stripped prisoner's kit goes.
+        /// Whose baggage a stripped prisoner's kit goes into, or null when
+        /// there is no such baggage and therefore no robbery.
         ///
-        /// The captor's own baggage whenever he leads a party, and the holding
-        /// party's stores only when he does not. This matters more than it
-        /// looks, and it was wrong: a prisoner taken into a town or castle is
-        /// held by that settlement's own party, and Settlement.ItemRoster is
-        /// literally Settlement.Party.ItemRoster -- for a town, the market
-        /// stock. Emptying a lord into it put his harness on sale for nothing,
-        /// out of the captor's reach and into everybody else's, and left
-        /// StolenGoods with nothing to sell and Recover with nothing to win
+        /// The man who decided it is the man who gets it. That reads as
+        /// obvious and the code did not do it: the event hands over whoever is
+        /// HOLDING the prisoner, and when a town or castle falls,
+        /// PrisonerCaptureCampaignBehavior.HandleSettlementHeroes takes every
+        /// hero inside prisoner with TakePrisonerAction.Apply(settlement.Party,
+        /// ...). Settlement.ItemRoster is literally Settlement.Party.ItemRoster,
+        /// which for a town is its market stock -- so storming a town and
+        /// robbing the lords in it put their harnesses on the shelves for
+        /// nothing, out of the captor's reach and into everybody else's, and
+        /// left StolenGoods with nothing to sell and Recover nothing to win
         /// back.
         ///
-        /// A lord with no party at all still has somewhere to put it: the keep
-        /// he is sitting in. That case keeps the old behaviour, which is right
-        /// for a castle and merely odd for a town, and the fitting is skipped
-        /// there so nothing can be taken back out.
+        /// A settlement is not an inventory, and a hero without a party has
+        /// none of his own -- Bannerlord keeps item rosters on parties, not on
+        /// people. So a captor with nowhere to put it does not take it. That is
+        /// the rule stated plainly rather than a fallback: somebody receives
+        /// the gear, or the gear is not taken.
+        ///
+        /// Bandits keep their share of this. A bandit band has no leader hero,
+        /// so the captor is null, but the band's own baggage train is a real
+        /// inventory and is where the loot belongs.
         /// </summary>
         private static PartyBase SpoilsFor(PartyBase captorParty, Hero captor)
         {
@@ -200,7 +206,9 @@ namespace HeroLoadoutFixer
                 return captor.PartyBelongedTo.Party;
             }
 
-            return captorParty;
+            if (captorParty != null && captorParty.IsMobile) return captorParty;
+
+            return null;
         }
 
         /// <summary>
