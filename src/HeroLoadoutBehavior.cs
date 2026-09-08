@@ -64,6 +64,12 @@ namespace HeroLoadoutFixer
             // without restarting the game.
             Settings.Load();
 
+            // And then MCM over the top of it, when the player has MCM. The
+            // screen keeps writing into Settings as he moves the switches, so
+            // turning capture loss off mid-campaign takes effect at the next
+            // capture with no reload. See McmBridge.
+            McmBridge.Attach();
+
             Diagnostics.ResetSession();
             CultureProfile.Reset();
             CultureArchetypes.Reset();

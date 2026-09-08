@@ -18,6 +18,21 @@ foreach ($r in $refs) {
   if (-not (Test-Path $r)) { Write-Host "MISSING REFERENCE: $r"; exit 1 }
 }
 
+# MCM, referenced to compile against and never required to run. Everything that
+# names an MCM type lives behind McmBridge, which catches the load failure, so a
+# player without MCM keeps settings.xml and loses only the options screen. Built
+# against whatever copy this machine has; the mod does not ship it.
+$mcm = Get-ChildItem -Path (Join-Path $game "..\..\workshop\content\261550") -Recurse `
+         -Filter "MCMv5.dll" -File -ErrorAction SilentlyContinue |
+       Select-Object -First 1
+if (-not $mcm) {
+  $mcm = Get-ChildItem -Path (Join-Path $game "Modules") -Recurse `
+           -Filter "MCMv5.dll" -File -ErrorAction SilentlyContinue |
+         Select-Object -First 1
+}
+if (-not $mcm) { Write-Host "MISSING REFERENCE: MCMv5.dll (install Mod Configuration Menu v5)"; exit 1 }
+$refs += $mcm.FullName
+
 $sources = Get-ChildItem (Join-Path $root "src") -Recurse -Filter *.cs
 
 $rsp = Join-Path $out "mod.rsp"
