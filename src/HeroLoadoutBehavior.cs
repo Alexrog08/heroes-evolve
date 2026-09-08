@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using TaleWorlds.CampaignSystem;
+using TaleWorlds.CampaignSystem.MapEvents;
 using TaleWorlds.CampaignSystem.Party;
 using TaleWorlds.CampaignSystem.Roster;
 using TaleWorlds.CampaignSystem.Settlements;
@@ -108,6 +109,11 @@ namespace HeroLoadoutFixer
             // costs one branch per capture when it is not wanted.
             CampaignEvents.HeroPrisonerTaken.AddNonSerializedListener(this, OnHeroPrisonerTaken);
 
+            // Winning a battle should win back what was stolen from you. The
+            // game's own loot pass refuses to move that gear, so this moves the
+            // part it leaves behind -- see StolenGoods.
+            CampaignEvents.MapEventEnded.AddNonSerializedListener(this, OnMapEventEnded);
+
             // The daily tick above carries the ledger reset and nothing else.
             // The census is deliberately NOT run from it.
             // Measured at 480ms on a 600-lord campaign -- two thousand seven
@@ -175,6 +181,23 @@ namespace HeroLoadoutFixer
             }
         }
 
+        /// <summary>
+        /// A battle is over, so whatever stolen gear the losers were carrying
+        /// changes hands. Guarded like every other event this mod listens to.
+        /// </summary>
+        private void OnMapEventEnded(MapEvent mapEvent)
+        {
+            try
+            {
+                if (!Settings.EnableCaptureLoss) return;
+                StolenGoods.Recover(mapEvent);
+            }
+            catch (System.Exception ex)
+            {
+                ModLog.Error("stolen-goods recovery failed: " + ex.GetType().Name + " " + ex.Message);
+            }
+        }
+
         /// <summary>Forgets what every clan spent yesterday, and who shopped.</summary>
         private void OnDailyTick()
         {
@@ -215,6 +238,14 @@ namespace HeroLoadoutFixer
                 // shopping trip; walking out empty-handed still used it up, and
                 // re-rolling at the next gate would quietly multiply the rate.
                 if (id != null) _shoppedToday.Add(id);
+
+                // Before buying: turn the loot he cannot use into coin, which
+                // both funds the purchase and puts the piece on a shelf where
+                // its owner -- or anybody else -- may find it again.
+                if (Settings.EnableCaptureLoss && party != null)
+                {
+                    StolenGoods.SellAt(settlement, party.Party);
+                }
 
                 ShoppingTrip.Shop(shopper, settlement, _budget, ClanWeight, SkillWeight, MinimumTier);
             }
