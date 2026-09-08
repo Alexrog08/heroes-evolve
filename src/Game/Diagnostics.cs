@@ -479,6 +479,7 @@ namespace HeroLoadoutFixer
                     if (suspects <= 25)
                     {
                         ModLog.Info("SUSPECT hero=" + hero.Name
+                                    + (hero.IsPrisoner ? " PRISONER" : "")
                                     + " age=" + (int)hero.Age
                                     + " weapons=" + weapons
                                     + " body=" + (body == null ? "<none>" : body.StringId + " t" + bodyTier)
@@ -2934,10 +2935,21 @@ namespace HeroLoadoutFixer
             for (int i = 0; i < broken.Count; i++)
             {
                 Hero hero = broken[i];
+                // Says why he is bare, because the two causes want opposite
+                // responses and the census cannot be read without knowing
+                // which it found. A hero the come-of-age bug left half-dressed
+                // is a defect this mod exists to repair. A hero sitting in
+                // somebody's dungeon with nothing on was robbed, most likely
+                // yesterday, and TryRepair is skipping him on purpose until he
+                // is released -- re-equipping a prisoner would undo the capture
+                // within a day of it happening. The first live census reported
+                // two of the second kind as though they were the first.
                 ModLog.Info("BROKEN hero=" + hero.Name
                             + " age=" + (int)hero.Age
                             + " clan=" + (hero.Clan != null ? hero.Clan.Name.ToString() : "<none>")
-                            + " culture=" + CultureIdOf(hero));
+                            + " culture=" + CultureIdOf(hero)
+                            + (hero.IsPrisoner ? " cause=prisoner(stripped; repaired on release)"
+                                               : " cause=defect"));
             }
 
             return broken;

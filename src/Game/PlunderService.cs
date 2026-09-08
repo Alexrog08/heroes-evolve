@@ -66,11 +66,24 @@ namespace HeroLoadoutFixer
         /// Scaling on what was taken is right for more than arithmetic. A thief
         /// learns from the score, not from the number of buckles he undid, and
         /// it self-scales with the campaign: stripping a pauper teaches nothing,
-        /// stripping a king in full harness is a career moment. At a twentieth,
-        /// a well-equipped lord is worth about one point at Roguery 50 and a
-        /// king's kit around three.
+        /// stripping a king in full harness is a career moment. A well-equipped
+        /// lord should be worth about one point at Roguery 50 and a king's kit
+        /// around three.
+        ///
+        /// That intent was right and the divisor was not. It was set at 20 on
+        /// an estimate that a lord's kit came to some thirty-odd thousand
+        /// denars; the first live campaign measured two real robberies at
+        /// 522,184 and 295,896, off by a factor of ten. At 20 the smaller of
+        /// those two paid 14,794 experience, which carries a captor from
+        /// Roguery 50 to 57 in one afternoon, or from 25 to 41. The lesson is
+        /// the old one this project keeps relearning: measure the input before
+        /// calibrating the constant.
+        ///
+        /// Two hundred restores what the paragraph above always meant. A
+        /// 400,000-denar harness is 2,000 experience, which is 1.1 points at
+        /// Roguery 50 against the game's own curve of 30 + 10L + L(L+1)/2.
         /// </summary>
-        public const int RogueryDenarsPerXp = 20;
+        public const int RogueryDenarsPerXp = 200;
 
         /// <summary>
         /// Strips the prisoner if this captor would. Returns how many pieces
