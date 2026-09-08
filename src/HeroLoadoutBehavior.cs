@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using TaleWorlds.CampaignSystem;
-using TaleWorlds.CampaignSystem.MapEvents;
 using TaleWorlds.CampaignSystem.Party;
 using TaleWorlds.CampaignSystem.Roster;
 using TaleWorlds.CampaignSystem.Settlements;
@@ -110,9 +109,11 @@ namespace HeroLoadoutFixer
             CampaignEvents.HeroPrisonerTaken.AddNonSerializedListener(this, OnHeroPrisonerTaken);
 
             // Winning a battle should win back what was stolen from you. The
-            // game's own loot pass refuses to move that gear, so this moves the
-            // part it leaves behind -- see StolenGoods.
-            CampaignEvents.MapEventEnded.AddNonSerializedListener(this, OnMapEventEnded);
+            // game's own loot pass refuses to move that gear, so this adds the
+            // part it leaves behind to the same pile -- while that pile is being
+            // filled, so it shows up in the loot window rather than appearing in
+            // the baggage afterwards. See StolenGoods.
+            CampaignEvents.OnCollectLootsItemsEvent.AddNonSerializedListener(this, OnCollectLootItems);
 
             // The daily tick above carries the ledger reset and nothing else.
             // The census is deliberately NOT run from it.
@@ -182,15 +183,16 @@ namespace HeroLoadoutFixer
         }
 
         /// <summary>
-        /// A battle is over, so whatever stolen gear the losers were carrying
-        /// changes hands. Guarded like every other event this mod listens to.
+        /// A winner's spoils are being counted, so whatever stolen gear the
+        /// losers were carrying goes onto the pile. Guarded like every other
+        /// event this mod listens to.
         /// </summary>
-        private void OnMapEventEnded(MapEvent mapEvent)
+        private void OnCollectLootItems(PartyBase winner, ItemRoster loot)
         {
             try
             {
                 if (!Settings.EnableCaptureLoss) return;
-                StolenGoods.Recover(mapEvent);
+                StolenGoods.Recover(winner, loot);
             }
             catch (System.Exception ex)
             {

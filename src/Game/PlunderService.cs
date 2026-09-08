@@ -210,6 +210,12 @@ namespace HeroLoadoutFixer
             EquipmentElement worn = prisoner.BattleEquipment[slot];
             if (worn.Item == null) return 0;
 
+            // A quest item is not loot. Taking one could strand the quest that
+            // put it there, and the game excludes them from its own looting for
+            // the same reason. Banners need no check: they sit in
+            // ExtraWeaponSlot, which nothing in this mod reaches.
+            if (worn.IsQuestItem) return 0;
+
             // ItemValue rather than Item.Value: it accounts for the modifier, so
             // a fine sword is worth more to take than a rusty one of the same
             // make, which is the whole idea.

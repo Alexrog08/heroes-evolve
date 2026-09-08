@@ -41,8 +41,14 @@ namespace HeroLoadoutFixer
         ///
         /// The lord has no use for a cuirass of the wrong culture and no way to
         /// carry it forever, so he does what anyone would: turns it into coin at
-        /// the first market. The town pays out of its own purse, so a poor town
-        /// buys less, and the item lands on the shelf where anybody may find it.
+        /// the first market.
+        ///
+        /// A town that cannot afford a piece does not get it. Paying what little
+        /// it holds and taking the goods anyway would have lords handing over
+        /// forty-thousand-denar harnesses for nothing, which is not a sale, and
+        /// the piece is better off staying in the baggage until a richer market
+        /// comes along. The purse is drawn down as it goes, so one visit cannot
+        /// empty a town twice over.
         /// </summary>
         public static int SellAt(Settlement settlement, PartyBase party)
         {
@@ -69,10 +75,8 @@ namespace HeroLoadoutFixer
                     int price = component.GetItemPrice(element, party.MobileParty, true);
                     if (price < 0) price = 0;
 
-                    // The town pays what it holds and no more. A market that has
-                    // spent its purse takes the goods cheap, exactly as it does
-                    // for anything else sold into it.
-                    if (price > component.Gold) price = component.Gold;
+                    // No money, no sale. He keeps it and tries the next town.
+                    if (price > component.Gold) break;
 
                     baggage.AddToCounts(element, -1);
                     shelf.AddToCounts(element, 1);
@@ -86,31 +90,52 @@ namespace HeroLoadoutFixer
                 }
             }
 
-            ModLog.Info("STOLENSOLD party=" + party.Name + " town=" + settlement.Name + " pieces=" + sold);
+            if (sold > 0)
+            {
+                ModLog.Info("STOLENSOLD party=" + party.Name + " town=" + settlement.Name
+                            + " pieces=" + sold);
+            }
+
             return sold;
         }
 
         /// <summary>
-        /// Hands the losers' stranded goods to the winner, which is what the
-        /// game would already do if its loot filter let it.
+        /// Adds the losers' stranded goods to the pile a winner is being
+        /// handed, which is what the game would already do if its loot filter
+        /// let it.
         ///
-        /// Only the items vanilla refuses to move. Everything else in that
-        /// baggage train has already been distributed by
-        /// MapEvent.LootDefeatedPartyItems, by its own rules and its own
-        /// chances; this does not touch it, and does not try to be a second
-        /// loot system.
+        /// Into the loot pile itself, not around it, and that is the whole
+        /// reason this hangs off OnCollectLootItems. The roster the event
+        /// carries is MapEventParty.RosterToReceiveLootItems, and that property
+        /// is not one roster but two: for an NPC it returns the party's own
+        /// ItemRoster, and for the player -- IsNpcParty is literally
+        /// "Party != MainParty" -- it returns
+        /// PlayerEncounter.Current.RosterToReceiveLootItems, which is the exact
+        /// object DoLootInventory hands to InventoryScreenHelper.OpenScreenAsLoot.
+        /// So adding here puts a recovered helm in the player's loot window
+        /// beside the ordinary spoils, and in a lord's baggage when the winner
+        /// is a lord, from one line of code. Vanilla mutates the same roster at
+        /// the same moment: the Metallurgy perk strips modifiers off looted
+        /// gear from its own handler on this event.
         ///
-        /// All of it to the winning leader rather than shared out. A stolen
-        /// helm is one object and the man who took the field takes it -- and
-        /// when that man is the player it goes through his party like any other
-        /// spoil, which is the whole point of opening this door.
+        /// The earlier attempt hung off MapEventEnded, which runs after the
+        /// window has been built and would have dropped the gear into his
+        /// baggage unannounced.
+        ///
+        /// Only the items vanilla refuses to move. Its filter, read off
+        /// LootDefeatedPartyItems, keeps anything NotMerchandise, quest-flagged
+        /// or a banner; Stranded is that test inverted, so what this handles and
+        /// what vanilla handles are two halves of one whole. Everything else has
+        /// already been distributed by the game's own chances and is not touched
+        /// here. This is not a second loot system.
         /// </summary>
-        public static int Recover(MapEvent mapEvent)
+        public static int Recover(PartyBase winner, ItemRoster loot)
         {
-            if (mapEvent == null || !mapEvent.HasWinner) return 0;
+            if (winner == null || loot == null) return 0;
 
-            PartyBase winner = mapEvent.GetLeaderParty(mapEvent.WinningSide);
-            if (winner == null || winner.ItemRoster == null) return 0;
+            MapEvent mapEvent = winner.MapEvent;
+            if (mapEvent == null || !mapEvent.HasWinner) return 0;
+            if (!Claims(winner, mapEvent)) return 0;
 
             MapEventSide losers = mapEvent.GetMapEventSide(mapEvent.DefeatedSide);
             if (losers == null || losers.Parties == null) return 0;
@@ -129,7 +154,7 @@ namespace HeroLoadoutFixer
                     int amount = stranded[s].Amount;
 
                     loser.ItemRoster.AddToCounts(element, -amount);
-                    winner.ItemRoster.AddToCounts(element, amount);
+                    loot.AddToCounts(element, amount);
                     taken += amount;
                 }
             }
@@ -140,6 +165,40 @@ namespace HeroLoadoutFixer
             }
 
             return taken;
+        }
+
+        /// <summary>
+        /// Whether this winner is the one who ends up with the stranded gear.
+        ///
+        /// It goes to one party rather than being shared out, because a stolen
+        /// helm is one object and the man who took the field takes it. Which
+        /// party is worth getting right, though, because the event fires once
+        /// per winner and the first answer decides.
+        ///
+        /// The player, whenever he fought on the winning side. His own harness
+        /// should come back to him and not to whichever ally an army happens to
+        /// list first, and his party is the one the game guarantees this event
+        /// fires for -- the guard in LootDefeatedPartyItems skips a winner whose
+        /// loot roster is empty unless that winner is MainParty. Keying on the
+        /// side's leader instead, which is what this did first, quietly robbed
+        /// him again whenever he rode in somebody else's army.
+        ///
+        /// Otherwise the first winner handed loot takes it. Between two lords
+        /// with nobody watching it hardly matters which, and the transfer
+        /// empties the losers' baggage, so the next winner through finds nothing
+        /// left to take twice.
+        /// </summary>
+        private static bool Claims(PartyBase winner, MapEvent mapEvent)
+        {
+            PartyBase player = PartyBase.MainParty;
+
+            if (player != null && player.MapEvent == mapEvent
+                && mapEvent.PlayerSide == mapEvent.WinningSide)
+            {
+                return winner == player;
+            }
+
+            return true;
         }
 
         /// <summary>
