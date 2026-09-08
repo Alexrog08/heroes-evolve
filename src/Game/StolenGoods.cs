@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.Actions;
+using TaleWorlds.CampaignSystem.ComponentInterfaces;
 using TaleWorlds.CampaignSystem.MapEvents;
 using TaleWorlds.CampaignSystem.Party;
 using TaleWorlds.CampaignSystem.Roster;
@@ -99,100 +100,141 @@ namespace HeroLoadoutFixer
             return sold;
         }
 
-        /// <summary>
-        /// Adds the losers' stranded goods to the pile a winner is being
-        /// handed, which is what the game would already do if its loot filter
-        /// let it.
+        /// Puts the losers' stranded goods through the game's own division of
+        /// spoils, which is what would have happened to them already if a
+        /// filter had not skipped them first.
         ///
-        /// Into the loot pile itself, not around it, and that is the whole
-        /// reason this hangs off OnCollectLootItems. The roster the event
-        /// carries is MapEventParty.RosterToReceiveLootItems, and that property
-        /// is not one roster but two: for an NPC it returns the party's own
-        /// ItemRoster, and for the player -- IsNpcParty is literally
-        /// "Party != MainParty" -- it returns
-        /// PlayerEncounter.Current.RosterToReceiveLootItems, which is the exact
-        /// object DoLootInventory hands to InventoryScreenHelper.OpenScreenAsLoot.
-        /// So adding here puts a recovered helm in the player's loot window
-        /// beside the ordinary spoils, and in a lord's baggage when the winner
-        /// is a lord, from one line of code. Vanilla mutates the same roster at
-        /// the same moment: the Metallurgy perk strips modifiers off looted
-        /// gear from its own handler on this event.
+        /// The distinction matters and it is the whole design. These items are
+        /// not outside the division because the division rejected them; they
+        /// are outside it because MapEvent.LootDefeatedPartyItems filters the
+        /// loser's baggage before dividing anything, and the filter drops
+        /// everything NotMerchandise. Vanilla's rule for who gets what never
+        /// saw them. So this does not decide who gets them -- it hands them to
+        /// BattleRewardModel.GetLootItemChancesForWinnerParties and abides by
+        /// the answer, exactly as the ordinary spoils did.
         ///
-        /// The earlier attempt hung off MapEventEnded, which runs after the
-        /// window has been built and would have dropped the gear into his
-        /// baggage unannounced.
+        /// Which settles a question no invented rule could have settled
+        /// honestly. The game divides by ContributionToBattle -- a number that
+        /// starts at zero and grows only in OnTroopScoreHit, one hit at a time
+        /// (ResetContributionToBattleToStrength exists but nothing in the
+        /// shipped game calls it). Ride in another man's army and you are paid
+        /// for what your men did, not for your rank; join a battle already
+        /// under way and you are paid for the part you fought; stand and watch
+        /// and you are paid nothing. Garrisons and militia never share, and
+        /// when the defeated party is a settlement the model returns no shares
+        /// at all, so a stormed town's stores stay where they are. All of that
+        /// comes free by asking rather than deciding.
         ///
-        /// Only the items vanilla refuses to move. Its filter, read off
-        /// LootDefeatedPartyItems, keeps anything NotMerchandise, quest-flagged
-        /// or a banner; Stranded is that test inverted, so what this handles and
-        /// what vanilla handles are two halves of one whole. Everything else has
-        /// already been distributed by the game's own chances and is not touched
-        /// here. This is not a second loot system.
+        /// Into the loot pile itself, and that is why this hangs off
+        /// OnCollectLootItems. MapEventParty.RosterToReceiveLootItems is not
+        /// one roster but two: for an NPC it is the party's own ItemRoster, and
+        /// for the player -- IsNpcParty is literally "Party != MainParty" -- it
+        /// is PlayerEncounter.Current.RosterToReceiveLootItems, the object
+        /// DoLootInventory hands to InventoryScreenHelper.OpenScreenAsLoot. So
+        /// a recovered helm lands in the player's loot window beside the
+        /// ordinary spoils, or in a lord's baggage, from one line of code. The
+        /// first attempt hung off MapEventEnded, which runs after that window
+        /// is built and would have dropped the gear in unannounced.
+        ///
+        /// Runs once per battle without being told to. The event fires for each
+        /// winner, and whichever fires first empties the losers of stranded
+        /// goods, so the rest find nothing to move twice.
         /// </summary>
-        public static int Recover(PartyBase winner, ItemRoster loot)
+        public static int Recover(PartyBase winner)
         {
-            if (winner == null || loot == null) return 0;
+            if (winner == null) return 0;
 
             MapEvent mapEvent = winner.MapEvent;
             if (mapEvent == null || !mapEvent.HasWinner) return 0;
-            if (!Claims(winner, mapEvent)) return 0;
 
+            MapEventSide winners = mapEvent.GetMapEventSide(mapEvent.WinningSide);
             MapEventSide losers = mapEvent.GetMapEventSide(mapEvent.DefeatedSide);
-            if (losers == null || losers.Parties == null) return 0;
+            if (winners == null || losers == null) return 0;
+            if (winners.Parties == null || losers.Parties == null) return 0;
+
+            BattleRewardModel model = Campaign.Current.Models.BattleRewardModel;
+            if (model == null) return 0;
 
             int taken = 0;
 
             for (int i = 0; i < losers.Parties.Count; i++)
             {
                 PartyBase loser = losers.Parties[i].Party;
-                if (loser == null || loser == winner || loser.ItemRoster == null) continue;
+                if (loser == null || loser.ItemRoster == null) continue;
 
                 List<ItemRosterElement> stranded = Stranded(loser.ItemRoster);
+                if (stranded.Count == 0) continue;
+
+                // Asked once per defeated party, as the game asks it: the
+                // shares depend on who was beaten, not only on who won.
+                List<KeyValuePair<MapEventParty, float>> shares =
+                    model.GetLootItemChancesForWinnerParties(winners.Parties, loser);
+                if (shares == null || shares.Count == 0) continue;
+
                 for (int s = 0; s < stranded.Count; s++)
                 {
                     EquipmentElement element = stranded[s].EquipmentElement;
-                    int amount = stranded[s].Amount;
 
-                    loser.ItemRoster.AddToCounts(element, -amount);
-                    loot.AddToCounts(element, amount);
-                    taken += amount;
+                    // One draw per piece rather than one for the lot. A pile
+                    // taken off three lords should be able to end up in three
+                    // saddlebags, which is how the ordinary spoils behave.
+                    for (int n = 0; n < stranded[s].Amount; n++)
+                    {
+                        MapEventParty taker = Draw(shares);
+                        if (taker == null) break;
+
+                        ItemRoster pile = taker.RosterToReceiveLootItems;
+                        if (pile == null) continue;
+
+                        loser.ItemRoster.AddToCounts(element, -1);
+                        pile.AddToCounts(element, 1);
+                        taken++;
+                    }
                 }
             }
 
             if (taken > 0)
             {
-                ModLog.Info("STOLENRECOVERED winner=" + winner.Name + " pieces=" + taken);
+                ModLog.Info("STOLENRECOVERED battle=" + mapEvent.EventType + " pieces=" + taken);
             }
 
             return taken;
         }
 
         /// <summary>
-        /// Whether this winner is the one who ends up with the stranded gear.
+        /// One winner, drawn against the weights the reward model returned.
         ///
-        /// The man who commanded the winning side. It goes to one party rather
-        /// than being shared out, because a stolen helm is one object; and it
-        /// goes to the commander because that is who the spoils of a field
-        /// belong to. Ride in another man's army and they are his, which is the
-        /// arrangement everyone in this game already lives under.
-        ///
-        /// Named without reference to the player, deliberately. A version of
-        /// this handed the gear to MainParty whenever the player fought on the
-        /// winning side, on the grounds that his own harness should come back to
-        /// him -- but no AI lord gets that courtesy about his own harness, and a
-        /// rule that reads differently depending on who is looking at it is not
-        /// a rule. The player is one more character on the map; the only thing
-        /// unusual about him is who decides what he does.
-        ///
-        /// Technically sound for both. The event's guard in
-        /// LootDefeatedPartyItems skips a winner whose loot roster is empty
-        /// unless that winner is MainParty -- and for an NPC that roster IS his
-        /// own ItemRoster, which a party on the march is never short of. So a
-        /// commander of either kind is reached.
+        /// The model gives a chance per party rather than a share that sums to
+        /// one -- Roguery bonuses are multiplied in afterwards, so the numbers
+        /// do not add up to anything in particular. Normalising by their total
+        /// is therefore the only reading that makes sense of them as a
+        /// division, and it keeps the relative weighting the model intended.
         /// </summary>
-        private static bool Claims(PartyBase winner, MapEvent mapEvent)
+        private static MapEventParty Draw(List<KeyValuePair<MapEventParty, float>> shares)
         {
-            return winner == mapEvent.GetLeaderParty(mapEvent.WinningSide);
+            float total = 0f;
+            MapEventParty last = null;
+
+            for (int i = 0; i < shares.Count; i++)
+            {
+                if (shares[i].Value <= 0f) continue;
+                total += shares[i].Value;
+                last = shares[i].Key;
+            }
+
+            if (last == null) return null;
+
+            float roll = MBRandom.RandomFloat * total;
+            for (int i = 0; i < shares.Count; i++)
+            {
+                if (shares[i].Value <= 0f) continue;
+                roll -= shares[i].Value;
+                if (roll <= 0f) return shares[i].Key;
+            }
+
+            // Floating point can leave a sliver unspent. The last party holding
+            // a positive weight is the honest answer to that, not an error.
+            return last;
         }
 
         /// <summary>

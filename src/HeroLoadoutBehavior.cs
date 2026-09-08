@@ -184,15 +184,18 @@ namespace HeroLoadoutFixer
 
         /// <summary>
         /// A winner's spoils are being counted, so whatever stolen gear the
-        /// losers were carrying goes onto the pile. Guarded like every other
-        /// event this mod listens to.
+        /// losers were carrying is divided along with them. The roster the
+        /// event carries is not used: StolenGoods reaches every winner's own
+        /// pile through the reward model, and this party is only the signal
+        /// that the division is happening. Guarded like every other event this
+        /// mod listens to.
         /// </summary>
-        private void OnCollectLootItems(PartyBase winner, ItemRoster loot)
+        private void OnCollectLootItems(PartyBase winner, ItemRoster gainedLoots)
         {
             try
             {
                 if (!Settings.EnableCaptureLoss) return;
-                StolenGoods.Recover(winner, loot);
+                StolenGoods.Recover(winner);
             }
             catch (System.Exception ex)
             {
