@@ -2378,9 +2378,13 @@ namespace HeroLoadoutFixer
                         if (!ItemCatalog.PassesCommonFilters(item, culture, 6)) continue;
                         fits++;
 
-                        // Culture-neutral gear is what a lord from anywhere else
-                        // can buy here, and most lords in a town are from
-                        // somewhere else.
+                        // Gear belonging to no culture at all, which is now the
+                        // only interesting culture split on a shelf. It used to
+                        // be reported as "what a foreign lord can buy", and that
+                        // stopped being true the moment culture became a
+                        // preference: a foreigner can buy the whole shelf, he
+                        // simply values his own people's work a tier higher.
+                        // See MarketRules.CulturePreference.
                         if (item.Culture == null) anyone++;
                     }
                     usable.Add(fits);
@@ -2394,8 +2398,8 @@ namespace HeroLoadoutFixer
 
             ModLog.Info("MARKET towns=" + towns);
             ModLog.Info("MARKET stockPerTown " + Percentiles(sizes));
-            ModLog.Info("MARKET forALocalLord " + Percentiles(usable));
-            ModLog.Info("MARKET forAForeignLord " + Percentiles(neutral));
+            ModLog.Info("MARKET buyableByAnyone " + Percentiles(usable));
+            ModLog.Info("MARKET ofNoCulture " + Percentiles(neutral));
         }
 
         /// <summary>
