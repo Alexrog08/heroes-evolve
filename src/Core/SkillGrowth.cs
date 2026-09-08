@@ -193,9 +193,26 @@ namespace HeroLoadoutFixer.Core
         /// when the gap is enormous. Seeding exists for that case and applies at
         /// once, deliberately.
         ///
-        /// Talent multiplies afterwards, so the true ceiling is this times
-        /// Talent.Maximum -- eight points a year for a prodigy who is badly
-        /// behind, a quarter of that for a slow learner in the same hole.
+        /// Talent multiplies afterwards, so a prodigy badly behind climbs at
+        /// this times Talent.Maximum and a slow learner in the same hole at a
+        /// quarter of that.
+        ///
+        /// And then the game multiplies again, which this comment used to
+        /// ignore. Hero.AddSkillXp routes through HeroDeveloper, which scales
+        /// the grant by GenericXpModel.GetXpMultiplier and by the hero's focus
+        /// factor before any of it lands. So this bounds the request, not the
+        /// delivery. Measured over a live campaign, weekly, across five hundred
+        /// lords: delivered ran 1.5 to 2.0 times asked, and the ratio fell
+        /// steadily as gaps closed.
+        ///
+        /// Left where it is, because the outcome is the one the design wanted
+        /// and it took the measurement to know that. At these numbers the
+        /// median lord gains between one and three points a year in a given
+        /// skill -- something like a hundred and ten over a forty-two-year
+        /// career, against a peak of a hundred and fifty times his talent. He
+        /// climbs all his life and never quite arrives, which is exactly what
+        /// CatchUpPerYear was tuned for. What was wrong was the arithmetic in
+        /// this comment, not the number.
         /// </summary>
         public const float MaximumPointsPerYear = 4.2f;
 
