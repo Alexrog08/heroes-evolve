@@ -322,7 +322,16 @@ namespace HeroLoadoutFixer
             // the heroes actually grown, not every living hero the loop walked
             // past -- AllAliveHeroes carries wanderers, notables and templates,
             // and calling those grown made the line a fiction.
-            ModLog.Info("GROWTH weekly pass grew " + grown + " lords");
+            // Asked against delivered. Hero.AddSkillXp multiplies the request by
+            // the generic XP multiplier and by the hero's focus factor, so the
+            // annual clamp in SkillGrowth caps what is requested and not what
+            // arrives. The ratio is the only honest way to know how far apart
+            // those two are -- see SkillGrowthService.TakeDelivered.
+            int delivered, asked;
+            SkillGrowthService.TakeDelivered(out delivered, out asked);
+
+            ModLog.Info("GROWTH weekly pass grew " + grown + " lords"
+                        + " asked=" + asked + " delivered=" + delivered);
         }
 
         private void TryRepair(Hero hero, string reason)

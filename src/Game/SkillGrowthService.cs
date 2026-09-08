@@ -154,6 +154,32 @@ namespace HeroLoadoutFixer
             return id == "Mariner" || id == "Boatswain" || id == "Shipmaster";
         }
 
+        /// <summary>
+        /// Skill points this mod has actually delivered since the counter was
+        /// last read, and what it asked for.
+        ///
+        /// The two differ, and finding out by how much is the point. SkillGrowth
+        /// clamps the annual gain to MaximumPointsPerYear and hands the result
+        /// to Hero.AddSkillXp -- which multiplies it by the generic XP
+        /// multiplier and again by the hero's focus factor before any of it
+        /// becomes progress. So the documented ceiling of roughly eight points a
+        /// year for a talented lord is a ceiling on the request, not on the
+        /// delivery, and a live campaign measured weapon skills climbing about
+        /// twice that. These two numbers turn that from an argument into a
+        /// ratio.
+        /// </summary>
+        private static int _pointsDelivered;
+        private static float _pointsAsked;
+
+        /// <summary>Reads the pair and clears it for the next pass.</summary>
+        public static void TakeDelivered(out int delivered, out int asked)
+        {
+            delivered = _pointsDelivered;
+            asked = (int)(_pointsAsked + 0.5f);
+            _pointsDelivered = 0;
+            _pointsAsked = 0f;
+        }
+
         private static void Grant(Hero hero, SkillObject skill, int target, float talent)
         {
             if (skill == null || target <= 0) return;
@@ -165,6 +191,8 @@ namespace HeroLoadoutFixer
             int xp = (int)(points * XpPerPointAt(current));
             if (xp <= 0) return;
 
+            _pointsAsked += points;
+
             // Hero.AddSkillXp routes through HeroDeveloper with the focus factor
             // applied, so this composes with the game's own progression rather
             // than bypassing it: a hero the AI has invested focus in learns
@@ -172,6 +200,7 @@ namespace HeroLoadoutFixer
             // whichever skill most exceeds its learning limit, pushing a skill
             // here makes the game itself follow.
             hero.AddSkillXp(skill, xp);
+            _pointsDelivered += hero.GetSkillValue(skill) - current;
         }
 
         /// <summary>
