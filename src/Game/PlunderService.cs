@@ -3,6 +3,7 @@ using TaleWorlds.CampaignSystem.Actions;
 using TaleWorlds.CampaignSystem.CharacterDevelopment;
 using TaleWorlds.CampaignSystem.Party;
 using TaleWorlds.CampaignSystem.Roster;
+using TaleWorlds.CampaignSystem.Settlements;
 using TaleWorlds.Core;
 using HeroLoadoutFixer.Core;
 
@@ -177,38 +178,70 @@ namespace HeroLoadoutFixer
         /// Whose baggage a stripped prisoner's kit goes into, or null when
         /// there is no such baggage and therefore no robbery.
         ///
-        /// The man who decided it is the man who gets it. That reads as
-        /// obvious and the code did not do it: the event hands over whoever is
-        /// HOLDING the prisoner, and when a town or castle falls,
-        /// PrisonerCaptureCampaignBehavior.HandleSettlementHeroes takes every
-        /// hero inside prisoner with TakePrisonerAction.Apply(settlement.Party,
-        /// ...). Settlement.ItemRoster is literally Settlement.Party.ItemRoster,
-        /// which for a town is its market stock -- so storming a town and
-        /// robbing the lords in it put their harnesses on the shelves for
-        /// nothing, out of the captor's reach and into everybody else's, and
-        /// left StolenGoods with nothing to sell and Recover nothing to win
-        /// back.
+        /// The gear goes where the man is, into an inventory somebody owns.
+        /// Those two together are the whole rule, and the code originally kept
+        /// neither: it emptied the prisoner into whoever the event named as
+        /// holding him, and when that is a settlement, Settlement.ItemRoster is
+        /// literally Settlement.Party.ItemRoster -- for a town, its market
+        /// stock. Harnesses went onto the shelves for nothing.
         ///
-        /// A settlement is not an inventory, and a hero without a party has
-        /// none of his own -- Bannerlord keeps item rosters on parties, not on
-        /// people. So a captor with nowhere to put it does not take it. That is
-        /// the rule stated plainly rather than a fallback: somebody receives
-        /// the gear, or the gear is not taken.
+        /// A settlement can hold a prisoner directly, which is worth knowing
+        /// because it is not the ordinary case and is easy to assume away.
+        /// Battlefield captures run through MapEvent.CaptureDefeatedPartyMembers
+        /// and make the man a noble's. But PrisonerCaptureCampaignBehavior.
+        /// HandleSettlementHeroes calls TakePrisonerAction.Apply(hero.Current-
+        /// Settlement.Party, hero) on OnWarDeclared, OnClanChangedKingdom and
+        /// OnSettlementOwnerChanged -- so every partyless lord sitting in a town
+        /// when war breaks out becomes that town's prisoner, with no noble in
+        /// between. That is the same population a released prisoner joins, since
+        /// the game parks him partyless in settlements for days.
         ///
-        /// Bandits keep their share of this. A bandit band has no leader hero,
-        /// so the captor is null, but the band's own baggage train is a real
-        /// inventory and is where the loot belongs.
+        /// For that case the garrison is the answer, not the settlement and not
+        /// the absent owner. The keep's own baggage train is a real inventory
+        /// that belongs to somebody, it is not the shop, and it does not
+        /// teleport a man's armour across the map to a lord who is besieging
+        /// somewhere else. Beat that garrison and Recover hands the gear to
+        /// whoever storms the walls, which is the right way for it to come back
+        /// out.
+        ///
+        /// And when there is no inventory at all -- a village, a settlement with
+        /// no garrison -- nobody robs him. Bannerlord keeps item rosters on
+        /// parties, not on people, so a captor with nowhere to put it does not
+        /// take it. Somebody receives the gear or the gear is not taken.
         /// </summary>
         private static PartyBase SpoilsFor(PartyBase captorParty, Hero captor)
         {
+            if (captorParty != null && captorParty.IsSettlement)
+            {
+                return GarrisonOf(captorParty.Settlement);
+            }
+
             if (captor != null && captor.PartyBelongedTo != null)
             {
                 return captor.PartyBelongedTo.Party;
             }
 
+            // A bandit band has no leader hero, so the captor is null, but its
+            // baggage train is a real inventory and is where the loot belongs.
             if (captorParty != null && captorParty.IsMobile) return captorParty;
 
             return null;
+        }
+
+        /// <summary>
+        /// The baggage of the men actually holding the keep, or null for a
+        /// settlement that has none.
+        ///
+        /// Settlement.Town covers towns and castles alike -- a castle is a Town
+        /// with IsCastle set -- and is null for a village, which has no garrison
+        /// and no business holding a lord prisoner.
+        /// </summary>
+        private static PartyBase GarrisonOf(Settlement settlement)
+        {
+            if (settlement == null || settlement.Town == null) return null;
+
+            MobileParty garrison = settlement.Town.GarrisonParty;
+            return garrison != null ? garrison.Party : null;
         }
 
         /// <summary>
