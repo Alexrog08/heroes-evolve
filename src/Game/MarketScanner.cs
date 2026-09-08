@@ -39,10 +39,21 @@ namespace HeroLoadoutFixer
         /// </summary>
         public static List<StockEntry> Stock(Settlement settlement)
         {
-            List<StockEntry> stock = new List<StockEntry>();
-            if (settlement == null) return stock;
+            return Stock(settlement != null ? settlement.ItemRoster : null);
+        }
 
-            ItemRoster roster = settlement.ItemRoster;
+        /// <summary>
+        /// The same measuring, for any roster at all.
+        ///
+        /// A town's shelves are one caller; a captor's saddlebags after he has
+        /// stripped a prisoner are the other. What a lord may put on out of his
+        /// own loot is the same question as what he may buy, minus the money,
+        /// so it is asked with the same code rather than a second copy that
+        /// would drift.
+        /// </summary>
+        public static List<StockEntry> Stock(ItemRoster roster)
+        {
+            List<StockEntry> stock = new List<StockEntry>();
             if (roster == null) return stock;
 
             for (int i = 0; i < roster.Count; i++)
@@ -204,12 +215,25 @@ namespace HeroLoadoutFixer
         private static void Offer(List<MarketOffer> offers, Settlement settlement, Hero hero,
                                   StockEntry entry, bool ownClass)
         {
-            SettlementComponent component = settlement != null ? settlement.SettlementComponent : null;
-            if (component == null) return;
+            // No settlement means nobody is selling: this is a man looking
+            // through what he already owns. The item's own worth stands in for
+            // the price so the ordering still breaks ties the same way, and
+            // nothing is charged for it.
+            int price;
+            if (settlement == null)
+            {
+                price = entry.Element.ItemValue;
+                if (price < 0) price = 0;
+            }
+            else
+            {
+                SettlementComponent component = settlement.SettlementComponent;
+                if (component == null) return;
 
-            MobileParty party = hero != null ? hero.PartyBelongedTo : null;
-            int price = component.GetItemPrice(entry.Element, party, false);
-            if (price <= 0) return;
+                MobileParty party = hero != null ? hero.PartyBelongedTo : null;
+                price = component.GetItemPrice(entry.Element, party, false);
+                if (price <= 0) return;
+            }
 
             offers.Add(new MarketOffer(entry.Element, price, entry.Tier, entry.FineTier, ownClass));
         }

@@ -112,7 +112,16 @@ namespace HeroLoadoutFixer
                 ChangeRelationAction.ApplyRelationChangeBetweenHeroes(captor, prisoner, RelationCost, false);
             }
 
-            if (captor != null) Reward(captor, value);
+            if (captor != null)
+            {
+                Reward(captor, value);
+
+                // And then he tries it on. Taking a man's harness and never
+                // looking at it would be odd; the market's own rules decide
+                // whether any of it suits him, which usually it does not.
+                LootFitting.Equip(captor, captorParty.ItemRoster,
+                                  Settings.ClanWeight, Settings.SkillWeight, Settings.MinimumTier);
+            }
 
             ModLog.Info("PLUNDER captor=" + (captor != null ? captor.Name.ToString() : "bandits")
                         + " prisoner=" + prisoner.Name

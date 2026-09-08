@@ -62,14 +62,29 @@ namespace HeroLoadoutFixer
         /// </summary>
         public static Candidate Best(Hero hero, Settlement settlement, int ceiling, BudgetService budget)
         {
-            if (hero == null || hero.BattleEquipment == null || settlement == null) return null;
+            if (settlement == null) return null;
 
             // What one purchase may cost him. Read once: it does not move until
             // something is actually bought.
             int limit = budget == null ? int.MaxValue : budget.Available(hero);
 
-            List<StockEntry> stock = MarketScanner.Stock(settlement);
-            if (stock.Count == 0) return null;
+            return Best(hero, settlement, MarketScanner.Stock(settlement), ceiling, limit);
+        }
+
+        /// <summary>
+        /// The best thing in a given pile that would improve a slot he already
+        /// fills, or null.
+        ///
+        /// Split out so a town's shelves and a captor's saddlebags run through
+        /// the same rules. A null settlement means nothing is for sale and the
+        /// pile is his own, which is what taking a prisoner's kit leaves him
+        /// with; a limit of int.MaxValue means nothing is being charged.
+        /// </summary>
+        public static Candidate Best(Hero hero, Settlement settlement, List<StockEntry> stock,
+                                     int ceiling, int limit)
+        {
+            if (hero == null || hero.BattleEquipment == null) return null;
+            if (stock == null || stock.Count == 0) return null;
 
             CultureObject culture = hero.Culture;
             if (culture == null && hero.Clan != null) culture = hero.Clan.Culture;
