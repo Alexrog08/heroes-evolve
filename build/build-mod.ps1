@@ -38,4 +38,14 @@ Copy-Item (Join-Path $root "SubModule.xml") $dest -Force
 $settings = Join-Path $dest "settings.xml"
 if (-not (Test-Path $settings)) { Copy-Item (Join-Path $root "settings.xml") $settings -Force }
 Copy-Item "$out\HeroLoadoutFixer.dll" (Join-Path $dest "bin\Win64_Shipping_Client") -Force
+
+# Translations. Replaced wholesale rather than merged, so a renamed or deleted
+# language file cannot linger in the deployed module and go on being loaded.
+$moduleData = Join-Path $root "ModuleData"
+if (Test-Path $moduleData) {
+    $destData = Join-Path $dest "ModuleData"
+    if (Test-Path $destData) { Remove-Item $destData -Recurse -Force }
+    Copy-Item $moduleData $destData -Recurse -Force
+}
+
 Write-Host "DEPLOYED to $dest"

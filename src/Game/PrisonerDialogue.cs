@@ -42,26 +42,35 @@ namespace HeroLoadoutFixer
             starter.AddDialogLine("hlf_strip_prisoner_reply",
                                   "hlf_strip_prisoner_reply",
                                   "close_window",
-                                  "{=hlf_strip_reply}You would strip a beaten man of his own harness? "
-                                  + "Take them, then. My kin will hear of this.",
+                                  "{=hlf_strip_reply}You would take the arms off a beaten man? "
+                                  + "There is a word for this, and it is not war. Take them, then. "
+                                  + "My clan will hear of it, and so will yours.",
                                   null, Strip, 100, null);
 
             // The same act against a man who trades in it. Said differently
             // because it is a different thing, and it costs half -- see
             // PlunderRules.AfterReprisal.
+            //
+            // The two answers are the trait talking. A man with Honor above
+            // zero has been wronged and says so: it is an outrage, his house
+            // will hear of it, and so will yours. A man below zero is not
+            // ashamed and is not pretending to be -- he will have better gear
+            // inside a month, and he tells you whose back he means to take it
+            // off. Which is the only reason the discount reads as fair rather
+            // than as a loophole: you can hear that he had it coming.
             starter.AddPlayerLine("hlf_strip_prisoner_reprisal",
                                   "hero_main_options",
                                   "hlf_strip_prisoner_reprisal_reply",
-                                  "{=hlf_strip_reprisal}You have stripped better men than me. "
+                                  "{=hlf_strip_reprisal}You know how this goes. "
                                   + "Hand over your arms and armour.",
                                   CanStripInReprisal, null, 100, null);
 
             starter.AddDialogLine("hlf_strip_prisoner_reprisal_reply",
                                   "hlf_strip_prisoner_reprisal_reply",
                                   "close_window",
-                                  "{=hlf_strip_reprisal_reply}I have, and I would again. Take them, "
-                                  + "then, and be quick. There is not a man alive who would name this "
-                                  + "dishonour in you.",
+                                  "{=hlf_strip_reprisal_reply}Ha! Take it. Take all of it -- I will "
+                                  + "have better within the month. And the next man I strip to his "
+                                  + "shirt may well share your name.",
                                   null, Strip, 100, null);
         }
 
