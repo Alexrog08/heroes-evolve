@@ -268,6 +268,8 @@ namespace HeroesEvolve
                 : Candidates(hero, settlement, stock, ceiling, int.MaxValue).Count;
             if (gaps <= 0) return 0;
 
+            int gapsAtStart = gaps;
+
             // He shops until there is nothing here worth buying or nothing left
             // to buy it with. There used to be a hard stop at one item, and it
             // was the wrong instrument: gradual improvement is supposed to come
@@ -312,8 +314,20 @@ namespace HeroesEvolve
                 if (pot <= 0 || gaps <= 0) break;
             }
 
+            LastTripGaps = gapsAtStart;
             return bought;
         }
+
+        /// <summary>
+        /// How many slots the last trip had to divide its money between.
+        ///
+        /// Reported so the log can say whether a small purchase was a lord with
+        /// little to fix or a lord whose share came out too thin to buy
+        /// anything with. Those look identical in a count of pieces and want
+        /// opposite responses, and telling them apart took a separate
+        /// measurement every time until this existed.
+        /// </summary>
+        public static int LastTripGaps;
 
         /// <summary>
         /// The ceiling on one shopping trip: eleven, every slot a lord has.

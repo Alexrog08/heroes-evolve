@@ -290,6 +290,7 @@ namespace HeroesEvolve
                     ModLog.Info("TRIP hero=" + shopper.Name
                                 + " at=" + settlement.Name
                                 + " bought=" + bought
+                                + " gaps=" + ShoppingTrip.LastTripGaps
                                 + " clanGold=" + (shopper.Clan != null ? shopper.Clan.Gold : 0));
                 }
             }
