@@ -231,13 +231,30 @@ namespace HeroLoadoutFixer
         }
 
         /// <summary>
-        /// Whether robbing this man answers his own trade. The game's test for
-        /// the same question about executions: negative Honor, read now, with
-        /// no record of what he has done kept anywhere.
+        /// Whether robbing this man answers his own trade.
+        ///
+        /// The game's test for the same question about executions: negative
+        /// Honor, read now, with no record of what he has done kept anywhere.
+        ///
+        /// And not a friend, which the first version forgot. PlunderRules
+        /// already holds that friendship restrains a robbery -- FriendshipShield
+        /// is a hundred, the strongest term in Circumstance -- so a discount
+        /// that ignored it had the model contradicting itself: a lord would
+        /// hesitate to rob a friend while the player robbed his own for half
+        /// price. It also made a nonsense of the scene, since the reprisal
+        /// lines have a man sneering at somebody who likes him.
+        ///
+        /// A friend is a friend whatever his reputation elsewhere. Devious is
+        /// simply the game's word for Honor below zero, and a man can be that
+        /// and still be at your side -- Mercy and Honor are different traits,
+        /// and being crooked is not the same as being crooked with you. Robbing
+        /// him is an ordinary betrayal and costs the ordinary price.
         /// </summary>
         private static bool IsReprisal(Hero hero)
         {
             if (hero == null) return false;
+            if (Hero.MainHero != null && hero.IsFriend(Hero.MainHero)) return false;
+
             return PlunderRules.IsReprisal(hero.GetTraitLevel(DefaultTraits.Honor));
         }
     }
