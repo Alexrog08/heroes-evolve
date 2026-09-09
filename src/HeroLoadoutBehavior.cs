@@ -278,7 +278,20 @@ namespace HeroesEvolve
                 // re-rolling at the next gate would quietly multiply the rate.
                 if (id != null) _shoppedToday.Add(id);
 
-                ShoppingTrip.Shop(shopper, settlement, _budget, ClanWeight, SkillWeight, MinimumTier);
+                // The trip's total, not just its pieces. Every purchase already
+                // logs a BUY line, but those are indistinguishable from one
+                // lord shopping five days running -- and whether a trip fits a
+                // man out or merely improves him by a buckle is now the thing
+                // worth being able to read back.
+                int bought = ShoppingTrip.Shop(shopper, settlement, _budget,
+                                               ClanWeight, SkillWeight, MinimumTier);
+                if (bought > 0)
+                {
+                    ModLog.Info("TRIP hero=" + shopper.Name
+                                + " at=" + settlement.Name
+                                + " bought=" + bought
+                                + " clanGold=" + (shopper.Clan != null ? shopper.Clan.Gold : 0));
+                }
             }
             catch (System.Exception ex)
             {
