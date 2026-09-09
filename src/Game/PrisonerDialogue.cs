@@ -37,7 +37,7 @@ namespace HeroLoadoutFixer
                                   "hero_main_options",
                                   "hlf_strip_prisoner_reply",
                                   "{=hlf_strip}Hand over your arms and armour.",
-                                  CanStripUnprovoked, null, 100, null);
+                                  CanStripPlainly, null, 100, null);
 
             starter.AddDialogLine("hlf_strip_prisoner_reply",
                                   "hlf_strip_prisoner_reply",
@@ -85,6 +85,27 @@ namespace HeroLoadoutFixer
                                   + "Hand over your arms and armour.",
                                   CanStripInReprisal, null, 100, null);
 
+            // And the third man, who is neither a stranger nor a scoundrel.
+            // Robbing a friend is not an outrage and not a reckoning; it is a
+            // betrayal, and the only one of the three where the prisoner does
+            // not argue. He has nothing to argue about -- he is not surprised
+            // that it can be done to him, only by whom. That lands harder than
+            // either of the others, and it costs the ordinary price: a friend
+            // is never a reprisal, whatever his reputation elsewhere.
+            starter.AddPlayerLine("hlf_strip_prisoner_friend",
+                                  "hero_main_options",
+                                  "hlf_strip_prisoner_friend_reply",
+                                  "{=hlf_strip_friend}Do not take this personally. "
+                                  + "Hand over your arms and armour.",
+                                  CanStripAFriend, null, 100, null);
+
+            starter.AddDialogLine("hlf_strip_prisoner_friend_reply",
+                                  "hlf_strip_prisoner_friend_reply",
+                                  "close_window",
+                                  "{=hlf_strip_friend_reply}I expected this from anyone but you. "
+                                  + "Take them, then. I have nothing else to say to you.",
+                                  null, Strip, 100, null);
+
             starter.AddDialogLine("hlf_strip_prisoner_reprisal_reply",
                                   "hlf_strip_prisoner_reprisal_reply",
                                   "close_window",
@@ -96,34 +117,56 @@ namespace HeroLoadoutFixer
         }
 
         /// <summary>
-        /// The plain demand: offered for a prisoner whose own conduct does not
-        /// answer for you.
+        /// Which of the three ways this robbery can be asked for.
+        ///
+        /// A stranger, a scoundrel, or a friend -- and they are tested in that
+        /// order of precedence rather than of decency, because friendship
+        /// outranks reputation. A man who is Devious and also at your side is
+        /// robbed as a friend and charged the full price; being crooked is not
+        /// the same as being crooked with you.
         /// </summary>
-        private static bool CanStripUnprovoked()
+        private enum Manner
         {
-            return CanStrip(false);
+            Plain,
+            Reprisal,
+            Friend,
         }
 
         /// <summary>
-        /// The reprisal: offered for a prisoner who is himself dishonourable.
-        /// Mutually exclusive with the line above, so exactly one of the two
-        /// ever appears.
+        /// How this particular prisoner is to be asked, read off him now.
+        ///
+        /// Friendship first. The reprisal discount exists because a man had it
+        /// coming, and a friend never has it coming, however poor his name
+        /// elsewhere -- PlunderRules already holds that friendship restrains a
+        /// robbery, FriendshipShield being the strongest term in Circumstance.
         /// </summary>
-        private static bool CanStripInReprisal()
+        private static Manner MannerFor(Hero hero)
         {
-            return CanStrip(true);
+            if (hero == null) return Manner.Plain;
+            if (Hero.MainHero != null && hero.IsFriend(Hero.MainHero)) return Manner.Friend;
+
+            if (PlunderRules.IsReprisal(hero.GetTraitLevel(DefaultTraits.Honor)))
+            {
+                return Manner.Reprisal;
+            }
+
+            return Manner.Plain;
         }
+
+        private static bool CanStripPlainly() { return CanStrip(Manner.Plain); }
+        private static bool CanStripInReprisal() { return CanStrip(Manner.Reprisal); }
+        private static bool CanStripAFriend() { return CanStrip(Manner.Friend); }
 
         /// <summary>
         /// Offered only for a lord you are actually holding, who still has
         /// something to hand over, and only on the branch that matches him.
         /// </summary>
-        private static bool CanStrip(bool wantReprisal)
+        private static bool CanStrip(Manner want)
         {
             try
             {
                 if (!CanStripCore()) return false;
-                return IsReprisal(Hero.OneToOneConversationHero) == wantReprisal;
+                return MannerFor(Hero.OneToOneConversationHero) == want;
             }
             catch (System.Exception ex)
             {
@@ -215,7 +258,7 @@ namespace HeroLoadoutFixer
             // Half of it when the man had it coming, which is the game's own
             // arithmetic for the same situation and not a courtesy invented
             // here -- an execution costs half against a dishonourable victim.
-            bool reprisal = IsReprisal(hero);
+            bool reprisal = MannerFor(hero) == Manner.Reprisal;
 
             ChangeRelationAction.ApplyPlayerRelation(
                 hero, PlunderRules.AfterReprisal(PlayerRelationCost, reprisal), true, true);
@@ -230,32 +273,5 @@ namespace HeroLoadoutFixer
                         + " roguery=" + PlunderService.RogueryXpFor(value));
         }
 
-        /// <summary>
-        /// Whether robbing this man answers his own trade.
-        ///
-        /// The game's test for the same question about executions: negative
-        /// Honor, read now, with no record of what he has done kept anywhere.
-        ///
-        /// And not a friend, which the first version forgot. PlunderRules
-        /// already holds that friendship restrains a robbery -- FriendshipShield
-        /// is a hundred, the strongest term in Circumstance -- so a discount
-        /// that ignored it had the model contradicting itself: a lord would
-        /// hesitate to rob a friend while the player robbed his own for half
-        /// price. It also made a nonsense of the scene, since the reprisal
-        /// lines have a man sneering at somebody who likes him.
-        ///
-        /// A friend is a friend whatever his reputation elsewhere. Devious is
-        /// simply the game's word for Honor below zero, and a man can be that
-        /// and still be at your side -- Mercy and Honor are different traits,
-        /// and being crooked is not the same as being crooked with you. Robbing
-        /// him is an ordinary betrayal and costs the ordinary price.
-        /// </summary>
-        private static bool IsReprisal(Hero hero)
-        {
-            if (hero == null) return false;
-            if (Hero.MainHero != null && hero.IsFriend(Hero.MainHero)) return false;
-
-            return PlunderRules.IsReprisal(hero.GetTraitLevel(DefaultTraits.Honor));
-        }
     }
 }
