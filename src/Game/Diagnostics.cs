@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Text;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.CharacterDevelopment;
+using TaleWorlds.CampaignSystem.Party;
 using TaleWorlds.CampaignSystem.Roster;
 using TaleWorlds.CampaignSystem.Settlements;
 using TaleWorlds.Core;
@@ -69,6 +70,7 @@ namespace HeroesEvolve
             ReportDefectRate();
             ReportSkillCurve();
             ReportPlayerCharacters();
+            ReportMyClan();
             ReportAttributes();
             ReportTalentSpread();
             ReportTraits();
@@ -1340,6 +1342,123 @@ namespace HeroesEvolve
         /// the founder is usually the most developed character the save has
         /// ever held.
         /// </summary>
+        /// <summary>
+        /// Every living hero of the player's clan, set beside the lords his age.
+        ///
+        /// Written for a question the rest of the census cannot answer, because
+        /// every other line filters on HeroFilter.IsEligible and that refuses
+        /// heroes travelling in the main party. Those heroes are refused for a
+        /// reason about equipment -- their inventory belongs to the player --
+        /// and the same filter happens to gate skill growth, so a companion
+        /// riding with the player gets none of it while every lord on the map
+        /// gets one to three points a year for life.
+        ///
+        /// That may be fine. A companion in the player's party fights when the
+        /// player fights, earns experience the ordinary way, and receives focus
+        /// and perks by hand, which no AI lord does. Whether it comes out even
+        /// depends entirely on how much a given player fights, which is not
+        /// something that can be reasoned about from here -- so it is measured
+        /// instead, against the cohort the man would be compared to if he were
+        /// anyone else.
+        ///
+        /// Reports the best of the six weapon skills, which is what SKILLAGE
+        /// buckets, so the two are the same measurement and the comparison is
+        /// honest. The cohort median is printed on the same line: a companion
+        /// well under it is falling behind the map, and over it is not.
+        /// </summary>
+        private static void ReportMyClan()
+        {
+            if (Clan.PlayerClan == null) return;
+
+            int[] bounds = { 18, 25, 35, 45, 55, 200 };
+            string[] labels = { "18-24", "25-34", "35-44", "45-54", "55+" };
+
+            // The map to measure against: every lord this mod does grow.
+            List<int>[] cohort = new List<int>[labels.Length];
+            for (int i = 0; i < cohort.Length; i++) cohort[i] = new List<int>();
+
+            foreach (Hero hero in Hero.AllAliveHeroes)
+            {
+                try
+                {
+                    if (!HeroFilter.IsEligible(hero)) continue;
+                    int b = Bucket(bounds, (int)hero.Age);
+                    if (b < 0) continue;
+                    int best = BestWeaponSkill(hero);
+                    if (best > 0) cohort[b].Add(best);
+                }
+                catch
+                {
+                    // One unreadable hero must not cost the comparison.
+                }
+            }
+
+            foreach (Hero hero in Hero.AllAliveHeroes)
+            {
+                try
+                {
+                    if (hero == null || hero.Clan != Clan.PlayerClan) continue;
+                    if (hero.IsChild || hero.IsTemplate) continue;
+
+                    int b = Bucket(bounds, (int)hero.Age);
+                    int best = BestWeaponSkill(hero);
+                    int median = b >= 0 ? Median(cohort[b]) : 0;
+
+                    MobileParty party = hero.PartyBelongedTo;
+                    string place;
+                    if (hero == Hero.MainHero) place = "you";
+                    else if (party != null && party == MobileParty.MainParty) place = "inYourParty";
+                    else if (party != null && party.LeaderHero == hero) place = "leadsAParty";
+                    else if (party != null) place = "inAParty";
+                    else place = "noParty";
+
+                    ModLog.Info("MYCLAN " + hero.Name
+                                + " age=" + (int)hero.Age
+                                + " where=" + place
+                                + " grown=" + HeroFilter.IsEligible(hero)
+                                + " bestWeapon=" + best
+                                + " cohort=" + (b >= 0 ? labels[b] : "?")
+                                + " cohortMedian=" + median
+                                + " vsCohort=" + (median > 0 ? (best - median).ToString() : "?"));
+                }
+                catch
+                {
+                    // Reported best-effort; one bad hero must not stop the rest.
+                }
+            }
+        }
+
+        /// <summary>The best of the six weapon skills, as SKILLAGE measures it.</summary>
+        private static int BestWeaponSkill(Hero hero)
+        {
+            if (hero == null) return 0;
+
+            SkillProfile skills = HeroAdapter.ReadSkills(hero);
+            int best = 0;
+            for (int i = 0; i < 6; i++)
+            {
+                int v = skills.Get((SkillKind)i);
+                if (v > best) best = v;
+            }
+            return best;
+        }
+
+        private static int Bucket(int[] bounds, int age)
+        {
+            for (int b = 0; b + 1 < bounds.Length; b++)
+            {
+                if (age >= bounds[b] && age < bounds[b + 1]) return b;
+            }
+            return -1;
+        }
+
+        private static int Median(List<int> values)
+        {
+            if (values == null || values.Count == 0) return 0;
+            values.Sort();
+            return values[values.Count / 2];
+        }
+
         private static void ReportPlayerCharacters()
         {
             Hero main = Hero.MainHero;
