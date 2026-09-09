@@ -4,20 +4,34 @@ namespace HeroesEvolve.Core
     /// Whether a weapon can be used from horseback, decided from the names of
     /// the ways it can be wielded.
     ///
-    /// The game knows this exactly and will not say. Each weapon mode carries an
-    /// item usage set id, and Native's item_usage_sets.xml gives some of those
-    /// sets a "requires_no_mount" flag -- a pike is braced against the ground,
-    /// a long bow cannot be drawn past a horse's neck. But the string to flags
-    /// lookup lives in native code: WeaponComponentData exposes only ItemUsage,
-    /// the bare string, and nothing in the managed API maps it to the flag. So
-    /// the flag has to be mirrored here, read out of the game's own data file.
+    /// The game knows this exactly and will not say. Each way of wielding a
+    /// weapon carries an item usage set id, and Native's item_usage_sets.xml
+    /// gives some of those sets a "requires_no_mount" flag. But the string to
+    /// flags lookup lives in native code -- WeaponComponentData exposes only
+    /// ItemUsage, the bare string -- so the flag is mirrored here, read out of
+    /// the game's own data.
     ///
-    /// Read from item_usage_sets.xml (v1.4.8), which defines 58 sets; these are
-    /// every one carrying requires_no_mount, counting the flag a set inherits
-    /// through base_set -- which is how long_bow gets it while plain bow does
-    /// not. A modded set with its own dismounted-only name would be missed,
-    /// which is a far smaller failure than the one this fixes and the only one
-    /// available without parsing every module's XML at load.
+    /// The flag marks a MODE, not a weapon, and that distinction is the whole
+    /// rule. Bracing a spear against the ground is something you do standing
+    /// still; couching one is something you do at a gallop. Neither says
+    /// anything about the weapon as a whole, and a spear that can be braced is
+    /// still a perfectly good spear on a horse -- you simply cannot brace from
+    /// up there. So the question is never whether a weapon HAS a dismounted
+    /// mode. It is whether it has anything else.
+    ///
+    /// That is why the base game has exactly one foot-only weapon family. Of
+    /// its twelve crafting templates only Pike offers nothing but dismounted
+    /// modes, pike and bracing; TwoHandedPolearm offers couch, bracing and
+    /// thrown alongside ordinary thrusts and is fine on a horse. Checked
+    /// template by template against the game's own flags: twelve of twelve
+    /// agree.
+    ///
+    /// The rule below is the one the game's own interface uses to draw the
+    /// "cannot use on horseback" icon -- CampaignUIHelper.GetItemUsageSetFlagDetails
+    /// tests RequiresNoMount and then lets the Bow.HorseMaster perk lift it.
+    ///
+    /// A modded set with its own dismounted-only name would be missed, which is
+    /// the only failure available without parsing every module's XML at load.
     /// </summary>
     public static class MountRules
     {
@@ -27,7 +41,9 @@ namespace HeroesEvolve.Core
         /// Ordered as the data file lists them. The first was found the
         /// expensive way -- a mounted Vlandian king holding a noble_long_bow he
         /// could not draw -- and the other four came from reading the file that
-        /// would have said so all along.
+        /// would have said so all along. Four of the five are modes that other
+        /// modes sit beside, so on their own they bar almost nothing: only the
+        /// pike, whose every mode is here, is refused a rider outright.
         /// </summary>
         private static readonly string[] Dismounted = new string[]
         {
@@ -36,20 +52,6 @@ namespace HeroesEvolve.Core
             "polearm_bracing",
             "polearm_pike",
             "polearm_thrown",
-        };
-
-        /// <summary>
-        /// The item usage sets the game allows ONLY from a mount.
-        ///
-        /// One set, and the same file says so: a couched lance is braced against
-        /// the horse's momentum and means nothing standing still. Kept separate
-        /// from the list above rather than folded into a single table, because
-        /// these two are not opposites -- a weapon may be neither, and a lance
-        /// that also thrusts is both couchable and perfectly usable on foot.
-        /// </summary>
-        private static readonly string[] MountedOnly = new string[]
-        {
-            "polearm_couch",
         };
 
         /// <summary>Whether this one way of wielding the weapon needs both feet on the ground.</summary>
@@ -98,45 +100,5 @@ namespace HeroesEvolve.Core
             return !sawOne;
         }
 
-        /// <summary>Whether this one way of wielding the weapon needs a mount under it.</summary>
-        public static bool IsMountedOnly(string usage)
-        {
-            if (string.IsNullOrEmpty(usage)) return false;
-
-            for (int i = 0; i < MountedOnly.Length; i++)
-            {
-                if (MountedOnly[i] == usage) return true;
-            }
-
-            return false;
-        }
-
-        /// <summary>
-        /// Whether a man on foot can use this weapon at all.
-        ///
-        /// The mirror of AllowsMounted and the same shape: one usable mode is
-        /// enough, so an ordinary lance -- couchable and also a thrusting spear
-        /// -- passes, and only a weapon with nothing but a couch would not.
-        ///
-        /// Added on principle rather than on evidence. No vanilla item is known
-        /// to offer the couch and nothing else, so this is expected to reject
-        /// nothing at all today; it exists because the rule it completes is
-        /// "give a man a weapon he can use", and a rule enforced in one
-        /// direction only is a rule half kept.
-        /// </summary>
-        public static bool AllowsOnFoot(string[] usages)
-        {
-            if (usages == null || usages.Length == 0) return true;
-
-            bool sawOne = false;
-            for (int i = 0; i < usages.Length; i++)
-            {
-                if (usages[i] == null) continue;
-                sawOne = true;
-                if (!IsMountedOnly(usages[i])) return true;
-            }
-
-            return !sawOne;
-        }
     }
 }

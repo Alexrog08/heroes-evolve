@@ -86,7 +86,16 @@ namespace HeroesEvolve
             // requires_no_mount -- the long bow, the pike, the braced spear, the
             // thrown polearm and shield-with-dagger -- and a pike is exactly the
             // weapon a mounted lord has no business buying. See MountRules.
-            if (RequiresNoMount(item)) return false;
+            // The game lifts this for one perk and this did not, so a lord who
+            // had earned the right to shoot a long bow from the saddle was
+            // still refused one. Bow.HorseMaster, and it is not limited to
+            // bows: CampaignUIHelper.GetItemUsageSetFlagDetails hides the
+            // "cannot use on horseback" icon on any RequiresNoMount weapon for
+            // a character holding it.
+            if (RequiresNoMount(item) && !hero.GetPerkValue(DefaultPerks.Bow.HorseMaster))
+            {
+                return false;
+            }
 
             if ((weapon.WeaponFlags & WeaponFlags.CantReloadOnHorseback) == 0) return true;
 
@@ -110,20 +119,6 @@ namespace HeroesEvolve
         private static bool RequiresNoMount(ItemObject item)
         {
             return !MountRules.AllowsMounted(UsageNames(item));
-        }
-
-        /// <summary>
-        /// Whether a hero with no horse could use this weapon.
-        ///
-        /// The other half of IsUsableMounted. See MountRules.AllowsOnFoot for
-        /// why it is here despite rejecting nothing in the base game.
-        /// </summary>
-        public static bool IsUsableOnFoot(ItemObject item)
-        {
-            if (item == null) return false;
-            if (!item.HasWeaponComponent) return true;
-
-            return MountRules.AllowsOnFoot(UsageNames(item));
         }
 
         /// <summary>Every way this item can be wielded, by name.</summary>

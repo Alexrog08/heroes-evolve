@@ -51,23 +51,27 @@ namespace HeroesEvolve.Tests
             Check.True(MountRules.AllowsMounted(new string[] { "" }), "an unnamed usage is not refused");
             Check.True(MountRules.AllowsMounted(new string[] { null }), "a null usage is not refused");
 
-            // The mirror. polearm_couch is the one set the file flags
-            // requires_mount, and a lance that also thrusts stays usable on foot.
-            Check.True(MountRules.IsMountedOnly("polearm_couch"), "a couch needs a horse under it");
-            Check.False(MountRules.IsMountedOnly("polearm_pike"), "a pike needs no horse");
-            Check.False(MountRules.IsMountedOnly(null), "a null usage requires nothing");
-
-            Check.False(MountRules.AllowsOnFoot(new string[] { "polearm_couch" }),
-                        "a weapon that can only be couched is no use on foot");
-            Check.True(MountRules.AllowsOnFoot(new string[] { "polearm_couch", "polearm_block_thrust" }),
-                       "a lance that also thrusts is fine on foot");
-            Check.True(MountRules.AllowsOnFoot(null), "an unreadable weapon is not refused on foot");
-            Check.True(MountRules.AllowsOnFoot(new string[0]), "no usages is not refused on foot");
-
-            // The two rules must not contradict each other on ordinary gear.
-            string[] plain = new string[] { "onehanded_block_shield_swing_thrust" };
-            Check.True(MountRules.AllowsMounted(plain) && MountRules.AllowsOnFoot(plain),
-                       "an ordinary sword serves a rider and a footman alike");
+            // The templates, checked against the game's own flags. This is the
+            // case the rule exists for and the case that is easiest to get
+            // backwards: a spear that can be braced is still a spear on a
+            // horse, and only the pike -- whose every mode wants the ground --
+            // is genuinely refused a rider.
+            Check.True(MountRules.AllowsMounted(new string[] {
+                           "onehanded_polearm_block_long_rshield_thrust",
+                           "polearm_block_long_shield_swing_thrust",
+                           "polearm_couch", "polearm_bracing", "polearm_thrown" }),
+                       "TwoHandedPolearm: braceable and couchable, still fine mounted");
+            Check.False(MountRules.AllowsMounted(new string[] {
+                            "polearm_pike", "polearm_bracing" }),
+                        "Pike: every mode wants the ground");
+            Check.True(MountRules.AllowsMounted(new string[] {
+                           "onehanded_shield_dagger",
+                           "onehanded_block_shield_swing_thrust_dagger",
+                           "throwing_knife" }),
+                       "Dagger: one dismounted mode among three does not bar it");
+            Check.True(MountRules.AllowsMounted(new string[] {
+                           "throwing_javelin", "onehanded_polearm_block_shield_thrust" }),
+                       "Javelin: neither mode is barred");
         }
     }
 }
