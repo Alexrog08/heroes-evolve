@@ -166,6 +166,31 @@ namespace HeroLoadoutFixer.Core
 
             // Score runs +2 (a paragon) to -2 (a brute); fold it into 0..1 with
             // the good end at zero, then bend it away from the middle.
+            //
+            // The bend is what makes a rare trait worth having, and the numbers
+            // are worth writing down because the question came up and nobody
+            // had ever worked them out. Cubed, with all four traits level:
+            //
+            //   +2   0.0%      -- and zero means never
+            //   +1   1.6%
+            //    0  12.5%
+            //   -1  42.2%
+            //   -2 100.0%      -- and a hundred means always
+            //
+            // The step from -1 to -2 is fifty-eight percentage points, the
+            // largest on the scale. That matters more than it looks: a census
+            // found every trait in a live campaign confined to -1 through +1,
+            // with one lord in 495 holding a +2 and none a -2, because
+            // AgingCampaignBehavior.OnHeroReachesTeenAge copies a parent's
+            // trait far more often than it drifts, and only ever drifts by one.
+            // TraitObject.Initialize sets the bounds at -2 to 2, so both
+            // extremes are reachable -- they simply take generations.
+            //
+            // Which is the right shape for something that rare. Moving Honor
+            // alone, the rest neutral, runs 2.7% at +2 through 12.5% at zero to
+            // 34.3% at -2: one exceptional trait nearly triples a man's
+            // appetite or quarters it, without needing him to be exceptional in
+            // all four.
             float linear = (2f - score) / 4f;
             float disposition = linear;
             for (int i = 1; i < DispositionCurve; i++) disposition *= linear;
