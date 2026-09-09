@@ -37,7 +37,13 @@ param(
 
     # A .jpg or .png, 512x512 or larger. Optional: the tool skips the preview
     # when the element is absent, and Steam lets you add one on the web page.
-    [string]$Image = ""
+    [string]$Image = "",
+
+    # Workshop tags. Steam defines the valid set for this app and silently
+    # discards anything else, so they are checked here against the list the
+    # Bannerlord workshop actually offers -- an invented tag would cost nothing
+    # at publish time and simply never appear.
+    [string[]]$Tags = @("Singleplayer", "Native", "Utility", "v1.4.8")
 )
 
 $ErrorActionPreference = "Stop"
@@ -84,8 +90,26 @@ $update.Add('  <UpdateItem>')
 $update.Add('    <ModuleFolder Value="' + (Escape-Attr $module) + '" />')
 $update.Add('    <ItemDescription Value="' + (Escape-Attr $description) + '" />')
 $update.Add('    <Visibility Value="' + $Visibility + '" />')
+# Read off the Bannerlord workshop's own filter panel. Type, Setting, Game Mode
+# and Compatible Version, which is every category it sorts by.
+$validTags = @(
+    'Graphical Enhancement', 'Map Pack', 'Partial Conversion', 'Sound',
+    'Total Conversion', 'Troops', 'UI', 'Utility', 'Weapons and Armour',
+    'Native', 'Antiquity', 'Dark Ages', 'Medieval', 'Musket Era', 'Modern',
+    'Sci-Fi', 'Fantasy', 'Oriental', 'Other',
+    'Singleplayer', 'Multiplayer',
+    'v1.2.12', 'v1.3.4', 'v1.3.5', 'v1.3.6', 'v1.3.7', 'v1.3.8', 'v1.3.9',
+    'v1.3.10', 'v1.3.11', 'v1.3.12', 'v1.3.13', 'v1.3.14', 'v1.3.15',
+    'v1.4.5', 'v1.4.6', 'v1.4.7', 'v1.4.8'
+)
+foreach ($t in $Tags) {
+    if ($validTags -notcontains $t) {
+        throw "Steam would silently drop the tag '$t'. Valid tags: $($validTags -join ', ')"
+    }
+}
+
 $update.Add('    <Tags>')
-$update.Add('      <Tag Value="Singleplayer" />')
+foreach ($t in $Tags) { $update.Add('      <Tag Value="' + (Escape-Attr $t) + '" />') }
 $update.Add('    </Tags>')
 if (-not [string]::IsNullOrWhiteSpace($Image)) {
     if (-not (Test-Path $Image)) { throw "preview image not found: $Image" }
@@ -137,6 +161,7 @@ Write-Host "  title      $name   (from SubModule.xml, not from this file)"
 Write-Host "  version    $version"
 Write-Host "  module     $module"
 Write-Host "  visibility $Visibility"
+Write-Host ("  tags       " + ($Tags -join ', '))
 if ([string]::IsNullOrWhiteSpace($Image)) {
     Write-Host "  preview    none -- add one on the Workshop page afterwards" -ForegroundColor Yellow
 }
