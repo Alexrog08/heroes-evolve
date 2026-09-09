@@ -5,7 +5,7 @@
   </tags>
   <strings>
     <string id="hlf_strip" text="Entrégame tus armas y tu armadura." />
-    <string id="hlf_strip_reply" text="¿Le quitarías las armas a un hombre vencido? Hay una palabra para esto, y no es guerra. Tómalas, pues. Mi clan sabrá de ello, y el tuyo también." />
+    <string id="hlf_strip_reply" text="¿Le quitarías las armas a un hombre vencido? Esto te deshonra. Tómalas, pues. Mi clan sabrá de ello, y el tuyo también." />
     <string id="hlf_strip_reprisal" text="No hay honor en ti que yo pueda ofender. Entrégame tus armas y tu armadura." />
     <string id="hlf_strip_reprisal_reply" text="Háblame de honor cuando termines de robarme. Tómalo, pues, tómalo todo: tendré mejor antes de un mes, y al próximo que deje en camisa puede que lleve tu apellido." />
     <string id="hlf_strip_friend" text="No te lo tomes como algo personal. Entrégame tus armas y tu armadura." />

@@ -43,21 +43,28 @@ namespace HeroLoadoutFixer
                                   "hlf_strip_prisoner_reply",
                                   "close_window",
                                   "{=hlf_strip_reply}You would take the arms off a beaten man? "
-                                  + "There is a word for this, and it is not war. Take them, then. "
-                                  + "My clan will hear of it, and so will yours.",
+                                  + "This dishonours you. Take them, then. My clan will hear of it, "
+                                  + "and so will yours.",
                                   null, Strip, 100, null);
 
             // The same act against a man who trades in it. Said differently
             // because it is a different thing, and it costs half -- see
             // PlunderRules.AfterReprisal.
             //
-            // The two answers are the trait talking. A man with Honor above
-            // zero has been wronged and says so: it is an outrage, his house
-            // will hear of it, and so will yours. A man below zero is not
-            // ashamed and is not pretending to be -- he will have better gear
-            // inside a month, and he tells you whose back he means to take it
-            // off. Which is the only reason the discount reads as fair rather
-            // than as a loophole: you can hear that he had it coming.
+            // Honour is named in all three answers, from three angles, and
+            // that is what makes them one conversation rather than three. The
+            // honourable man says the act dishonours you. The demand made of a
+            // scoundrel says there is no honour in him to offend. The scoundrel
+            // throws the word back and asks you to finish robbing him first.
+            // The friend never mentions it, because between friends it was
+            // never the point.
+            //
+            // A man with Honor above zero has been wronged and says so plainly.
+            // A man below zero is not ashamed and is not pretending to be -- he
+            // will have better gear inside a month, and he tells you whose back
+            // he means to take it off. Which is the only reason the discount
+            // reads as fair rather than as a loophole: you can hear that he had
+            // it coming.
             //
             // The demand names honour, and that is the whole job of the
             // sentence. Honor below zero is the entire test, and a player
