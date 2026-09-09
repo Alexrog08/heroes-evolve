@@ -58,19 +58,27 @@ namespace HeroLoadoutFixer
             // inside a month, and he tells you whose back he means to take it
             // off. Which is the only reason the discount reads as fair rather
             // than as a loophole: you can hear that he had it coming.
+            //
+            // Both lines name honour on purpose, and the demand says it first.
+            // The player cannot see a trait level without going to look for it,
+            // so a spare line -- the first draft was "You know how this goes"
+            // -- left him reading a differently worded option with no idea why
+            // it was different or why it cost him less. Saying that no man of
+            // honour will speak for this one puts the reason in the sentence,
+            // and having him spit the word back is what confirms it.
             starter.AddPlayerLine("hlf_strip_prisoner_reprisal",
                                   "hero_main_options",
                                   "hlf_strip_prisoner_reprisal_reply",
-                                  "{=hlf_strip_reprisal}You know how this goes. "
+                                  "{=hlf_strip_reprisal}No man of honour would speak for you. "
                                   + "Hand over your arms and armour.",
                                   CanStripInReprisal, null, 100, null);
 
             starter.AddDialogLine("hlf_strip_prisoner_reprisal_reply",
                                   "hlf_strip_prisoner_reprisal_reply",
                                   "close_window",
-                                  "{=hlf_strip_reprisal_reply}Ha! Take it. Take all of it -- I will "
-                                  + "have better within the month. And the next man I strip to his "
-                                  + "shirt may well share your name.",
+                                  "{=hlf_strip_reprisal_reply}Ha! Honour. Take it, then, take all "
+                                  + "of it -- I will have better within the month, and the next man I "
+                                  + "strip to his shirt may well share your name.",
                                   null, Strip, 100, null);
         }
 
