@@ -103,6 +103,28 @@ namespace HeroesEvolve
         public static float PlunderChance = 0.5f;
 
         /// <summary>
+        /// Whether this mod dresses the heroes of the player's own clan.
+        ///
+        /// On by default, because a party led by your brother is a party the AI
+        /// takes into battle and the same argument for equipping any other lord
+        /// applies to him.
+        ///
+        /// Off is not a special rule for the player, and this mod does not have
+        /// those. It is the same boundary already drawn around heroes in the
+        /// main party, which are refused because their inventory is the
+        /// player's to manage and a mod tidying it would be taking something
+        /// away rather than adding it. Some players outfit their family and
+        /// their caravan masters by hand and want that respected past the edge
+        /// of their own party; this moves the line, it does not bend a rule.
+        ///
+        /// Deliberately does not touch skill growth. That takes nothing from
+        /// anyone -- it makes a man better at what he already does -- and a
+        /// player who wants to choose his brother's armour rarely wants his
+        /// brother to stop learning.
+        /// </summary>
+        public static bool ManageOwnClan = true;
+
+        /// <summary>
         /// Item ids this campaign refuses to buy or grant, however good they
         /// are. Empty by default.
         ///
@@ -184,6 +206,7 @@ namespace HeroesEvolve
                 EnableSkillGrowth = Flag(root, "EnableSkillGrowth", EnableSkillGrowth);
                 EnablePurchases = Flag(root, "EnablePurchases", EnablePurchases);
                 EnableLogging = Flag(root, "EnableLogging", EnableLogging);
+                ManageOwnClan = Flag(root, "ManageOwnClan", ManageOwnClan);
                 EnableCaptureLoss = Flag(root, "EnableCaptureLoss", EnableCaptureLoss);
 
                 ClanWeight = Number(root, "ClanWeight", ClanWeight, 0f, 10f);
@@ -216,6 +239,7 @@ namespace HeroesEvolve
         public static string Describe()
         {
             return "repair=" + EnableRepair
+                   + " ownClan=" + ManageOwnClan
                    + " growth=" + EnableSkillGrowth
                    + " purchases=" + EnablePurchases
                    + " clanWeight=" + ClanWeight

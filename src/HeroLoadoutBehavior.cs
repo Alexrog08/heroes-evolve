@@ -371,6 +371,13 @@ namespace HeroesEvolve
                 // NeedsGrant is loudest about. He is repaired when he gets out.
                 if (hero.IsPrisoner) return;
 
+                // Repair reads the same boundary the shopping filter does. It
+                // is checked here rather than in HeroFilter.IsEligible because
+                // that one also gates skill growth and the census, and neither
+                // should change because a player would rather pick his
+                // brother's armour himself.
+                if (!Settings.ManageOwnClan && hero.Clan == Clan.PlayerClan) return;
+
                 // Asked before NeedsGrant, not after. A hero on this list is one
                 // nothing can be done for, and he is looked at again every day
                 // for the rest of the campaign -- reading his whole equipment

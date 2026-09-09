@@ -117,6 +117,10 @@ namespace HeroesEvolve
 
             if (hero.Clan == Clan.PlayerClan)
             {
+                // The player's own, at the player's discretion. See
+                // Settings.ManageOwnClan for why this is a boundary rather
+                // than an exemption.
+                if (!Settings.ManageOwnClan) return false;
                 if (party == null) return false;
                 if (party.LeaderHero != hero) return false;
             }

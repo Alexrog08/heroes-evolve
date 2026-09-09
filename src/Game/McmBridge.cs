@@ -106,6 +106,7 @@ namespace HeroesEvolve
             Settings.EnableSkillGrowth = settings.EnableSkillGrowth;
             Settings.EnablePurchases = settings.EnablePurchases;
             Settings.EnableLogging = settings.EnableLogging;
+            Settings.ManageOwnClan = settings.ManageOwnClan;
 
             Settings.SkillPerTier = settings.SkillPerTier;
             Settings.SkillWeight = settings.SkillWeight;

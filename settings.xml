@@ -63,6 +63,17 @@
   <DominanceMargin>30</DominanceMargin>
 
 
+  <!-- Whether repair and shopping reach the heroes of your own clan: your
+       family, and the companions leading your parties and caravans. True
+       because a party your brother leads is one the AI takes into battle, and
+       the argument for equipping any other lord applies to him.
+
+       Set it false if you outfit them by hand and want that respected. Heroes
+       travelling inside your own party are never touched either way, since
+       their inventory is already yours to manage. Their skills keep growing
+       regardless: that takes nothing from you. -->
+  <ManageOwnClan>true</ManageOwnClan>
+
   <!-- ============ Money ============ -->
 
   <!-- The share of his wallet a lord may spend on ONE TRIP to the market,

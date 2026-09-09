@@ -76,6 +76,16 @@ namespace HeroesEvolve
         [SettingPropertyGroup("What runs", GroupOrder = 6)]
         public bool EnablePurchases { get; set; } = true;
 
+        [SettingPropertyBool("Include my own clan", RequireRestart = false,
+            HintText = "Whether repair and shopping reach the heroes of your own clan -- your "
+                     + "family, and the companions leading your parties and caravans. On, because "
+                     + "a party your brother leads is one the AI takes into battle. Turn it off if "
+                     + "you outfit them by hand and want that left alone. Heroes travelling in "
+                     + "your own party are never touched either way. This does not stop their "
+                     + "skills growing.")]
+        [SettingPropertyGroup("What runs", GroupOrder = 6)]
+        public bool ManageOwnClan { get; set; } = true;
+
         [SettingPropertyBool("Write hev.log", RequireRestart = false,
             HintText = "Logs what the mod does, under the Bannerlord logs folder. Off costs nothing "
                      + "and writes nothing. The census below needs this on.")]
