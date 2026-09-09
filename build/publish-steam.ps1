@@ -96,6 +96,19 @@ if (-not [string]::IsNullOrWhiteSpace($ChangeNotes)) {
 }
 $update.Add('  </UpdateItem>')
 
+# Nexus renders a narrower BBCode dialect than Steam does -- no [h1]/[h2] --
+# and would print those tags as literal text in the middle of the page. Rather
+# than keep a second description that drifts from the first, the Nexus copy is
+# rendered from the same source every time this runs, using only tags both
+# sites agree on. Edit docs/store-description.bbcode; never edit the output.
+$nexus = $description
+$nexus = $nexus -replace '\[h1\](.*?)\[/h1\]', '[size=5][b]$1[/b][/size]'
+$nexus = $nexus -replace '\[h2\](.*?)\[/h2\]', '[size=4][b]$1[/b][/size]'
+$nexusOut = Join-Path $root ".tmp\store-description-nexus.bbcode"
+New-Item -ItemType Directory -Force (Split-Path $nexusOut) | Out-Null
+$nexus | Set-Content -Path $nexusOut -Encoding UTF8 -NoNewline
+if ($nexus -match '\[h[0-9]\]') { throw "a header tag survived the Nexus rendering" }
+
 $out = Join-Path $root ".tmp\workshop.xml"
 New-Item -ItemType Directory -Force (Split-Path $out) | Out-Null
 
@@ -117,6 +130,9 @@ Write-Host "  visibility $Visibility"
 if ([string]::IsNullOrWhiteSpace($Image)) {
     Write-Host "  preview    none -- add one on the Workshop page afterwards" -ForegroundColor Yellow
 }
+Write-Host ""
+Write-Host "Nexus copy (paste into the Description box):" -ForegroundColor Cyan
+Write-Host "  $nexusOut"
 Write-Host ""
 Write-Host "Steam must be running and logged in. Then publish with:" -ForegroundColor Cyan
 Write-Host ""
