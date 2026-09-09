@@ -1370,6 +1370,20 @@ namespace HeroesEvolve
         {
             if (Clan.PlayerClan == null) return;
 
+            // Which of the six the engine actually set on the player's house.
+            // Recorded because the guard that used to read them refused nine of
+            // his heroes, and the next person to widen that list should be able
+            // to see what it catches.
+            Clan mine = Clan.PlayerClan;
+            ModLog.Info("MYCLAN clan=" + mine.Name
+                        + " tier=" + mine.Tier
+                        + " minorFaction=" + mine.IsMinorFaction
+                        + " banditFaction=" + mine.IsBanditFaction
+                        + " outlaw=" + mine.IsOutlaw
+                        + " sect=" + mine.IsSect
+                        + " nomad=" + mine.IsNomad
+                        + " mafia=" + mine.IsMafia);
+
             int[] bounds = { 18, 25, 35, 45, 55, 200 };
             string[] labels = { "18-24", "25-34", "35-44", "45-54", "55+" };
 
@@ -1427,6 +1441,10 @@ namespace HeroesEvolve
                                 + " age=" + (int)hero.Age
                                 + " where=" + place
                                 + " grown=" + HeroFilter.IsEligible(hero)
+                                + " why=" + (HeroFilter.WhyIneligible(hero) ?? "-")
+                                + " isLord=" + hero.IsLord
+                                + " companionOf=" + (hero.CompanionOf != null
+                                                     ? hero.CompanionOf.Name.ToString() : "none")
                                 + " cohort=" + (b >= 0 ? labels[b] : "?")
                                 + " | bestWeapon=" + best + " vs " + median
                                 + " (" + Signed(best - median) + ")"

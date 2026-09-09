@@ -11,6 +11,42 @@ namespace HeroesEvolve
     /// </summary>
     public static class HeroFilter
     {
+        /// <summary>
+        /// Which test IsEligible failed on, or null when it passed.
+        ///
+        /// Mirrors the order below and exists because "grown=False" in a census
+        /// is a fact without a cause, and the causes want opposite fixes: a
+        /// companion refused for riding in the player's party is a boundary
+        /// working as designed, and one refused for having no CompanionOf is a
+        /// hole. Guessing between them from names and ages wasted a round trip.
+        ///
+        /// Kept beside the real filter deliberately. A copy that drifts would be
+        /// worse than no copy at all, so anything added there is added here.
+        /// </summary>
+        public static string WhyIneligible(Hero hero)
+        {
+            if (hero == null) return "null";
+            if (hero.IsDead) return "dead";
+            if (hero.IsHumanPlayerCharacter) return "isPlayer";
+            if (hero == Hero.MainHero) return "isMainHero";
+            if (hero.IsChild) return "isChild";
+            if (!hero.IsLord && hero.CompanionOf == null) return "notLordAndNotCompanion";
+            if (hero.PartyBelongedTo != null && hero.PartyBelongedTo == MobileParty.MainParty)
+            {
+                return "inMainParty";
+            }
+            if (hero.IsTemplate) return "isTemplate";
+            if (hero.Clan != null
+                && hero.Clan != Clan.PlayerClan
+                && (hero.Clan.IsMinorFaction
+                    || hero.Clan.IsBanditFaction
+                    || hero.Clan.IsOutlaw
+                    || hero.Clan.IsSect
+                    || hero.Clan.IsNomad
+                    || hero.Clan.IsMafia)) return "clanKind";
+            return null;
+        }
+
         public static bool IsEligible(Hero hero)
         {
             if (hero == null) return false;
@@ -64,12 +100,23 @@ namespace HeroesEvolve
             // and "repairing" them would have erased the design rather than a
             // defect. Their gear still improves later through the purchase
             // engine, which scales with the clan's own wealth and skills.
-            if (hero.Clan != null && (hero.Clan.IsMinorFaction
-                                      || hero.Clan.IsBanditFaction
-                                      || hero.Clan.IsOutlaw
-                                      || hero.Clan.IsSect
-                                      || hero.Clan.IsNomad
-                                      || hero.Clan.IsMafia)) return false;
+            //
+            // Never the player's own clan, whatever flags it happens to carry.
+            // A census found nine of nineteen player-clan heroes refused here,
+            // including companions leading their own parties, which is the
+            // opposite of what the comment three blocks up promises. The guard
+            // is about respecting somebody else's design; the player's house is
+            // not somebody else's design, and if the engine marks it with one
+            // of these that is a fact about how the clan was created rather
+            // than a statement that it should stay rough.
+            if (hero.Clan != null
+                && hero.Clan != Clan.PlayerClan
+                && (hero.Clan.IsMinorFaction
+                    || hero.Clan.IsBanditFaction
+                    || hero.Clan.IsOutlaw
+                    || hero.Clan.IsSect
+                    || hero.Clan.IsNomad
+                    || hero.Clan.IsMafia)) return false;
 
             return true;
         }
