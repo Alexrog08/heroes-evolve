@@ -69,9 +69,15 @@ namespace HeroLoadoutFixer
             //
             // Stated as an observation rather than a sermon, which matters
             // while you are the one stripping a prisoner: it names what he is
-            // without claiming anything about what you are. And his "none at
-            // all" agrees with it before going straight back to threatening
-            // somebody of your blood, which is the confirmation.
+            // without claiming anything about what you are.
+            //
+            // And he does not concede it. An earlier draft had him agree --
+            // "none at all" -- which is the one thing a man of his sort would
+            // never do; conceding the charge makes him a device for explaining
+            // the mechanic rather than a person. He throws it back instead, and
+            // the charge lands, because you are robbing him while you say it.
+            // Then the swagger, unchanged: better gear inside a month, and a
+            // threat aimed at somebody of your blood.
             starter.AddPlayerLine("hlf_strip_prisoner_reprisal",
                                   "hero_main_options",
                                   "hlf_strip_prisoner_reprisal_reply",
@@ -82,9 +88,10 @@ namespace HeroLoadoutFixer
             starter.AddDialogLine("hlf_strip_prisoner_reprisal_reply",
                                   "hlf_strip_prisoner_reprisal_reply",
                                   "close_window",
-                                  "{=hlf_strip_reprisal_reply}None at all. Take it, then, take all "
-                                  + "of it -- I will have better within the month, and the next man I "
-                                  + "strip to his shirt may well share your name.",
+                                  "{=hlf_strip_reprisal_reply}Speak to me of honour when you have "
+                                  + "finished robbing me. Take it, then, take all of it -- I will have "
+                                  + "better within the month, and the next man I strip to his shirt "
+                                  + "may well share your name.",
                                   null, Strip, 100, null);
         }
 
