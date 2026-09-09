@@ -78,7 +78,33 @@ namespace HeroesEvolve
             if (hero.IsHumanPlayerCharacter) return false;
             if (hero == Hero.MainHero) return false;
             if (hero.IsChild) return false;
-            if (!hero.IsLord && hero.CompanionOf == null) return false;
+            // Lords, companions, and the wanderers nobody has hired yet.
+            //
+            // Wider than the gear filter on purpose. A lord sitting out a war in
+            // his castle is training, running his accounts and reading, and a
+            // wanderer waiting in a tavern is doing whatever he did before
+            // anyone offered him work -- neither is standing still, and only a
+            // party made the difference under the old rule. The two things that
+            // follow are worth having: a lord who has spent years garrisoned
+            // rides out competent rather than rusty, and a companion hired late
+            // is worth hiring late, since the years he spent unhired went
+            // somewhere.
+            //
+            // Note that Hero.Level rises with skill and Hero.Level is one term
+            // in DefaultCompanionHiringPriceCalculationModel, so an old
+            // wanderer now costs more to take on. That is the same trade the
+            // player is being offered -- a better man for more money -- rather
+            // than a side effect to be sorry about.
+            //
+            // Notables stay out, which the occupation check does for free:
+            // merchants, headmen, gang leaders, preachers and rural notables
+            // are none of the three. They are not fighters, they do not carry a
+            // loadout, and a village headman quietly gaining One Handed for
+            // sixty years is nobody's idea of an improvement.
+            if (!hero.IsLord
+                && hero.CompanionOf == null
+                && hero.Occupation != Occupation.Wanderer) return false;
+
             if (hero.IsTemplate) return false;
 
             if (hero.Clan != null
