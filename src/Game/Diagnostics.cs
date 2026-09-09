@@ -1375,7 +1375,12 @@ namespace HeroesEvolve
 
             // The map to measure against: every lord this mod does grow.
             List<int>[] cohort = new List<int>[labels.Length];
-            for (int i = 0; i < cohort.Length; i++) cohort[i] = new List<int>();
+            List<int>[] cohortTotal = new List<int>[labels.Length];
+            for (int i = 0; i < cohort.Length; i++)
+            {
+                cohort[i] = new List<int>();
+                cohortTotal[i] = new List<int>();
+            }
 
             foreach (Hero hero in Hero.AllAliveHeroes)
             {
@@ -1386,6 +1391,9 @@ namespace HeroesEvolve
                     if (b < 0) continue;
                     int best = BestWeaponSkill(hero);
                     if (best > 0) cohort[b].Add(best);
+
+                    int total = AllSkillTotal(hero);
+                    if (total > 0) cohortTotal[b].Add(total);
                 }
                 catch
                 {
@@ -1412,20 +1420,71 @@ namespace HeroesEvolve
                     else if (party != null) place = "inAParty";
                     else place = "noParty";
 
+                    int total = AllSkillTotal(hero);
+                    int totalMedian = b >= 0 ? Median(cohortTotal[b]) : 0;
+
                     ModLog.Info("MYCLAN " + hero.Name
                                 + " age=" + (int)hero.Age
                                 + " where=" + place
                                 + " grown=" + HeroFilter.IsEligible(hero)
-                                + " bestWeapon=" + best
                                 + " cohort=" + (b >= 0 ? labels[b] : "?")
-                                + " cohortMedian=" + median
-                                + " vsCohort=" + (median > 0 ? (best - median).ToString() : "?"));
+                                + " | bestWeapon=" + best + " vs " + median
+                                + " (" + Signed(best - median) + ")"
+                                + " | allSkills=" + total + " vs " + totalMedian
+                                + " (" + Signed(total - totalMedian) + ")");
+
+                    // Every skill by name, because the totals say a man is
+                    // behind without saying at what. A companion who lost
+                    // ground in Trade and Medicine while keeping up with a
+                    // sword is a different problem from one who is simply
+                    // older than his level.
+                    ModLog.Info("MYCLAN " + hero.Name + " skills " + EverySkill(hero));
                 }
                 catch
                 {
                     // Reported best-effort; one bad hero must not stop the rest.
                 }
             }
+        }
+
+        /// <summary>
+        /// Every skill added together: one number for how developed a person is.
+        ///
+        /// A sum rather than an average because a hero with nothing in half the
+        /// skill list should read as less developed than one who is competent
+        /// across it, and an average would hide exactly that.
+        /// </summary>
+        private static int AllSkillTotal(Hero hero)
+        {
+            if (hero == null) return 0;
+
+            int total = 0;
+            foreach (SkillObject skill in TaleWorlds.CampaignSystem.Extensions.Skills.All)
+            {
+                if (skill == null) continue;
+                total += hero.GetSkillValue(skill);
+            }
+            return total;
+        }
+
+        /// <summary>Every skill by name and value, compactly, for one hero.</summary>
+        private static string EverySkill(Hero hero)
+        {
+            StringBuilder text = new StringBuilder();
+            foreach (SkillObject skill in TaleWorlds.CampaignSystem.Extensions.Skills.All)
+            {
+                if (skill == null) continue;
+                if (text.Length > 0) text.Append(' ');
+                text.Append(skill.StringId).Append('=').Append(hero.GetSkillValue(skill));
+                text.Append('/').Append(hero.HeroDeveloper != null
+                                        ? hero.HeroDeveloper.GetFocus(skill) : 0);
+            }
+            return text.ToString();
+        }
+
+        private static string Signed(int n)
+        {
+            return n >= 0 ? "+" + n : n.ToString();
         }
 
         /// <summary>The best of the six weapon skills, as SKILLAGE measures it.</summary>
