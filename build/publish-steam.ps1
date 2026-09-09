@@ -112,13 +112,23 @@ if ($nexus -match '\[h[0-9]\]') { throw "a header tag survived the Nexus renderi
 $out = Join-Path $root ".tmp\workshop.xml"
 New-Item -ItemType Directory -Force (Split-Path $out) | Out-Null
 
-$xml = @('<?xml version="1.0" encoding="utf-8"?>', '<Tasks>') + $tasks + $update + @('</Tasks>')
+# NO XML declaration. Program.LoadTasks reads document.FirstChild.ChildNodes,
+# and with a <?xml ... ?> prolog present FirstChild is the XmlDeclaration, whose
+# ChildNodes is empty -- so the tool loads zero tasks, does nothing, and prints
+# "Starting..." then "Finished..." with no error of any kind. Cost an evening.
+# Without the prolog FirstChild is <Tasks> and the tasks are its children.
+$xml = @('<Tasks>') + $tasks + $update + @('</Tasks>')
 $xml -join "`r`n" | Set-Content -Path $out -Encoding UTF8
 
-# If this cannot be parsed the tool will fail with nothing useful to say.
+# Checked the way the tool reads it, not the way XML says to read it. Loading
+# into DocumentElement would have called the broken file perfectly good.
 $check = New-Object System.Xml.XmlDocument
 $check.Load($out)
-Write-Host "wrote $out ($($check.DocumentElement.ChildNodes.Count) tasks)" -ForegroundColor Green
+$seen = $check.FirstChild.ChildNodes.Count
+if ($check.FirstChild.NodeType -ne 'Element' -or $seen -lt 2) {
+    throw "the publisher would read $seen tasks from this file; it needs the root element first and at least a create/get plus an update"
+}
+Write-Host "wrote $out ($seen tasks, as the publisher will read them)" -ForegroundColor Green
 
 $version = ([xml](Get-Content (Join-Path $module "SubModule.xml"))).Module.Version.value
 $name = ([xml](Get-Content (Join-Path $module "SubModule.xml"))).Module.Name.value
