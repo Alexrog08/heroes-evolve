@@ -44,9 +44,20 @@ namespace HeroLoadoutFixer
         /// prisoner leaves. Using it rather than hand-rolling two calls means
         /// the act is logged and weighted the way the game weighs its own.
         ///
-        /// Twenty sits below the thirty it charges for burning a village. No
-        /// civilian is harmed here, and the offence is chiefly a breach of the
-        /// customs of war rather than a cruelty.
+        /// Twenty sits just below the game's own figure, which is twenty-five
+        /// at full severity: BeHostileAction.ApplyGeneralConsequencesOnPeace
+        /// computes -25 times a severity and hands the result to this same
+        /// door. No civilian is harmed here, and the offence is chiefly a
+        /// breach of the customs of war rather than a cruelty, so a little
+        /// under is right. (An earlier version of this comment said thirty,
+        /// from memory rather than from the assembly.)
+        ///
+        /// What that buys, now that the scale has been read: a trait level
+        /// costs a thousand experience -- DefaultCharacterDevelopmentModel.
+        /// GetTraitLevelForTraitXp steps at 1000 and 4000 either side of zero,
+        /// clamped at 6000 -- so fifty robberies move a man's Honor by one,
+        /// against forty of the game's own hostile acts. A career of it, not an
+        /// afternoon.
         ///
         /// Only the player has traits that move at all: AddTraitXp is hardwired
         /// to Campaign.PlayerTraitDeveloper and Hero.MainHero, and an AI lord's
