@@ -74,6 +74,19 @@ foreach ($p in @($module, $publisher, $descriptionFile)) {
 # and the Nexus page cannot drift apart.
 $description = Get-Content $descriptionFile -Raw
 
+# Steam caps a Workshop description at 8000 characters and does not say so
+# politely: the whole upload runs, the content transfers, the preview transfers,
+# and only at k_EItemUpdateStatusCommittingChanges does it turn into
+# k_EResultInvalidParam -- which names no parameter and looks for all the world
+# like a tag problem or a permissions problem. Cost a full upload to find.
+$descriptionLimit = 8000
+if ($description.Length -gt $descriptionLimit) {
+    throw ("the description is $($description.Length) characters and Steam accepts " +
+           "$descriptionLimit. It would upload everything and then fail at the commit " +
+           "with k_EResultInvalidParam. Trim docs/store-description.bbcode by " +
+           "$($description.Length - $descriptionLimit) characters.")
+}
+
 # XML normalises a literal newline inside an attribute value into a space --
 # it is in the spec, and it would flatten the whole description into one
 # paragraph. A character reference survives normalisation, so the line breaks
@@ -201,6 +214,7 @@ Write-Host "  title      $name   (from SubModule.xml, not from this file)"
 Write-Host "  version    $version"
 Write-Host "  module     $module"
 Write-Host "  visibility $Visibility"
+Write-Host ("  description " + $description.Length + " of " + $descriptionLimit + " characters")
 Write-Host ("  tags       " + ($Tags -join ', '))
 if ([string]::IsNullOrWhiteSpace($Image)) {
     Write-Host "  preview    none -- add one on the Workshop page afterwards" -ForegroundColor Yellow
