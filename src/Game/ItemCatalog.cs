@@ -308,6 +308,58 @@ namespace HeroLoadoutFixer
         /// Every usage is checked, not only the primary: an item can be wielded
         /// more than one way and only one of them need be the ugly one.
         /// </summary>
+        /// <summary>
+        /// Says which excluded ids name no item in this installation.
+        ///
+        /// Written after watching the exclusion list fail in the quietest way
+        /// it can. The setting is a free-text box matched by exact string, so a
+        /// typo, a stale id from a mod since removed, or -- as actually
+        /// happened -- the example id copied out of the settings.xml comment,
+        /// all behave identically to an empty box: the mod goes on buying the
+        /// thing and nothing anywhere says why. Every other setting in this mod
+        /// is a switch or a bounded number and cannot be wrong in that way.
+        ///
+        /// Reported rather than corrected. An id this installation does not
+        /// know may still be right -- the player may be about to enable the mod
+        /// that defines it -- so the list is left exactly as entered.
+        /// </summary>
+        public static void ReportUnknownExclusions()
+        {
+            try
+            {
+                string[] ids = Settings.ExcludedIds();
+                if (ids.Length == 0) return;
+
+                // The screen can be opened from the main menu, where no item
+                // list exists yet. Nothing to check against is not a complaint.
+                MBReadOnlyList<ItemObject> all = MBObjectManager.Instance != null
+                    ? MBObjectManager.Instance.GetObjectTypeList<ItemObject>() : null;
+                if (all == null || all.Count == 0) return;
+
+                for (int i = 0; i < ids.Length; i++)
+                {
+                    bool found = false;
+                    for (int j = 0; j < all.Count; j++)
+                    {
+                        ItemObject item = all[j];
+                        if (item == null) continue;
+                        if (string.Equals(item.StringId, ids[i],
+                                          System.StringComparison.OrdinalIgnoreCase))
+                        {
+                            found = true;
+                            break;
+                        }
+                    }
+
+                    ModLog.Info("EXCLUDED " + ids[i] + (found ? " matches an item" : " MATCHES NOTHING"));
+                }
+            }
+            catch
+            {
+                // A diagnostic must never be the thing that takes a campaign down.
+            }
+        }
+
         public static bool IsIncendiary(ItemObject item)
         {
             if (item == null || !item.HasWeaponComponent) return false;

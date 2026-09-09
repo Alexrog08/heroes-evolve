@@ -102,7 +102,7 @@
        You are the exception on both sides: nothing decides to rob for you,
        and your own standing never moves for having been robbed. Relations in
        this game are yours to earn. -->
-  <EnableCaptureLoss>false</EnableCaptureLoss>
+  <EnableCaptureLoss>true</EnableCaptureLoss>
 
   <!-- Scales how often a captor robs. 0 is the same as off, 1 runs the rules
        as written, 2 doubles them. Every weight behind this is invented — no

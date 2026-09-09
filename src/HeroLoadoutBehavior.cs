@@ -93,6 +93,7 @@ namespace HeroLoadoutFixer
             // heroes one in-game day later instead, which actually works, so
             // the dead subscription is removed rather than fought.
             ModLog.Info("SETTINGS in force: " + Settings.Describe());
+            ItemCatalog.ReportUnknownExclusions();
 
             CampaignEvents.DailyTickHeroEvent.AddNonSerializedListener(this, OnDailyTickHero);
 

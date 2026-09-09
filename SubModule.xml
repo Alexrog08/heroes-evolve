@@ -2,7 +2,7 @@
 <Module>
   <Name value="Hero Loadout Fixer"/>
   <Id value="HeroLoadoutFixer"/>
-  <Version value="v0.1.0"/>
+  <Version value="v1.0.0"/>
   <SingleplayerModule value="true"/>
   <MultiplayerModule value="false"/>
   <DependedModules>
