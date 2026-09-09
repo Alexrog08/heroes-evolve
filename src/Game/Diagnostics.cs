@@ -1400,7 +1400,7 @@ namespace HeroesEvolve
             {
                 try
                 {
-                    if (!HeroFilter.IsEligible(hero)) continue;
+                    if (!HeroFilter.IsEligibleToGrow(hero)) continue;
                     int b = Bucket(bounds, (int)hero.Age);
                     if (b < 0) continue;
                     int best = BestWeaponSkill(hero);
@@ -1440,7 +1440,8 @@ namespace HeroesEvolve
                     ModLog.Info("MYCLAN " + hero.Name
                                 + " age=" + (int)hero.Age
                                 + " where=" + place
-                                + " grown=" + HeroFilter.IsEligible(hero)
+                                + " grown=" + HeroFilter.IsEligibleToGrow(hero)
+                                + " geared=" + HeroFilter.IsEligible(hero)
                                 + " why=" + (HeroFilter.WhyIneligible(hero) ?? "-")
                                 + " isLord=" + hero.IsLord
                                 + " companionOf=" + (hero.CompanionOf != null

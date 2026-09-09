@@ -53,7 +53,7 @@ namespace HeroesEvolve
         /// </summary>
         public static bool GrowWeekly(Hero hero)
         {
-            if (!HeroFilter.IsEligible(hero)) return false;
+            if (!HeroFilter.IsEligibleToGrow(hero)) return false;
             if (hero.HeroDeveloper == null || hero.BattleEquipment == null) return false;
 
             float talent = Talent.For(hero.StringId);

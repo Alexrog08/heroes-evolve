@@ -47,6 +47,52 @@ namespace HeroesEvolve
             return null;
         }
 
+        /// <summary>
+        /// Whether this mod grows this hero's skills.
+        ///
+        /// Everything IsEligible tests except the main party, and the exception
+        /// is the whole point. That clause exists because the player outfits the
+        /// heroes riding with him out of his own inventory, and gear changing
+        /// without him asking is the complaint this mod was written to answer.
+        /// It is a rule about equipment, and it had been silently deciding
+        /// skills too -- so a companion at the player's shoulder learned nothing
+        /// for life while every lord on the map gained one to three points a
+        /// year, and over a long campaign he could only fall further behind.
+        ///
+        /// Growth takes nothing from anyone. It cannot overwrite a choice the
+        /// player made, and it cannot overshoot: SkillGrowth.PointsStep returns
+        /// zero the moment a hero reaches his target, so a companion the player
+        /// actually fights with is already at or past his ceiling and receives
+        /// nothing at all. The only hero this reaches is one who has genuinely
+        /// fallen behind, and it carries him to the same ceiling every other
+        /// lord is aiming at -- no further.
+        ///
+        /// ManageOwnClan does not gate this either, for the same reason: a
+        /// player who would rather choose his brother's armour himself rarely
+        /// wants his brother to stop learning.
+        /// </summary>
+        public static bool IsEligibleToGrow(Hero hero)
+        {
+            if (hero == null) return false;
+            if (hero.IsDead) return false;
+            if (hero.IsHumanPlayerCharacter) return false;
+            if (hero == Hero.MainHero) return false;
+            if (hero.IsChild) return false;
+            if (!hero.IsLord && hero.CompanionOf == null) return false;
+            if (hero.IsTemplate) return false;
+
+            if (hero.Clan != null
+                && hero.Clan != Clan.PlayerClan
+                && (hero.Clan.IsMinorFaction
+                    || hero.Clan.IsBanditFaction
+                    || hero.Clan.IsOutlaw
+                    || hero.Clan.IsSect
+                    || hero.Clan.IsNomad
+                    || hero.Clan.IsMafia)) return false;
+
+            return true;
+        }
+
         public static bool IsEligible(Hero hero)
         {
             if (hero == null) return false;
