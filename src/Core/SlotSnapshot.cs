@@ -1,6 +1,6 @@
 using System;
 
-namespace HeroLoadoutFixer.Core
+namespace HeroesEvolve.Core
 {
     /// <summary>
     /// What a hero currently has equipped, expressed only in core types.

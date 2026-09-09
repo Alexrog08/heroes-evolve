@@ -1,4 +1,4 @@
-namespace HeroLoadoutFixer.Core
+namespace HeroesEvolve.Core
 {
     /// <summary>
     /// What kind of thing occupies a weapon slot. Ammunition is split by kind

@@ -36,7 +36,7 @@ $refs += $mcm.FullName
 $sources = Get-ChildItem (Join-Path $root "src") -Recurse -Filter *.cs
 
 $rsp = Join-Path $out "mod.rsp"
-$lines = @("/nologo", "/target:library", "/platform:x64", "/optimize+", "/out:`"$out\HeroLoadoutFixer.dll`"")
+$lines = @("/nologo", "/target:library", "/platform:x64", "/optimize+", "/out:`"$out\HeroesEvolve.dll`"")
 foreach ($r in $refs)    { $lines += "/r:`"$r`"" }
 foreach ($s in $sources) { $lines += "`"$($s.FullName)`"" }
 Set-Content -Path $rsp -Value $lines -Encoding UTF8
@@ -44,15 +44,33 @@ Set-Content -Path $rsp -Value $lines -Encoding UTF8
 & $csc /noconfig "@$rsp"
 if ($LASTEXITCODE -ne 0) { Write-Host "BUILD FAILED"; exit 1 }
 
-$dest = Join-Path $game "Modules\HeroLoadoutFixer"
+$dest = Join-Path $game "Modules\HeroesEvolve"
 New-Item -ItemType Directory -Force -Path (Join-Path $dest "bin\Win64_Shipping_Client") | Out-Null
 Copy-Item (Join-Path $root "SubModule.xml") $dest -Force
+
+# settings.xml is parsed before it is allowed to ship. This has gone wrong twice
+# the same way: an em dash typed as two hyphens inside a comment, which XML
+# forbids, and which nothing complains about at the time. Settings.Load catches
+# the parse failure by design -- a broken config must never take a campaign down
+# -- so the file silently falls back to defaults in its entirety, and the only
+# symptom is a mod that quietly ignores every setting in it. Cheap to check,
+# invisible when it breaks, so it is checked.
+$sourceSettings = Join-Path $root "settings.xml"
+try {
+  $probe = New-Object System.Xml.XmlDocument
+  $probe.Load($sourceSettings)
+} catch {
+  Write-Host "settings.xml is not valid XML and would load as defaults:" -ForegroundColor Red
+  Write-Host "  $($_.Exception.Message)" -ForegroundColor Red
+  Write-Host "  (a comment containing -- is the usual cause; use an em dash)" -ForegroundColor Yellow
+  exit 1
+}
 
 # settings.xml ships alongside, but never over the top of one the player has
 # already edited -- a deploy must not silently reset their configuration.
 $settings = Join-Path $dest "settings.xml"
-if (-not (Test-Path $settings)) { Copy-Item (Join-Path $root "settings.xml") $settings -Force }
-Copy-Item "$out\HeroLoadoutFixer.dll" (Join-Path $dest "bin\Win64_Shipping_Client") -Force
+if (-not (Test-Path $settings)) { Copy-Item $sourceSettings $settings -Force }
+Copy-Item "$out\HeroesEvolve.dll" (Join-Path $dest "bin\Win64_Shipping_Client") -Force
 
 # Translations. Replaced wholesale rather than merged, so a renamed or deleted
 # language file cannot linger in the deployed module and go on being loaded.

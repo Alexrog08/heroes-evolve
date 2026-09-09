@@ -1,4 +1,4 @@
-namespace HeroLoadoutFixer.Core
+namespace HeroesEvolve.Core
 {
     /// <summary>
     /// Whether a captor strips his prisoner.

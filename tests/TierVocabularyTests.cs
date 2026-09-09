@@ -1,6 +1,6 @@
-using HeroLoadoutFixer.Core;
+using HeroesEvolve.Core;
 
-namespace HeroLoadoutFixer.Tests
+namespace HeroesEvolve.Tests
 {
     /// <summary>
     /// Pins the vocabulary boundary at the seam between TierCeiling (Core,

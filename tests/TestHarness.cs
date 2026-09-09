@@ -1,6 +1,6 @@
 using System;
 
-namespace HeroLoadoutFixer.Tests
+namespace HeroesEvolve.Tests
 {
     public static class Check
     {
@@ -52,6 +52,7 @@ namespace HeroLoadoutFixer.Tests
             MountHarnessTests.RunAll();
             BattleRoleTests.RunAll();
             TalentTests.RunAll();
+            MountRulesTests.RunAll();
             SkillGrowthTests.RunAll();
             FocusGrowthTests.RunAll();
             GrantTierTests.RunAll();
@@ -68,7 +69,7 @@ namespace HeroLoadoutFixer.Tests
     {
         public static void RunAll()
         {
-            Check.Equal(3, (int)HeroLoadoutFixer.Core.SkillKind.Bow, "SkillKind.Bow ordinal");
+            Check.Equal(3, (int)HeroesEvolve.Core.SkillKind.Bow, "SkillKind.Bow ordinal");
         }
     }
 }

@@ -1,4 +1,4 @@
-namespace HeroLoadoutFixer.Core
+namespace HeroesEvolve.Core
 {
     /// <summary>
     /// The battlefield role a hero is meant to fill.

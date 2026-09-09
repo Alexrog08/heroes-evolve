@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace HeroLoadoutFixer.Core
+namespace HeroesEvolve.Core
 {
     /// <summary>
     /// The loadout a hero deserves, before anything is reconciled against what

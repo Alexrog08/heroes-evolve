@@ -1,4 +1,4 @@
-namespace HeroLoadoutFixer.Core
+namespace HeroesEvolve.Core
 {
     /// <summary>
     /// How far a lord's combat skills should have come by a given age, and how

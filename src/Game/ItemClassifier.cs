@@ -2,9 +2,9 @@ using System.Collections.Generic;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.CharacterDevelopment;
 using TaleWorlds.Core;
-using HeroLoadoutFixer.Core;
+using HeroesEvolve.Core;
 
-namespace HeroLoadoutFixer
+namespace HeroesEvolve
 {
     /// <summary>Maps game items onto the core's category vocabulary.</summary>
     public static class ItemClassifier
@@ -70,47 +70,103 @@ namespace HeroLoadoutFixer
             if (item == null || hero == null) return false;
             if (!item.HasWeaponComponent) return true;
 
-            WeaponComponentData weapon = item.PrimaryWeapon;
-            if (weapon == null) return true;
-
-            // A long bow cannot be drawn from horseback at all. The game says so
-            // through the item's usage set (ItemUsageSetFlags.RequiresNoMount),
-            // not through WeaponFlags -- noble_long_bow carries only
-            // NotUsableWithOneHand and TwoHandIdleOnMount, so the flag check
-            // below waves it straight through. Observed live: a mounted Vlandian
-            // king was handed noble_long_bow, a weapon he cannot use on the
-            // horse he was granted in the same pass.
+            // Some weapons cannot be used from a horse at all, and the game
+            // says so through the item's usage set rather than through
+            // WeaponFlags -- noble_long_bow carries only NotUsableWithOneHand
+            // and TwoHandIdleOnMount, so the flag check below waves it straight
+            // through. Observed live: a mounted Vlandian king was handed
+            // noble_long_bow, a weapon he cannot use on the horse he was granted
+            // in the same pass.
             //
-            // The usage string is read directly because the string -> flags
-            // lookup lives behind a native delegate. Mods follow the same
-            // naming, so this holds for them too; a mod inventing its own
-            // dismounted-only usage name would slip through, which is a smaller
-            // failure than the one being fixed.
-            if (RequiresNoMount(item)) return false;
-
-            if ((weapon.WeaponFlags & WeaponFlags.CantReloadOnHorseback) == 0) return true;
-
-            // Only the crossbow perk is documented to lift the restriction:
-            // "You can reload any crossbow on horseback."
-            if (Classify(item) == WeaponCategory.Crossbow)
+            // That was fixed by naming the long bow, which fixed one case out of
+            // five. Native's item_usage_sets.xml flags five sets
+            // requires_no_mount -- the long bow, the pike, the braced spear, the
+            // thrown polearm and shield-with-dagger -- and a pike is exactly the
+            // weapon a mounted lord has no business buying. See MountRules.
+            // The game lifts this for one perk and this did not, so a lord who
+            // had earned the right to shoot a long bow from the saddle was
+            // still refused one. Bow.HorseMaster, and it is not limited to
+            // bows: CampaignUIHelper.GetItemUsageSetFlagDetails hides the
+            // "cannot use on horseback" icon on any RequiresNoMount weapon for
+            // a character holding it.
+            if (RequiresNoMount(item) && !hero.GetPerkValue(DefaultPerks.Bow.HorseMaster))
             {
-                return hero.GetPerkValue(DefaultPerks.Crossbow.MountedCrossbowman);
+                return false;
             }
 
-            return false;
+            // A second restriction, and a weaker one. A heavy crossbow can be
+            // fired from a horse; it cannot be wound again up there. The game
+            // draws this as its own icon, cant_reload_on_horseback, separate
+            // from cannot-use -- so it is a warning to a player, who can judge
+            // when one bolt is worth it. It is not a warning a lord can act on.
+            // He fights whole battles unattended, and a lord who shoots once
+            // and then carries a plank has been disarmed by his own shopping.
+            // So it is refused here, on that reasoning rather than on the
+            // engine's, which only ever hides an icon.
+            //
+            // The perk is the game's own: Crossbow.MountedCrossbowman, which
+            // GetWeaponFlagDetails uses to hide that icon. Applied to whatever
+            // carries the flag rather than to whatever we classify as a
+            // crossbow -- the engine does not ask what the weapon is, and the
+            // narrower test refused a man the perk he had earned whenever our
+            // classification and the flag disagreed.
+            if (CantReloadMounted(item)
+                && !hero.GetPerkValue(DefaultPerks.Crossbow.MountedCrossbowman))
+            {
+                return false;
+            }
+
+            return true;
         }
 
         /// <summary>
-        /// True when any of the item's usages is one the game forbids on a
-        /// mount. Only long bows use this today.
+        /// True when no way of wielding this weapon can be reloaded from a
+        /// horse.
+        ///
+        /// Every mode, for the same reason MountRules weighs every mode: one
+        /// that works is enough. No weapon in the base game carries the flag on
+        /// some modes and not others -- the five that carry it are heavy
+        /// crossbows with a single mode each -- so this asks the question the
+        /// consistent way rather than the way that happens to be sufficient.
+        /// </summary>
+        private static bool CantReloadMounted(ItemObject item)
+        {
+            bool sawOne = false;
+            foreach (WeaponComponentData usage in AllUsages(item))
+            {
+                if (usage == null) continue;
+                sawOne = true;
+                if ((usage.WeaponFlags & WeaponFlags.CantReloadOnHorseback) == 0)
+                {
+                    return false;
+                }
+            }
+
+            return sawOne;
+        }
+
+        /// <summary>
+        /// True when no way of wielding this item works from a mount.
+        ///
+        /// The judgement itself is MountRules, which holds the five usage sets
+        /// the game flags requires_no_mount and the reason one usable mode is
+        /// enough. This end only collects the names.
         /// </summary>
         private static bool RequiresNoMount(ItemObject item)
         {
+            return !MountRules.AllowsMounted(UsageNames(item));
+        }
+
+        /// <summary>Every way this item can be wielded, by name.</summary>
+        private static string[] UsageNames(ItemObject item)
+        {
+            List<string> usages = new List<string>();
             foreach (WeaponComponentData usage in AllUsages(item))
             {
-                if (usage.ItemUsage == "long_bow") return true;
+                if (usage != null) usages.Add(usage.ItemUsage);
             }
-            return false;
+
+            return usages.ToArray();
         }
 
         /// <summary>

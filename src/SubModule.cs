@@ -2,7 +2,7 @@ using TaleWorlds.CampaignSystem;
 using TaleWorlds.Core;
 using TaleWorlds.MountAndBlade;
 
-namespace HeroLoadoutFixer
+namespace HeroesEvolve
 {
     public class SubModule : MBSubModuleBase
     {

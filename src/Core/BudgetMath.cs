@@ -1,4 +1,4 @@
-namespace HeroLoadoutFixer.Core
+namespace HeroesEvolve.Core
 {
     /// <summary>
     /// Money arithmetic, kept pure so the economy can be reasoned about without

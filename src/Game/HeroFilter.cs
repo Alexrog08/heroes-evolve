@@ -1,7 +1,7 @@
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.Party;
 
-namespace HeroLoadoutFixer
+namespace HeroesEvolve
 {
     /// <summary>
     /// The single definition of "a hero this mod is allowed to touch".
@@ -11,6 +11,114 @@ namespace HeroLoadoutFixer
     /// </summary>
     public static class HeroFilter
     {
+        /// <summary>
+        /// Which test IsEligible failed on, or null when it passed.
+        ///
+        /// Mirrors the order below and exists because "grown=False" in a census
+        /// is a fact without a cause, and the causes want opposite fixes: a
+        /// companion refused for riding in the player's party is a boundary
+        /// working as designed, and one refused for having no CompanionOf is a
+        /// hole. Guessing between them from names and ages wasted a round trip.
+        ///
+        /// Kept beside the real filter deliberately. A copy that drifts would be
+        /// worse than no copy at all, so anything added there is added here.
+        /// </summary>
+        public static string WhyIneligible(Hero hero)
+        {
+            if (hero == null) return "null";
+            if (hero.IsDead) return "dead";
+            if (hero.IsHumanPlayerCharacter) return "isPlayer";
+            if (hero == Hero.MainHero) return "isMainHero";
+            if (hero.IsChild) return "isChild";
+            if (!hero.IsLord && hero.CompanionOf == null) return "notLordAndNotCompanion";
+            if (hero.PartyBelongedTo != null && hero.PartyBelongedTo == MobileParty.MainParty)
+            {
+                return "inMainParty";
+            }
+            if (hero.IsTemplate) return "isTemplate";
+            if (hero.Clan != null
+                && hero.Clan != Clan.PlayerClan
+                && (hero.Clan.IsMinorFaction
+                    || hero.Clan.IsBanditFaction
+                    || hero.Clan.IsOutlaw
+                    || hero.Clan.IsSect
+                    || hero.Clan.IsNomad
+                    || hero.Clan.IsMafia)) return "clanKind";
+            return null;
+        }
+
+        /// <summary>
+        /// Whether this mod grows this hero's skills.
+        ///
+        /// Everything IsEligible tests except the main party, and the exception
+        /// is the whole point. That clause exists because the player outfits the
+        /// heroes riding with him out of his own inventory, and gear changing
+        /// without him asking is the complaint this mod was written to answer.
+        /// It is a rule about equipment, and it had been silently deciding
+        /// skills too -- so a companion at the player's shoulder learned nothing
+        /// for life while every lord on the map gained one to three points a
+        /// year, and over a long campaign he could only fall further behind.
+        ///
+        /// Growth takes nothing from anyone. It cannot overwrite a choice the
+        /// player made, and it cannot overshoot: SkillGrowth.PointsStep returns
+        /// zero the moment a hero reaches his target, so a companion the player
+        /// actually fights with is already at or past his ceiling and receives
+        /// nothing at all. The only hero this reaches is one who has genuinely
+        /// fallen behind, and it carries him to the same ceiling every other
+        /// lord is aiming at -- no further.
+        ///
+        /// ManageOwnClan does not gate this either, for the same reason: a
+        /// player who would rather choose his brother's armour himself rarely
+        /// wants his brother to stop learning.
+        /// </summary>
+        public static bool IsEligibleToGrow(Hero hero)
+        {
+            if (hero == null) return false;
+            if (hero.IsDead) return false;
+            if (hero.IsHumanPlayerCharacter) return false;
+            if (hero == Hero.MainHero) return false;
+            if (hero.IsChild) return false;
+            // Lords, companions, and the wanderers nobody has hired yet.
+            //
+            // Wider than the gear filter on purpose. A lord sitting out a war in
+            // his castle is training, running his accounts and reading, and a
+            // wanderer waiting in a tavern is doing whatever he did before
+            // anyone offered him work -- neither is standing still, and only a
+            // party made the difference under the old rule. The two things that
+            // follow are worth having: a lord who has spent years garrisoned
+            // rides out competent rather than rusty, and a companion hired late
+            // is worth hiring late, since the years he spent unhired went
+            // somewhere.
+            //
+            // Note that Hero.Level rises with skill and Hero.Level is one term
+            // in DefaultCompanionHiringPriceCalculationModel, so an old
+            // wanderer now costs more to take on. That is the same trade the
+            // player is being offered -- a better man for more money -- rather
+            // than a side effect to be sorry about.
+            //
+            // Notables stay out, which the occupation check does for free:
+            // merchants, headmen, gang leaders, preachers and rural notables
+            // are none of the three. They are not fighters, they do not carry a
+            // loadout, and a village headman quietly gaining One Handed for
+            // sixty years is nobody's idea of an improvement.
+            if (!hero.IsLord
+                && hero.CompanionOf == null
+                && hero.Occupation != Occupation.Wanderer) return false;
+
+            if (hero.IsTemplate) return false;
+
+            if (hero.Clan != null
+                && hero.Clan != Clan.PlayerClan
+                && (hero.Clan.IsMinorFaction
+                    || hero.Clan.IsBanditFaction
+                    || hero.Clan.IsOutlaw
+                    || hero.Clan.IsSect
+                    || hero.Clan.IsNomad
+                    || hero.Clan.IsMafia)) return false;
+
+            return true;
+        }
+
         public static bool IsEligible(Hero hero)
         {
             if (hero == null) return false;
@@ -64,12 +172,23 @@ namespace HeroLoadoutFixer
             // and "repairing" them would have erased the design rather than a
             // defect. Their gear still improves later through the purchase
             // engine, which scales with the clan's own wealth and skills.
-            if (hero.Clan != null && (hero.Clan.IsMinorFaction
-                                      || hero.Clan.IsBanditFaction
-                                      || hero.Clan.IsOutlaw
-                                      || hero.Clan.IsSect
-                                      || hero.Clan.IsNomad
-                                      || hero.Clan.IsMafia)) return false;
+            //
+            // Never the player's own clan, whatever flags it happens to carry.
+            // A census found nine of nineteen player-clan heroes refused here,
+            // including companions leading their own parties, which is the
+            // opposite of what the comment three blocks up promises. The guard
+            // is about respecting somebody else's design; the player's house is
+            // not somebody else's design, and if the engine marks it with one
+            // of these that is a fact about how the clan was created rather
+            // than a statement that it should stay rough.
+            if (hero.Clan != null
+                && hero.Clan != Clan.PlayerClan
+                && (hero.Clan.IsMinorFaction
+                    || hero.Clan.IsBanditFaction
+                    || hero.Clan.IsOutlaw
+                    || hero.Clan.IsSect
+                    || hero.Clan.IsNomad
+                    || hero.Clan.IsMafia)) return false;
 
             return true;
         }
@@ -117,6 +236,10 @@ namespace HeroLoadoutFixer
 
             if (hero.Clan == Clan.PlayerClan)
             {
+                // The player's own, at the player's discretion. See
+                // Settings.ManageOwnClan for why this is a boundary rather
+                // than an exemption.
+                if (!Settings.ManageOwnClan) return false;
                 if (party == null) return false;
                 if (party.LeaderHero != hero) return false;
             }

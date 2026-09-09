@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using TaleWorlds.Core;
-using HeroLoadoutFixer.Core;
+using HeroesEvolve.Core;
 
-namespace HeroLoadoutFixer
+namespace HeroesEvolve
 {
     /// <summary>
     /// One thing a town has in stock that a hero could actually buy: the exact

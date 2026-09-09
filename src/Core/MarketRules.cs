@@ -1,4 +1,4 @@
-namespace HeroLoadoutFixer.Core
+namespace HeroesEvolve.Core
 {
     /// <summary>
     /// When an item on sale counts as an upgrade, and which of two offers comes
@@ -103,9 +103,11 @@ namespace HeroLoadoutFixer.Core
         /// lord can trade the worst sword of a tier for the best one without
         /// waiting for the next integer step -- but only when the gap is real.
         /// Comparing raw item value instead would have five hundred heroes
-        /// churning their kit for a few points at every gate; MinimumGain is
-        /// what stops that, and one purchase per lord per day is what stops it
-        /// twice.
+        /// churning their kit for a few points at every gate. MinimumGain is
+        /// what stops that, and since a trip now buys until the town runs out
+        /// it is the only thing that stops it: a lord who has just bought the
+        /// best helmet on the shelf is offered no other, because none of them
+        /// clears this bar against what he is now wearing.
         ///
         /// The ceiling stays in integer tiers because that is what merit and
         /// the rest of the mod speak in, and it is a cap rather than a

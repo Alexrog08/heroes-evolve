@@ -1,7 +1,7 @@
 using System.Collections.Generic;
-using HeroLoadoutFixer.Core;
+using HeroesEvolve.Core;
 
-namespace HeroLoadoutFixer.Tests
+namespace HeroesEvolve.Tests
 {
     public static class PlannerTests
     {

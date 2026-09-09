@@ -77,7 +77,7 @@ param(
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 $game = "D:\SteamLibrary\steamapps\common\Mount & Blade II Bannerlord"
-$dll  = Join-Path $root "build\out\HeroLoadoutFixer.dll"
+$dll  = Join-Path $root "build\out\HeroesEvolve.dll"
 
 if (-not (Test-Path $dll)) { Write-Host "Build the mod first."; exit 1 }
 

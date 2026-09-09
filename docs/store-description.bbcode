@@ -1,0 +1,159 @@
+[h1]Heroes Evolve[/h1]
+
+Lords are handed an equipment set when they come of age and then nothing ever
+happens to it. Some are handed a broken one -- a single weapon, or civilian
+clothes to fight a war in. The rest keep what they were given at eighteen until
+the day they die, while their skills sit still beside it.
+
+This mod gives them a career instead: it repairs the broken ones, lets all of
+them improve at what they do, and sends them to market to spend their own clan's
+money. Nothing is granted free that a lord could buy, and nothing is bought that
+his skills do not justify.
+
+[h2]What it does[/h2]
+
+Four systems, each a switch, described as what they do to your campaign.
+
+[b]1. Repairs lords the game left broken.[/b] Every day it checks each lord for
+two specific faults: fewer than two weapons, or body armour of tier 1, which is
+civilian clothing. Either one gets him a complete kit -- weapons, armour, a
+mount if he already rode -- picked to match his own skills, at the lowest tier
+that qualifies. It never gives him the best available, and it runs once: after
+that he is on his own and has to buy the rest.
+
+[b]2. Grows skills for the rest of a lord's life.[/b] Weekly, it moves each lord
+toward a ceiling of his own, closing 12% of the remaining gap a year, capped at
+4.2 points in any one skill so nothing runs away. Weapon skills follow the
+weapons he carries; the rest follow where he has put focus. The ceiling is his
+talent times 150 at sixty, and talent comes from his own id, so it is identical
+in every save and no two lords share it. Reaches lords, hired companions and
+wanderers still in taverns -- so a companion hired at forty is worth what those
+years bought, and costs more, since price rises with level. Notables are left
+alone.
+
+[b]3. Sends lords shopping with their own money.[/b] Entering a town, a lord has
+a 25% chance of visiting the market, at most once a day. If he goes, he may
+spend up to 30% of his clan's purse, divided between the slots that town can
+improve for him -- so a lord who needs everything comes back in middling gear,
+and one who needs a single piece buys it well. What he may wear at all is capped
+by his combat skill: one tier per 28 points, so tier 6 needs about 168. The gold
+is real and leaves the clan, and a reserve is held back so buying gear can never
+stop a clan paying its troops.
+
+[b]He only ever improves what he already carries.[/b] Shopping never fills an
+empty slot, never changes what kind of fighter he is, and never mounts a man
+fighting on foot -- though it will buy a better horse for one already riding. A
+swordsman looks for a better sword; he does not come back with a bow. Whatever
+he holds is what gets better, whether this mod's repair handed it to him or you
+did.
+
+[b]4. Lets a captor strip his prisoner.[/b] A captor may take everything the man
+wears: weapons, armour, horse and harness, typically ten of the eleven slots at
+once. All or nothing, no half-robbery. It moves into the captor's inventory,
+where he wears it or sells it, and is never destroyed -- so beating him later
+puts it on your loot screen.
+
+Whether he does it is his character, not a die roll: honour weighs heaviest,
+then generosity and mercy equally, against roguery and how the two men stand. A
+father will not strip his son unless they are already at war. Bandits always do.
+At the shipped setting the median captor robs one prisoner in sixteen, the most
+honourable one in a hundred, the worst one in four -- roughly one lord in nine
+stripped somewhere on the map in a year. It costs him ten points of standing
+with the man and a mark against his honour.
+
+The victim is not left in his shirt: he is repaired the day he gets out and buys
+his way back up. Quest items, crafted weapons and unique gear are never taken.
+
+[h2]How you rob someone[/h2]
+
+Nothing else in this mod asks anything of you. This is the one part you operate,
+and it is a conversation.
+
+[list=1]
+[*]Take a lord prisoner, or hold one in a town or castle your clan owns.
+[*]Talk to him. In your own party, that is the prisoner list on the party
+screen; in a settlement, it is the dungeon.
+[*]Pick [i]"Hand over your arms and armour."[/i] It sits in the same menu as
+"I have decided to let you go."
+[/list]
+
+The line changes with the man. A lord whose own honour is negative is told there
+is none in him for you to offend, and robbing him costs half -- the game already
+halves the penalty for executing a dishonourable prisoner, and this follows it.
+A friend gets "do not take this personally", at full price. Everyone else gets
+the plain demand. All three answer you, and the answers are worth reading.
+
+You are never rolled for: nothing makes you rob a man and nothing stops you. It
+costs twelve points of standing with him and a mark against your honour, halved
+against the dishonourable, and you gain Roguery for what you took.
+
+The option appears only when there is something to take and the man is yours. If
+you cannot see it, he has nothing left worth taking, or robbery is off.
+
+[h2]The same rules for everyone[/h2]
+
+You are not exempt and you are not privileged. Lords rob your prisoners on the
+same terms you rob theirs, except that nothing ever decides for you.
+
+That includes your own house. Your family, and the companions you have given a
+party or a caravan to, are lords the AI takes into battle, so they are repaired,
+they grow, and they go shopping like anyone else. If you would rather outfit
+them yourself, one switch moves that line around your whole clan.
+
+Gear is where the line falls, never learning. Heroes riding in your own party
+keep the equipment you gave them -- that inventory is yours -- but they go on
+improving like everyone else, so a companion at your side for twenty years does
+not quietly fall behind the map. Nothing overshoots: a hero already at his
+ceiling receives nothing.
+
+[h2]Configuration[/h2]
+
+Sixteen settings in the in-game options screen if you have Mod Configuration
+Menu, and in [i]settings.xml[/i] if you do not. MCM is optional, not required.
+Every setting takes effect immediately -- no restart, no reload.
+
+Turn off any of the four systems, exempt your own clan, move the gear ceiling,
+change how freely lords spend, scale or disable the robbery, and strike item ids
+from what lords may buy. A one-click census surveys every lord in your campaign
+to a log file -- the same survey every number here was measured with, so you can
+check them against your own game rather than taking them on trust.
+
+[h2]Compatibility[/h2]
+
+[list]
+[*][b]No Harmony patches.[/b] Nothing in the game engine is rewritten.
+[*][b]Writes nothing into your save.[/b] The mod keeps no data of its own.
+[*][b]Safe to add or remove mid-campaign.[/b] Add it and lords improve from
+wherever they are. Remove it and the campaign carries on, though lords keep what
+they bought, as they would keep anything else they own.
+[*]Works with mods that add items: new gear is part of what lords may buy, under
+the same rules. Incendiary weapons are refused outright, and you can exclude
+anything else by id.
+[*][b]War Sails is not required, and is what this was built on.[/b] Every figure
+above was measured on campaigns running the naval DLC. It depends on none of it
+and runs the same without.
+[/list]
+
+[h2]Requirements[/h2]
+
+[list]
+[*]Mount & Blade II: Bannerlord [b]v1.4.8[/b]
+[*][i]Optional:[/i] Mod Configuration Menu (MCM) v5, for the in-game settings screen
+[/list]
+
+[h2]Languages[/h2]
+
+English, Spanish, French, German, Russian.
+
+[h2]Installation[/h2]
+
+Extract into your [i]Modules[/i] folder and enable "Heroes Evolve" in the
+launcher. Load it after MCM if you use it.
+
+[h2]Notes[/h2]
+
+Nearly every number here was measured on live campaigns rather than guessed, and
+several were corrected when the measurement disagreed with the design.
+
+Bug reports welcome. Turn logging on, reproduce it, and send [i]hev.log[/i] from
+the Bannerlord logs folder -- it usually says exactly what happened.

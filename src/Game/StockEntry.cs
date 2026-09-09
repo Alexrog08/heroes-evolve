@@ -1,6 +1,6 @@
 using TaleWorlds.Core;
 
-namespace HeroLoadoutFixer
+namespace HeroesEvolve
 {
     /// <summary>
     /// One line of a town's stock, with the answers the scans keep asking for

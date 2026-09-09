@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 
-namespace HeroLoadoutFixer
+namespace HeroesEvolve
 {
     /// <summary>
     /// File log under %LocalAppData%, rolled over when it gets large. Every call
@@ -14,8 +14,8 @@ namespace HeroLoadoutFixer
     /// </summary>
     public static class ModLog
     {
-        private const string FileName = "hlf.log";
-        private const string OldFileName = "hlf.log.old";
+        private const string FileName = "hev.log";
+        private const string OldFileName = "hev.log.old";
 
         /// <summary>
         /// Size at which the log rolls over. Two megabytes is tens of thousands

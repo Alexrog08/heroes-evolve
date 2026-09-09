@@ -2,7 +2,7 @@ using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
-namespace HeroLoadoutFixer
+namespace HeroesEvolve
 {
     /// <summary>
     /// The one place in this mod that names a type from MCM.
@@ -94,10 +94,19 @@ namespace HeroLoadoutFixer
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static void Pull(McmSettings settings)
         {
+            // What it looked like before, so a change can be reported rather
+            // than merely made. Without this the options screen was a silent
+            // partner: SETTINGS in force is written once per campaign load, so
+            // anything moved afterwards left no trace at all and neither the
+            // player nor anyone reading his log could tell a setting that had
+            // failed to apply from one applied after the line was written.
+            string before = Settings.Describe();
+
             Settings.EnableRepair = settings.EnableRepair;
             Settings.EnableSkillGrowth = settings.EnableSkillGrowth;
             Settings.EnablePurchases = settings.EnablePurchases;
             Settings.EnableLogging = settings.EnableLogging;
+            Settings.ManageOwnClan = settings.ManageOwnClan;
 
             Settings.SkillPerTier = settings.SkillPerTier;
             Settings.SkillWeight = settings.SkillWeight;
@@ -120,6 +129,19 @@ namespace HeroLoadoutFixer
             // be handed the text rather than the array.
             ModLog.Enabled = Settings.EnableLogging;
             Settings.SetExcludedItems(settings.ExcludedItems);
+
+            // Only when something actually moved. MCM does not raise a change
+            // per property or per slider step: BaseSettingsContainer.SaveSettings
+            // writes the file and then raises PropertyChanged exactly once, with
+            // the property name "SAVE_TRIGGERED" -- which is also why Pull copies
+            // every field rather than switching on the name, since the name never
+            // identifies what changed. So this fires once per press of Done, and
+            // the comparison keeps a press that changed nothing out of the log.
+            string after = Settings.Describe();
+            if (after == before) return;
+
+            ModLog.Info("SETTINGS changed: " + after);
+            ItemCatalog.ReportUnknownExclusions();
         }
     }
 }

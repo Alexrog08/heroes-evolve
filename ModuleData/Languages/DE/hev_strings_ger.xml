@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<base xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" type="string">
+  <tags>
+    <tag language="Deutsch" />
+  </tags>
+  <strings>
+    <string id="hev_strip" text="Gebt mir Eure Waffen und Eure Rüstung." />
+    <string id="hev_strip_reply" text="Ihr würdet einem geschlagenen Mann die Waffen nehmen? Das entehrt Euch. Nehmt sie also. Mein Klan wird davon erfahren, und der Eure auch." />
+    <string id="hev_strip_reprisal" text="In Euch ist keine Ehre, die ich verletzen könnte. Gebt mir Eure Waffen und Eure Rüstung." />
+    <string id="hev_strip_reprisal_reply" text="Sprecht mir von Ehre, wenn Ihr mich ausgeraubt habt. Nehmt es also, nehmt alles — binnen eines Monats habe ich Besseres, und der Nächste, den ich im Hemd zurücklasse, trägt vielleicht Euren Namen." />
+    <string id="hev_strip_friend" text="Nehmt es nicht persönlich. Gebt mir Eure Waffen und Eure Rüstung." />
+    <string id="hev_strip_friend_reply" text="Von jedem hätte ich das erwartet, nur nicht von Euch. Nehmt sie also. Ich habe Euch nichts mehr zu sagen." />
+  </strings>
+</base>

@@ -3,7 +3,7 @@ using System.IO;
 using System.Reflection;
 using System.Xml;
 
-namespace HeroLoadoutFixer
+namespace HeroesEvolve
 {
     /// <summary>
     /// Every number a player is allowed to change, in one place.
@@ -33,7 +33,7 @@ namespace HeroLoadoutFixer
         /// <summary>Let lords buy better gear when they visit a town.</summary>
         public static bool EnablePurchases = true;
 
-        /// <summary>Write hlf.log. Off costs nothing and writes nothing.</summary>
+        /// <summary>Write hev.log. Off costs nothing and writes nothing.</summary>
         public static bool EnableLogging = true;
 
         // --- How good a lord's gear may get --------------------------------
@@ -69,7 +69,7 @@ namespace HeroLoadoutFixer
         /// gate on item tier: at a tenth, a tier-6 piece needs a house holding
         /// some 430,000.
         /// </summary>
-        public static float SpendingShare = 0.10f;
+        public static float SpendingShare = 0.30f;
 
         /// <summary>
         /// Scales the gold held back to keep troops paid. 1.0 keeps exactly the
@@ -83,10 +83,16 @@ namespace HeroLoadoutFixer
         // --- Losing gear ----------------------------------------------------
 
         /// <summary>
-        /// Lets a captor strip his prisoner. Off by default: it changes the
-        /// feel of every defeat, and that should be a choice.
+        /// Lets a captor strip his prisoner.
+        ///
+        /// On by default. It was off while the system was unproven, on the
+        /// grounds that it changes the feel of every defeat and that should be
+        /// a choice -- but a campaign has now run it through seventy-one
+        /// robberies, fourteen recoveries and four sales without an error, and
+        /// a feature nobody switches on is a feature nobody has. The switch is
+        /// still there for anyone who wants the old shape.
         /// </summary>
-        public static bool EnableCaptureLoss = false;
+        public static bool EnableCaptureLoss = true;
 
         /// <summary>
         /// Scales how often a captor robs. Zero is the same as off; one runs
@@ -94,7 +100,29 @@ namespace HeroLoadoutFixer
         /// invented, so this is the dial that matters until a campaign has
         /// measured the rate.
         /// </summary>
-        public static float PlunderChance = 1.0f;
+        public static float PlunderChance = 0.5f;
+
+        /// <summary>
+        /// Whether this mod dresses the heroes of the player's own clan.
+        ///
+        /// On by default, because a party led by your brother is a party the AI
+        /// takes into battle and the same argument for equipping any other lord
+        /// applies to him.
+        ///
+        /// Off is not a special rule for the player, and this mod does not have
+        /// those. It is the same boundary already drawn around heroes in the
+        /// main party, which are refused because their inventory is the
+        /// player's to manage and a mod tidying it would be taking something
+        /// away rather than adding it. Some players outfit their family and
+        /// their caravan masters by hand and want that respected past the edge
+        /// of their own party; this moves the line, it does not bend a rule.
+        ///
+        /// Deliberately does not touch skill growth. That takes nothing from
+        /// anyone -- it makes a man better at what he already does -- and a
+        /// player who wants to choose his brother's armour rarely wants his
+        /// brother to stop learning.
+        /// </summary>
+        public static bool ManageOwnClan = true;
 
         /// <summary>
         /// Item ids this campaign refuses to buy or grant, however good they
@@ -119,6 +147,22 @@ namespace HeroLoadoutFixer
         public static void SetExcludedItems(string text)
         {
             _excludedItems = Split(text);
+        }
+
+        /// <summary>
+        /// The exclusion list as entered, for whoever can check it against the
+        /// catalogue. Settings cannot do that itself -- it is deliberately free
+        /// of TaleWorlds types -- so it hands the ids out and ItemCatalog says
+        /// which of them name a real item.
+        ///
+        /// A copy, because a caller holding the live array would see it change
+        /// under him the next time the player pressed Done.
+        /// </summary>
+        public static string[] ExcludedIds()
+        {
+            string[] copy = new string[_excludedItems.Length];
+            _excludedItems.CopyTo(copy, 0);
+            return copy;
         }
 
         /// <summary>Whether the player has struck this item from his campaign.</summary>
@@ -162,6 +206,7 @@ namespace HeroLoadoutFixer
                 EnableSkillGrowth = Flag(root, "EnableSkillGrowth", EnableSkillGrowth);
                 EnablePurchases = Flag(root, "EnablePurchases", EnablePurchases);
                 EnableLogging = Flag(root, "EnableLogging", EnableLogging);
+                ManageOwnClan = Flag(root, "ManageOwnClan", ManageOwnClan);
                 EnableCaptureLoss = Flag(root, "EnableCaptureLoss", EnableCaptureLoss);
 
                 ClanWeight = Number(root, "ClanWeight", ClanWeight, 0f, 10f);
@@ -194,6 +239,7 @@ namespace HeroLoadoutFixer
         public static string Describe()
         {
             return "repair=" + EnableRepair
+                   + " ownClan=" + ManageOwnClan
                    + " growth=" + EnableSkillGrowth
                    + " purchases=" + EnablePurchases
                    + " clanWeight=" + ClanWeight

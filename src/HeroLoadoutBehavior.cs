@@ -5,7 +5,7 @@ using TaleWorlds.CampaignSystem.Roster;
 using TaleWorlds.CampaignSystem.Settlements;
 using TaleWorlds.Core;
 
-namespace HeroLoadoutFixer
+namespace HeroesEvolve
 {
     /// <summary>
     /// Subscribes to the event that matters for the grant path and does the
@@ -93,6 +93,7 @@ namespace HeroLoadoutFixer
             // heroes one in-game day later instead, which actually works, so
             // the dead subscription is removed rather than fought.
             ModLog.Info("SETTINGS in force: " + Settings.Describe());
+            ItemCatalog.ReportUnknownExclusions();
 
             CampaignEvents.DailyTickHeroEvent.AddNonSerializedListener(this, OnDailyTickHero);
 
@@ -277,7 +278,21 @@ namespace HeroLoadoutFixer
                 // re-rolling at the next gate would quietly multiply the rate.
                 if (id != null) _shoppedToday.Add(id);
 
-                ShoppingTrip.Shop(shopper, settlement, _budget, ClanWeight, SkillWeight, MinimumTier);
+                // The trip's total, not just its pieces. Every purchase already
+                // logs a BUY line, but those are indistinguishable from one
+                // lord shopping five days running -- and whether a trip fits a
+                // man out or merely improves him by a buckle is now the thing
+                // worth being able to read back.
+                int bought = ShoppingTrip.Shop(shopper, settlement, _budget,
+                                               ClanWeight, SkillWeight, MinimumTier);
+                if (bought > 0)
+                {
+                    ModLog.Info("TRIP hero=" + shopper.Name
+                                + " at=" + settlement.Name
+                                + " bought=" + bought
+                                + " gaps=" + ShoppingTrip.LastTripGaps
+                                + " clanGold=" + (shopper.Clan != null ? shopper.Clan.Gold : 0));
+                }
             }
             catch (System.Exception ex)
             {
@@ -355,6 +370,13 @@ namespace HeroLoadoutFixer
                 // and a lord who has just been stripped is exactly the hero
                 // NeedsGrant is loudest about. He is repaired when he gets out.
                 if (hero.IsPrisoner) return;
+
+                // Repair reads the same boundary the shopping filter does. It
+                // is checked here rather than in HeroFilter.IsEligible because
+                // that one also gates skill growth and the census, and neither
+                // should change because a player would rather pick his
+                // brother's armour himself.
+                if (!Settings.ManageOwnClan && hero.Clan == Clan.PlayerClan) return;
 
                 // Asked before NeedsGrant, not after. A hero on this list is one
                 // nothing can be done for, and he is looked at again every day

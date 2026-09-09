@@ -1,9 +1,9 @@
 using System.Collections.Generic;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.Core;
-using HeroLoadoutFixer.Core;
+using HeroesEvolve.Core;
 
-namespace HeroLoadoutFixer
+namespace HeroesEvolve
 {
     /// <summary>
     /// Everything GrantService decided for one hero, with nothing written yet.

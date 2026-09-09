@@ -1,4 +1,4 @@
-namespace HeroLoadoutFixer.Tests
+namespace HeroesEvolve.Tests
 {
     /// <summary>
     /// Pins the harness/mount family-compatibility rule from Fix 1 of the

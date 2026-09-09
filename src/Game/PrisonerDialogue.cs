@@ -1,4 +1,4 @@
-using HeroLoadoutFixer.Core;
+using HeroesEvolve.Core;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.Actions;
 using TaleWorlds.CampaignSystem.CharacterDevelopment;
@@ -6,7 +6,7 @@ using TaleWorlds.CampaignSystem.Party;
 using TaleWorlds.CampaignSystem.Settlements;
 using TaleWorlds.Core;
 
-namespace HeroLoadoutFixer
+namespace HeroesEvolve
 {
     /// <summary>
     /// Taking a captured lord's arms, by asking him for them yourself.
@@ -33,16 +33,16 @@ namespace HeroLoadoutFixer
         {
             if (starter == null) return;
 
-            starter.AddPlayerLine("hlf_strip_prisoner",
+            starter.AddPlayerLine("hev_strip_prisoner",
                                   "hero_main_options",
-                                  "hlf_strip_prisoner_reply",
-                                  "{=hlf_strip}Hand over your arms and armour.",
+                                  "hev_strip_prisoner_reply",
+                                  "{=hev_strip}Hand over your arms and armour.",
                                   CanStripPlainly, null, 100, null);
 
-            starter.AddDialogLine("hlf_strip_prisoner_reply",
-                                  "hlf_strip_prisoner_reply",
+            starter.AddDialogLine("hev_strip_prisoner_reply",
+                                  "hev_strip_prisoner_reply",
                                   "close_window",
-                                  "{=hlf_strip_reply}You would take the arms off a beaten man? "
+                                  "{=hev_strip_reply}You would take the arms off a beaten man? "
                                   + "This dishonours you. Take them, then. My clan will hear of it, "
                                   + "and so will yours.",
                                   null, Strip, 100, null);
@@ -85,10 +85,10 @@ namespace HeroLoadoutFixer
             // the charge lands, because you are robbing him while you say it.
             // Then the swagger, unchanged: better gear inside a month, and a
             // threat aimed at somebody of your blood.
-            starter.AddPlayerLine("hlf_strip_prisoner_reprisal",
+            starter.AddPlayerLine("hev_strip_prisoner_reprisal",
                                   "hero_main_options",
-                                  "hlf_strip_prisoner_reprisal_reply",
-                                  "{=hlf_strip_reprisal}There is no honour in you for me to offend. "
+                                  "hev_strip_prisoner_reprisal_reply",
+                                  "{=hev_strip_reprisal}There is no honour in you for me to offend. "
                                   + "Hand over your arms and armour.",
                                   CanStripInReprisal, null, 100, null);
 
@@ -99,24 +99,24 @@ namespace HeroLoadoutFixer
             // that it can be done to him, only by whom. That lands harder than
             // either of the others, and it costs the ordinary price: a friend
             // is never a reprisal, whatever his reputation elsewhere.
-            starter.AddPlayerLine("hlf_strip_prisoner_friend",
+            starter.AddPlayerLine("hev_strip_prisoner_friend",
                                   "hero_main_options",
-                                  "hlf_strip_prisoner_friend_reply",
-                                  "{=hlf_strip_friend}Do not take this personally. "
+                                  "hev_strip_prisoner_friend_reply",
+                                  "{=hev_strip_friend}Do not take this personally. "
                                   + "Hand over your arms and armour.",
                                   CanStripAFriend, null, 100, null);
 
-            starter.AddDialogLine("hlf_strip_prisoner_friend_reply",
-                                  "hlf_strip_prisoner_friend_reply",
+            starter.AddDialogLine("hev_strip_prisoner_friend_reply",
+                                  "hev_strip_prisoner_friend_reply",
                                   "close_window",
-                                  "{=hlf_strip_friend_reply}I expected this from anyone but you. "
+                                  "{=hev_strip_friend_reply}I expected this from anyone but you. "
                                   + "Take them, then. I have nothing else to say to you.",
                                   null, Strip, 100, null);
 
-            starter.AddDialogLine("hlf_strip_prisoner_reprisal_reply",
-                                  "hlf_strip_prisoner_reprisal_reply",
+            starter.AddDialogLine("hev_strip_prisoner_reprisal_reply",
+                                  "hev_strip_prisoner_reprisal_reply",
                                   "close_window",
-                                  "{=hlf_strip_reprisal_reply}Speak to me of honour when you have "
+                                  "{=hev_strip_reprisal_reply}Speak to me of honour when you have "
                                   + "finished robbing me. Take it, then, take all of it -- I will have "
                                   + "better within the month, and the next man I strip to his shirt "
                                   + "may well share your name.",
