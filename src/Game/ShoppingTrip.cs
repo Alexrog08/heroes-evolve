@@ -326,6 +326,14 @@ namespace HeroesEvolve
         /// anything with. Those look identical in a count of pieces and want
         /// opposite responses, and telling them apart took a separate
         /// measurement every time until this existed.
+        ///
+        /// It answered on the first campaign that logged it, and the answer was
+        /// the first: of 297 trips, 262 bought every gap the lord had. The
+        /// average trip filled 1.51 slots out of 1.71 available, so the budget
+        /// binds on about one trip in eight and the modest piece count is a
+        /// population with little left to fix rather than a purse held shut.
+        /// Worth keeping in mind before anyone reads a low average as the share
+        /// being too small and raises it.
         /// </summary>
         public static int LastTripGaps;
 
