@@ -43,7 +43,18 @@ param(
     # discards anything else, so they are checked here against the list the
     # Bannerlord workshop actually offers -- an invented tag would cost nothing
     # at publish time and simply never appear.
-    [string[]]$Tags = @("Singleplayer", "Native", "Utility", "v1.4.8")
+    [string[]]$Tags = @("Singleplayer", "Native", "Utility", "v1.4.8"),
+
+    # Actually run the publisher after writing the config.
+    #
+    # Off by default: publishing puts the mod on the internet under your Steam
+    # account, and that stays a decision you make rather than a side effect of
+    # regenerating a file. Passing it is the decision.
+    #
+    # It exists because the alternative was a printed command line containing an
+    # ampersand inside a path, which PowerShell mis-parses at the slightest
+    # provocation and did so twice.
+    [switch]$Publish
 )
 
 $ErrorActionPreference = "Stop"
@@ -169,7 +180,13 @@ Write-Host ""
 Write-Host "Nexus copy (paste into the Description box):" -ForegroundColor Cyan
 Write-Host "  $nexusOut"
 Write-Host ""
-Write-Host "Steam must be running and logged in. Then publish with:" -ForegroundColor Cyan
-Write-Host ""
-Write-Host "  & `"$publisher`" `"$out`""
+if ($Publish) {
+    Write-Host "Publishing. Steam must be running and logged in." -ForegroundColor Cyan
+    Write-Host ""
+    & $publisher $out
+    Write-Host ""
+    Write-Host "Done. Check the item page: https://steamcommunity.com/sharedfiles/filedetails/?id=$ItemId" -ForegroundColor Green
+} else {
+    Write-Host "Nothing published. Re-run with -Publish to send it." -ForegroundColor Yellow
+}
 Write-Host ""
