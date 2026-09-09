@@ -70,9 +70,6 @@ namespace HeroesEvolve
             if (item == null || hero == null) return false;
             if (!item.HasWeaponComponent) return true;
 
-            WeaponComponentData weapon = item.PrimaryWeapon;
-            if (weapon == null) return true;
-
             // Some weapons cannot be used from a horse at all, and the game
             // says so through the item's usage set rather than through
             // WeaponFlags -- noble_long_bow carries only NotUsableWithOneHand
@@ -97,16 +94,55 @@ namespace HeroesEvolve
                 return false;
             }
 
-            if ((weapon.WeaponFlags & WeaponFlags.CantReloadOnHorseback) == 0) return true;
-
-            // Only the crossbow perk is documented to lift the restriction:
-            // "You can reload any crossbow on horseback."
-            if (Classify(item) == WeaponCategory.Crossbow)
+            // A second restriction, and a weaker one. A heavy crossbow can be
+            // fired from a horse; it cannot be wound again up there. The game
+            // draws this as its own icon, cant_reload_on_horseback, separate
+            // from cannot-use -- so it is a warning to a player, who can judge
+            // when one bolt is worth it. It is not a warning a lord can act on.
+            // He fights whole battles unattended, and a lord who shoots once
+            // and then carries a plank has been disarmed by his own shopping.
+            // So it is refused here, on that reasoning rather than on the
+            // engine's, which only ever hides an icon.
+            //
+            // The perk is the game's own: Crossbow.MountedCrossbowman, which
+            // GetWeaponFlagDetails uses to hide that icon. Applied to whatever
+            // carries the flag rather than to whatever we classify as a
+            // crossbow -- the engine does not ask what the weapon is, and the
+            // narrower test refused a man the perk he had earned whenever our
+            // classification and the flag disagreed.
+            if (CantReloadMounted(item)
+                && !hero.GetPerkValue(DefaultPerks.Crossbow.MountedCrossbowman))
             {
-                return hero.GetPerkValue(DefaultPerks.Crossbow.MountedCrossbowman);
+                return false;
             }
 
-            return false;
+            return true;
+        }
+
+        /// <summary>
+        /// True when no way of wielding this weapon can be reloaded from a
+        /// horse.
+        ///
+        /// Every mode, for the same reason MountRules weighs every mode: one
+        /// that works is enough. No weapon in the base game carries the flag on
+        /// some modes and not others -- the five that carry it are heavy
+        /// crossbows with a single mode each -- so this asks the question the
+        /// consistent way rather than the way that happens to be sufficient.
+        /// </summary>
+        private static bool CantReloadMounted(ItemObject item)
+        {
+            bool sawOne = false;
+            foreach (WeaponComponentData usage in AllUsages(item))
+            {
+                if (usage == null) continue;
+                sawOne = true;
+                if ((usage.WeaponFlags & WeaponFlags.CantReloadOnHorseback) == 0)
+                {
+                    return false;
+                }
+            }
+
+            return sawOne;
         }
 
         /// <summary>
