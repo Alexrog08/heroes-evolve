@@ -69,7 +69,31 @@ namespace HeroLoadoutFixer.Core
         /// </summary>
         public const int HonorWeight = 4;
         public const int GenerosityWeight = 3;
-        public const int MercyWeight = 2;
+
+        /// <summary>
+        /// Level with Generosity, and it was not always.
+        ///
+        /// Two, at first, on the reasoning that stripping a prisoner is more a
+        /// dishonesty and a greed than a cruelty -- you take his things, you do
+        /// not hurt him. That is true of the act and misses the man. A merciful
+        /// lord does not leave somebody naked even when honour is not what
+        /// guides him: it is the sight of a noble sitting in a ditch with
+        /// nothing that stops him, and pity is reason enough on its own.
+        ///
+        /// So compassion now restrains him exactly as much as loyalty to his
+        /// own does, and only his word binds him harder. The numbers say the
+        /// same, from a neutral man at 12.5%: Honor swings 13.8 points across
+        /// its range, Generosity and Mercy 10.3 each, Calculating 3.8.
+        ///
+        /// The calibration survives the change untouched, which is why it was
+        /// safe to make. Every trait level moves the score through the same
+        /// denominator, so a lord who is neutral in all four still sits at
+        /// 12.5%, one who is minus one in all four still at 42.2%, and one who
+        /// is plus one throughout still at 1.6%. What moved is the balance
+        /// between the middle two, which is all that was asked.
+        /// </summary>
+        public const int MercyWeight = 3;
+
         public const int CalculatingWeight = 1;
 
         /// <summary>

@@ -47,14 +47,17 @@ namespace HeroLoadoutFixer.Tests
             Check.True(Percent(0, 0, 0, 2, 0, 0, Stranger) < average, "Cerebral stays his hand");
 
             // Honor leads, because breaking the customs of war is the act itself
-            // rather than a disposition towards it.
+            // rather than a disposition towards it. Below it, greed and cruelty
+            // restrain a man equally: a merciful lord will not leave somebody
+            // naked even when honour is not what guides him, and pity is reason
+            // enough on its own.
             int deceitful = Percent(-2, 0, 0, 0, 0, 0, Stranger);
             int tightfisted = Percent(0, 0, -2, 0, 0, 0, Stranger);
             int sadistic = Percent(0, -2, 0, 0, 0, 0, Stranger);
             int hotheaded = Percent(0, 0, 0, -2, 0, 0, Stranger);
             Check.True(deceitful > tightfisted, "Honor outweighs Generosity");
-            Check.True(tightfisted > sadistic, "Generosity outweighs Mercy");
-            Check.True(sadistic > hotheaded, "and Mercy outweighs Calculating");
+            Check.Equal(tightfisted, sadistic, "Generosity and Mercy weigh the same");
+            Check.True(sadistic > hotheaded, "and both outweigh Calculating");
 
             // --- roguery is skill, not desire ---
             Check.True(Percent(-1, 0, 0, 0, 300, 0, Stranger) > Percent(-1, 0, 0, 0, 0, 0, Stranger),
