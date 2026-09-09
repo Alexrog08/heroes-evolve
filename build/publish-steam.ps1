@@ -35,9 +35,10 @@ param(
     [ValidateSet("private", "public", "friendsonly")]
     [string]$Visibility = "private",
 
-    # A .jpg or .png, 512x512 or larger. Optional: the tool skips the preview
-    # when the element is absent, and Steam lets you add one on the web page.
-    [string]$Image = "",
+    # A .jpg or .png, 512x512 or larger. Defaults to the cover kept beside the
+    # store copy, and a relative path is resolved against the repository rather
+    # than against wherever you happened to be standing when you ran this.
+    [string]$Image = "docs/cover.jpg",
 
     # Workshop tags. Steam defines the valid set for this app and silently
     # discards anything else, so they are checked here against the list the
@@ -123,8 +124,17 @@ $update.Add('    <Tags>')
 foreach ($t in $Tags) { $update.Add('      <Tag Value="' + (Escape-Attr $t) + '" />') }
 $update.Add('    </Tags>')
 if (-not [string]::IsNullOrWhiteSpace($Image)) {
-    if (-not (Test-Path $Image)) { throw "preview image not found: $Image" }
-    $update.Add('    <Image Value="' + (Escape-Attr (Resolve-Path $Image)) + '" />')
+    # Relative to the repository, not to the shell's working directory. This
+    # script is normally run from somewhere else entirely, and a path that
+    # resolves for the author and not for anyone else is not a path.
+    $imagePath = $Image
+    if (-not [System.IO.Path]::IsPathRooted($imagePath)) {
+        $imagePath = Join-Path $root $Image
+    }
+    if (-not (Test-Path $imagePath)) {
+        throw "preview image not found: $imagePath (given as '$Image')"
+    }
+    $update.Add('    <Image Value="' + (Escape-Attr (Resolve-Path $imagePath)) + '" />')
 }
 if (-not [string]::IsNullOrWhiteSpace($ChangeNotes)) {
     $update.Add('    <ChangeNotes Value="' + (Escape-Attr $ChangeNotes) + '" />')
