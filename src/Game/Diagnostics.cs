@@ -212,13 +212,23 @@ namespace HeroesEvolve
         /// him in the best boots in Calradia over a shirt, and the budget wants
         /// weighting by slot instead.
         ///
-        /// The purchase log said the slots are within about a factor of two at
-        /// tier 4, and that arrows cost twice what a bow of the same tier does,
-        /// which is the opposite of the feared case. But that was measured on
-        /// purchases, which are already filtered by what a lord could afford.
-        /// This measures what he ends up wearing, which is the thing actually
-        /// in question. A slot standing a whole tier above the others is the
-        /// signal that the even split is wrong.
+        /// It answered the question and the answer was neither. Lords wear body
+        /// armour at 6.77 and leg armour at 3.17 -- three and a half tiers of
+        /// spread, far worse than feared -- and no budget can touch it, because
+        /// the catalogue is what causes it. Counted across every culture: 203
+        /// body armours and 431 helmets at tier 6, and for gloves and leg armour
+        /// at tier 5 or 6, nothing at all. Bannerlord simply does not make them.
+        /// Their ceiling is tier 4, and there are four tier-4 leggings in the
+        /// whole game, all Battanian.
+        ///
+        /// So weighting the trip budget by slot would be worse than useless: it
+        /// would hand more money to a slot with nothing better to sell. The even
+        /// split already handles this correctly, because what cannot be spent on
+        /// leggings stays in the pot and buys a better cuirass.
+        ///
+        /// Kept in the census anyway. It is the line that would catch a mod
+        /// adding high-tier leg armour, or a future change that starts dressing
+        /// lords lopsidedly for a reason the game itself is not responsible for.
         /// </summary>
         private static void ReportTierBySlot()
         {
