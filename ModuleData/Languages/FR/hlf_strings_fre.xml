@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<base xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" type="string">
+  <tags>
+    <tag language="Français" />
+  </tags>
+  <strings>
+    <string id="hlf_strip" text="Rendez-moi vos armes et votre armure." />
+    <string id="hlf_strip_reply" text="Vous dépouilleriez de ses armes un homme vaincu ? Cela vous déshonore. Prenez-les, donc. Mon clan l’apprendra, et le vôtre aussi." />
+    <string id="hlf_strip_reprisal" text="Il n’y a en vous aucun honneur que je puisse offenser. Rendez-moi vos armes et votre armure." />
+    <string id="hlf_strip_reprisal_reply" text="Parlez-moi d’honneur quand vous aurez fini de me dépouiller. Prenez donc tout — j’en aurai de meilleures avant un mois, et le prochain que je laisserai en chemise portera peut-être votre nom." />
+    <string id="hlf_strip_friend" text="Ne le prenez pas personnellement. Rendez-moi vos armes et votre armure." />
+    <string id="hlf_strip_friend_reply" text="De n’importe qui j’aurais attendu cela, mais pas de vous. Prenez-les, donc. Je n’ai plus rien à vous dire." />
+  </strings>
+</base>
