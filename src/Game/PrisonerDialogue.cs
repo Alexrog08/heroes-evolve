@@ -59,24 +59,30 @@ namespace HeroLoadoutFixer
             // off. Which is the only reason the discount reads as fair rather
             // than as a loophole: you can hear that he had it coming.
             //
-            // Both lines name honour on purpose, and the demand says it first.
-            // The player cannot see a trait level without going to look for it,
-            // so a spare line -- the first draft was "You know how this goes"
-            // -- left him reading a differently worded option with no idea why
-            // it was different or why it cost him less. Saying that no man of
-            // honour will speak for this one puts the reason in the sentence,
-            // and having him spit the word back is what confirms it.
+            // The demand names honour, and that is the whole job of the
+            // sentence. Honor below zero is the entire test, and a player
+            // cannot see a trait level without going to the encyclopedia to
+            // look for it -- so a spare line, and the first draft was "You know
+            // how this goes", left him reading a differently worded option and
+            // paying half the usual cost with no way to connect either fact to
+            // the man in front of him.
+            //
+            // Stated as an observation rather than a sermon, which matters
+            // while you are the one stripping a prisoner: it names what he is
+            // without claiming anything about what you are. And his "none at
+            // all" agrees with it before going straight back to threatening
+            // somebody of your blood, which is the confirmation.
             starter.AddPlayerLine("hlf_strip_prisoner_reprisal",
                                   "hero_main_options",
                                   "hlf_strip_prisoner_reprisal_reply",
-                                  "{=hlf_strip_reprisal}No man of honour would speak for you. "
+                                  "{=hlf_strip_reprisal}There is no honour in you for me to offend. "
                                   + "Hand over your arms and armour.",
                                   CanStripInReprisal, null, 100, null);
 
             starter.AddDialogLine("hlf_strip_prisoner_reprisal_reply",
                                   "hlf_strip_prisoner_reprisal_reply",
                                   "close_window",
-                                  "{=hlf_strip_reprisal_reply}Ha! Honour. Take it, then, take all "
+                                  "{=hlf_strip_reprisal_reply}None at all. Take it, then, take all "
                                   + "of it -- I will have better within the month, and the next man I "
                                   + "strip to his shirt may well share your name.",
                                   null, Strip, 100, null);
