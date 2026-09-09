@@ -1,6 +1,6 @@
-using HeroLoadoutFixer.Core;
+using HeroesEvolve.Core;
 
-namespace HeroLoadoutFixer.Tests
+namespace HeroesEvolve.Tests
 {
     /// <summary>
     /// CategoryRules.SameFamily: a skill governs a family of weapons, not one

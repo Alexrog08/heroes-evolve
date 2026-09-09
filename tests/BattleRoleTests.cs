@@ -1,7 +1,7 @@
 using System.Collections.Generic;
-using HeroLoadoutFixer.Core;
+using HeroesEvolve.Core;
 
-namespace HeroLoadoutFixer.Tests
+namespace HeroesEvolve.Tests
 {
     /// <summary>
     /// Every fixture here is a real hero from a live campaign, with the skills

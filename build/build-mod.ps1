@@ -36,7 +36,7 @@ $refs += $mcm.FullName
 $sources = Get-ChildItem (Join-Path $root "src") -Recurse -Filter *.cs
 
 $rsp = Join-Path $out "mod.rsp"
-$lines = @("/nologo", "/target:library", "/platform:x64", "/optimize+", "/out:`"$out\HeroLoadoutFixer.dll`"")
+$lines = @("/nologo", "/target:library", "/platform:x64", "/optimize+", "/out:`"$out\HeroesEvolve.dll`"")
 foreach ($r in $refs)    { $lines += "/r:`"$r`"" }
 foreach ($s in $sources) { $lines += "`"$($s.FullName)`"" }
 Set-Content -Path $rsp -Value $lines -Encoding UTF8
@@ -44,7 +44,7 @@ Set-Content -Path $rsp -Value $lines -Encoding UTF8
 & $csc /noconfig "@$rsp"
 if ($LASTEXITCODE -ne 0) { Write-Host "BUILD FAILED"; exit 1 }
 
-$dest = Join-Path $game "Modules\HeroLoadoutFixer"
+$dest = Join-Path $game "Modules\HeroesEvolve"
 New-Item -ItemType Directory -Force -Path (Join-Path $dest "bin\Win64_Shipping_Client") | Out-Null
 Copy-Item (Join-Path $root "SubModule.xml") $dest -Force
 
@@ -52,7 +52,7 @@ Copy-Item (Join-Path $root "SubModule.xml") $dest -Force
 # already edited -- a deploy must not silently reset their configuration.
 $settings = Join-Path $dest "settings.xml"
 if (-not (Test-Path $settings)) { Copy-Item (Join-Path $root "settings.xml") $settings -Force }
-Copy-Item "$out\HeroLoadoutFixer.dll" (Join-Path $dest "bin\Win64_Shipping_Client") -Force
+Copy-Item "$out\HeroesEvolve.dll" (Join-Path $dest "bin\Win64_Shipping_Client") -Force
 
 # Translations. Replaced wholesale rather than merged, so a renamed or deleted
 # language file cannot linger in the deployed module and go on being loaded.

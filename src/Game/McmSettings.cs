@@ -4,7 +4,7 @@ using MCM.Abstractions.Attributes.v2;
 using MCM.Abstractions.Base.Global;
 using TaleWorlds.CampaignSystem;
 
-namespace HeroLoadoutFixer
+namespace HeroesEvolve
 {
     /// <summary>
     /// The whole configuration, in the game's own options screen.
@@ -45,9 +45,9 @@ namespace HeroLoadoutFixer
         // display name), so declaration order here does not survive; nothing
         // sets a per-property Order, which leaves them alphabetical.
 
-        public override string Id { get { return "HeroLoadoutFixer"; } }
-        public override string DisplayName { get { return "Hero Loadout Fixer"; } }
-        public override string FolderName { get { return "HeroLoadoutFixer"; } }
+        public override string Id { get { return "HeroesEvolve"; } }
+        public override string DisplayName { get { return "Heroes Evolve"; } }
+        public override string FolderName { get { return "HeroesEvolve"; } }
         public override string FormatType { get { return "json2"; } }
 
         // ---- What runs ------------------------------------------------------
@@ -74,7 +74,7 @@ namespace HeroLoadoutFixer
         [SettingPropertyGroup("What runs", GroupOrder = 6)]
         public bool EnablePurchases { get; set; } = true;
 
-        [SettingPropertyBool("Write hlf.log", RequireRestart = false,
+        [SettingPropertyBool("Write hev.log", RequireRestart = false,
             HintText = "Logs what the mod does, under the Bannerlord logs folder. Off costs nothing "
                      + "and writes nothing. The census below needs this on.")]
         [SettingPropertyGroup("What runs", GroupOrder = 6)]
@@ -188,11 +188,11 @@ namespace HeroLoadoutFixer
         /// a steep price for a log file. This button costs nothing and leaves
         /// cheat mode off.
         /// </summary>
-        [SettingPropertyButton("Write a census to hlf.log",
+        [SettingPropertyButton("Write a census to hev.log",
             Content = "Run",
             RequireRestart = false,
             HintText = "Surveys every lord in the campaign -- tiers, gear, skills, traits, and what "
-                     + "the engine would change -- and writes the report to hlf.log in the "
+                     + "the engine would change -- and writes the report to hev.log in the "
                      + "Bannerlord logs folder. Reads only; nothing in the campaign is modified. "
                      + "About half a second on a mature save. Needs logging switched on.")]
         [SettingPropertyGroup("Diagnostics", GroupOrder = 1)]

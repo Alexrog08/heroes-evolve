@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace HeroLoadoutFixer.Core
+namespace HeroesEvolve.Core
 {
     /// <summary>
     /// Decides what a hero should carry. Pure: no game types, fully testable.

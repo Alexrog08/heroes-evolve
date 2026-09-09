@@ -1,6 +1,6 @@
 using System;
 
-namespace HeroLoadoutFixer.Core
+namespace HeroesEvolve.Core
 {
     /// <summary>
     /// How good a hero's gear is allowed to get: a weighted blend of clan

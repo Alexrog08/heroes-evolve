@@ -3,7 +3,7 @@ using System.Text;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.Core;
 
-namespace HeroLoadoutFixer
+namespace HeroesEvolve
 {
     /// <summary>
     /// Whether a culture puts its lords on horses, read from the lords

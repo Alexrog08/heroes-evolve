@@ -1,6 +1,6 @@
 using System;
 
-namespace HeroLoadoutFixer.Core
+namespace HeroesEvolve.Core
 {
     /// <summary>
     /// Immutable snapshot of a hero's combat-relevant skills.

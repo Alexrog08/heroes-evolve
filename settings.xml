@@ -1,7 +1,7 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 
 <!--
-  HeroLoadoutFixer settings.
+  HeroesEvolve settings.
 
   Delete this file and the mod runs on the defaults below. Delete a single
   line and that one value falls back. A value the mod cannot read, or one
@@ -12,7 +12,7 @@
   next load and uninstalling the mod leaves no trace.
 -->
 
-<HeroLoadoutFixer>
+<HeroesEvolve>
 
   <!-- ============ What runs ============ -->
 
@@ -29,7 +29,7 @@
        something better of the same kind, and never touches an empty slot. -->
   <EnablePurchases>true</EnablePurchases>
 
-  <!-- Writes hlf.log under
+  <!-- Writes hev.log under
        %LOCALAPPDATA%\Mount and Blade II Bannerlord\logs\ -->
   <EnableLogging>true</EnableLogging>
 
@@ -142,4 +142,4 @@
          AR_naptha_pot, some_other_item                                    -->
   <ExcludedItems></ExcludedItems>
 
-</HeroLoadoutFixer>
+</HeroesEvolve>

@@ -1,9 +1,9 @@
 using System.Collections.Generic;
 using System.Text;
 using TaleWorlds.CampaignSystem;
-using HeroLoadoutFixer.Core;
+using HeroesEvolve.Core;
 
-namespace HeroLoadoutFixer
+namespace HeroesEvolve
 {
     /// <summary>
     /// The fighting shapes a culture actually fields, read from its own troops.

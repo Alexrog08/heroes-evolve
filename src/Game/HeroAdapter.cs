@@ -1,8 +1,8 @@
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.Core;
-using HeroLoadoutFixer.Core;
+using HeroesEvolve.Core;
 
-namespace HeroLoadoutFixer
+namespace HeroesEvolve
 {
     /// <summary>Reads game state into the core's pure types.</summary>
     public static class HeroAdapter

@@ -1,7 +1,7 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Module>
-  <Name value="Hero Loadout Fixer"/>
-  <Id value="HeroLoadoutFixer"/>
+  <Name value="Heroes Evolve"/>
+  <Id value="HeroesEvolve"/>
   <Version value="v1.0.0"/>
   <SingleplayerModule value="true"/>
   <MultiplayerModule value="false"/>
@@ -20,9 +20,9 @@
   </DependedModuleMetadatas>
   <SubModules>
     <SubModule>
-      <Name value="HeroLoadoutFixer"/>
-      <DLLName value="HeroLoadoutFixer.dll"/>
-      <SubModuleClassType value="HeroLoadoutFixer.SubModule"/>
+      <Name value="HeroesEvolve"/>
+      <DLLName value="HeroesEvolve.dll"/>
+      <SubModuleClassType value="HeroesEvolve.SubModule"/>
       <Tags>
         <Tag key="DedicatedServerType" value="none"/>
         <Tag key="IsNoRenderModeElement" value="false"/>

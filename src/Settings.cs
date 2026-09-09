@@ -3,7 +3,7 @@ using System.IO;
 using System.Reflection;
 using System.Xml;
 
-namespace HeroLoadoutFixer
+namespace HeroesEvolve
 {
     /// <summary>
     /// Every number a player is allowed to change, in one place.
@@ -33,7 +33,7 @@ namespace HeroLoadoutFixer
         /// <summary>Let lords buy better gear when they visit a town.</summary>
         public static bool EnablePurchases = true;
 
-        /// <summary>Write hlf.log. Off costs nothing and writes nothing.</summary>
+        /// <summary>Write hev.log. Off costs nothing and writes nothing.</summary>
         public static bool EnableLogging = true;
 
         // --- How good a lord's gear may get --------------------------------

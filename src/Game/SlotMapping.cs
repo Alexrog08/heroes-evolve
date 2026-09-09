@@ -1,6 +1,6 @@
 using TaleWorlds.Core;
 
-namespace HeroLoadoutFixer
+namespace HeroesEvolve
 {
     /// <summary>
     /// Translation between core slot indices and Bannerlord's EquipmentIndex.

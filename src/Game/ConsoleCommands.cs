@@ -5,12 +5,12 @@ using TaleWorlds.CampaignSystem.Settlements;
 using TaleWorlds.Core;
 using TaleWorlds.Library;
 using TaleWorlds.ObjectSystem;
-using HeroLoadoutFixer.Core;
+using HeroesEvolve.Core;
 
-namespace HeroLoadoutFixer
+namespace HeroesEvolve
 {
     /// <summary>
-    /// Developer-console commands, group "hlf". Requires cheat_mode = 1 in
+    /// Developer-console commands, group "hev". Requires cheat_mode = 1 in
     /// engine_config.txt for the console itself to open.
     ///
     /// These exist to make the come-of-age bug reachable on demand. Waiting for
@@ -19,20 +19,20 @@ namespace HeroLoadoutFixer
     /// </summary>
     public static class ConsoleCommands
     {
-        [CommandLineFunctionality.CommandLineArgumentFunction("census", "hlf")]
+        [CommandLineFunctionality.CommandLineArgumentFunction("census", "hev")]
         public static string Census(List<string> args)
         {
-            if (Campaign.Current == null) return "hlf: no campaign is running.";
+            if (Campaign.Current == null) return "hev: no campaign is running.";
 
             Diagnostics.RunCensus(HeroLoadoutBehavior.ClanWeight, HeroLoadoutBehavior.SkillWeight,
                                   HeroLoadoutBehavior.MinimumTier, HeroLoadoutBehavior.DominanceMargin);
-            return "hlf: census written to hlf.log.";
+            return "hev: census written to hev.log.";
         }
 
-        [CommandLineFunctionality.CommandLineArgumentFunction("dry_run", "hlf")]
+        [CommandLineFunctionality.CommandLineArgumentFunction("dry_run", "hev")]
         public static string DryRun(List<string> args)
         {
-            if (Campaign.Current == null) return "hlf: no campaign is running.";
+            if (Campaign.Current == null) return "hev: no campaign is running.";
 
             Hero hero = FindHero(args);
             if (hero == null) return Usage("hlf.dry_run", args);
@@ -45,14 +45,14 @@ namespace HeroLoadoutFixer
         /// What the purchase engine would do for a hero in the town the player
         /// is standing in. Reads only -- nothing is bought and no gold moves.
         /// </summary>
-        [CommandLineFunctionality.CommandLineArgumentFunction("market", "hlf")]
+        [CommandLineFunctionality.CommandLineArgumentFunction("market", "hev")]
         public static string Market(List<string> args)
         {
-            if (Campaign.Current == null) return "hlf: no campaign is running.";
+            if (Campaign.Current == null) return "hev: no campaign is running.";
 
             Settlement settlement = Settlement.CurrentSettlement;
-            if (settlement == null) return "hlf: stand inside a town first.";
-            if (!settlement.IsTown) return "hlf: " + settlement.Name + " is not a town.";
+            if (settlement == null) return "hev: stand inside a town first.";
+            if (!settlement.IsTown) return "hev: " + settlement.Name + " is not a town.";
 
             Hero hero = FindHero(args);
             if (hero == null) return Usage("hlf.market", args);
@@ -69,14 +69,14 @@ namespace HeroLoadoutFixer
         /// tick uses, logging the plan slot by slot on the way through.
         /// Meant for a throwaway save.
         /// </summary>
-        [CommandLineFunctionality.CommandLineArgumentFunction("test_repair", "hlf")]
+        [CommandLineFunctionality.CommandLineArgumentFunction("test_repair", "hev")]
         public static string TestRepair(List<string> args)
         {
-            if (Campaign.Current == null) return "hlf: no campaign is running.";
+            if (Campaign.Current == null) return "hev: no campaign is running.";
 
             Hero hero = FindHero(args);
             if (hero == null) return Usage("hlf.test_repair", args);
-            if (hero.BattleEquipment == null) return "hlf: " + hero.Name + " has no battle equipment.";
+            if (hero.BattleEquipment == null) return "hev: " + hero.Name + " has no battle equipment.";
 
             // Strip() destroys equipment in place -- items are overwritten, not
             // returned to any inventory -- and GrantService.Grant has no
@@ -88,13 +88,13 @@ namespace HeroLoadoutFixer
             // the only thing that makes the test meaningful.
             if (!HeroFilter.IsEligible(hero))
             {
-                return "hlf: " + hero.Name + " is not a hero this mod touches "
+                return "hev: " + hero.Name + " is not a hero this mod touches "
                        + "(player character, companion, child, or template). Refusing to strip. "
                        + "Use hlf.dry_run to inspect any hero without modifying it.";
             }
 
             StringBuilder report = new StringBuilder();
-            report.AppendLine("hlf: THIS MODIFIED " + hero.Name + ". Do not save over a campaign you care about.");
+            report.AppendLine("hev: THIS MODIFIED " + hero.Name + ". Do not save over a campaign you care about.");
 
             ModLog.Info("TESTREPAIR hero=" + hero.Name + " before=" + Describe(hero));
             report.AppendLine("before: " + Describe(hero));
@@ -113,7 +113,7 @@ namespace HeroLoadoutFixer
                                                           HeroLoadoutBehavior.SkillWeight,
                                                           HeroLoadoutBehavior.MinimumTier,
                                                           HeroLoadoutBehavior.DominanceMargin);
-            if (resolved == null) return "hlf: could not resolve a loadout for " + hero.Name + ".";
+            if (resolved == null) return "hev: could not resolve a loadout for " + hero.Name + ".";
 
             ModLog.Info("TESTREPAIR plan hero=" + hero.Name
                         + " current=" + resolved.CurrentWeapons
@@ -136,7 +136,7 @@ namespace HeroLoadoutFixer
 
             ModLog.Info("TESTREPAIR hero=" + hero.Name + " after=" + Describe(hero));
             report.AppendLine("after: " + Describe(hero));
-            report.AppendLine("(full detail in hlf.log)");
+            report.AppendLine("(full detail in hev.log)");
 
             return report.ToString();
         }
@@ -229,7 +229,7 @@ namespace HeroLoadoutFixer
             }
             if (partials.Count > 10) names.Append(", ... (").Append(partials.Count).Append(" total)");
 
-            _lastAmbiguity = "hlf: \"" + wanted + "\" matches several heroes: " + names
+            _lastAmbiguity = "hev: \"" + wanted + "\" matches several heroes: " + names
                              + ". Give the full name.";
             return null;
         }
@@ -245,8 +245,8 @@ namespace HeroLoadoutFixer
             if (_lastAmbiguity != null) return _lastAmbiguity;
 
             string wanted = args == null || args.Count == 0 ? "" : string.Join(" ", args.ToArray()).Trim();
-            if (wanted.Length == 0) return "hlf: usage: " + command + " <hero name>";
-            return "hlf: no living hero matches \"" + wanted + "\".";
+            if (wanted.Length == 0) return "hev: usage: " + command + " <hero name>";
+            return "hev: no living hero matches \"" + wanted + "\".";
         }
     }
 }

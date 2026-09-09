@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using TaleWorlds.CampaignSystem;
-using HeroLoadoutFixer.Core;
+using HeroesEvolve.Core;
 
-namespace HeroLoadoutFixer
+namespace HeroesEvolve
 {
     /// <summary>
     /// What a lord may spend on gear today, and who pays which half.

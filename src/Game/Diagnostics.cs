@@ -7,9 +7,9 @@ using TaleWorlds.CampaignSystem.Settlements;
 using TaleWorlds.Core;
 using TaleWorlds.Library;
 using TaleWorlds.ObjectSystem;
-using HeroLoadoutFixer.Core;
+using HeroesEvolve.Core;
 
-namespace HeroLoadoutFixer
+namespace HeroesEvolve
 {
     /// <summary>
     /// Read-only reporting. Nothing here changes a hero, an item or a save.
@@ -2525,9 +2525,9 @@ namespace HeroLoadoutFixer
         public static string MarketDryRun(Hero hero, Settlement settlement, float clanWeight,
                                           float skillWeight, int minimumTier)
         {
-            if (hero == null) return "hlf: no hero.";
-            if (settlement == null) return "hlf: no settlement.";
-            if (hero.BattleEquipment == null) return "hlf: " + hero.Name + " has no battle equipment.";
+            if (hero == null) return "hev: no hero.";
+            if (settlement == null) return "hev: no settlement.";
+            if (hero.BattleEquipment == null) return "hev: " + hero.Name + " has no battle equipment.";
 
             StringBuilder report = new StringBuilder();
             SkillProfile skills = HeroAdapter.ReadSkills(hero);
