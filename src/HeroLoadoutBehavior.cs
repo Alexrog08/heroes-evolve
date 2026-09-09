@@ -40,7 +40,7 @@ namespace HeroLoadoutFixer
         /// lifetime this ledger should have -- it holds no save data.
         /// </summary>
         private readonly BudgetService _budget =
-            new BudgetService(Settings.ReserveMultiplier, Settings.SpendingShare);
+            new BudgetService();
 
         /// <summary>
         /// Who has already been shopping today.

@@ -112,6 +112,15 @@ namespace HeroLoadoutFixer
         /// </summary>
         private static string[] _excludedItems = new string[0];
 
+        /// <summary>
+        /// Replaces the exclusion list from one line of text, for the options
+        /// screen. Parsed by the same splitter settings.xml uses.
+        /// </summary>
+        public static void SetExcludedItems(string text)
+        {
+            _excludedItems = Split(text);
+        }
+
         /// <summary>Whether the player has struck this item from his campaign.</summary>
         public static bool IsExcluded(string itemId)
         {
@@ -242,10 +251,22 @@ namespace HeroLoadoutFixer
         /// </summary>
         private static string[] List(XmlNode root, string name)
         {
-            string text = Text(root, name);
+            return Split(Text(root, name));
+        }
+
+        /// <summary>
+        /// One line of ids into an array, separated by commas or whitespace so
+        /// the player may write it either way without being told which. Missing
+        /// or empty gives an empty array, never null.
+        ///
+        /// Shared with the options screen through SetExcludedItems, so the file
+        /// and MCM cannot disagree about what "a, b" means.
+        /// </summary>
+        private static string[] Split(string text)
+        {
             if (string.IsNullOrEmpty(text)) return new string[0];
 
-            char[] separators = new char[] { ',', ' ', '\t', '\r', '\n' };
+            char[] separators = new char[] { ',', ' ', (char)9, (char)13, (char)10 };
             string[] parts = text.Split(separators, StringSplitOptions.RemoveEmptyEntries);
             for (int i = 0; i < parts.Length; i++) parts[i] = parts[i].Trim();
             return parts;

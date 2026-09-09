@@ -59,16 +59,28 @@ namespace HeroLoadoutFixer
         /// </summary>
         public const float DefaultSpendingShare = 0.10f;
 
-        private readonly float _reserveMultiplier;
-        private readonly float _spendingShare;
         private readonly Dictionary<string, ClanDay> _today = new Dictionary<string, ClanDay>();
 
-        public BudgetService() : this(DefaultReserveMultiplier, DefaultSpendingShare) { }
+        /// <summary>
+        /// Read live rather than copied in, and that fixed two faults at once.
+        ///
+        /// The behaviour built this once with the values Settings held at
+        /// campaign load, so a player who moved either slider in the options
+        /// screen changed nothing until he restarted -- the service went on
+        /// spending against the figures it had been born with. And the census
+        /// built its own with the parameterless constructor, which meant it
+        /// reported the shipped defaults however the player had configured the
+        /// campaign: a man who set the share to a third read a survey of
+        /// somebody else's tenth.
+        ///
+        /// Settings is the single source everything else in this mod reads, and
+        /// there was never a reason for this one class to hold a copy.
+        /// </summary>
+        private static float ReserveMultiplier { get { return Settings.ReserveMultiplier; } }
 
-        public BudgetService(float reserveMultiplier, float spendingShare)
+        private static float SpendingShare
         {
-            _reserveMultiplier = reserveMultiplier;
-            _spendingShare = spendingShare < 0f ? 0f : spendingShare;
+            get { return Settings.SpendingShare < 0f ? 0f : Settings.SpendingShare; }
         }
 
         /// <summary>
@@ -110,7 +122,7 @@ namespace HeroLoadoutFixer
         {
             if (clan == null) return 0;
             int parties = clan.WarPartyComponents != null ? clan.WarPartyComponents.Count : 0;
-            return BudgetMath.Reserve(parties, _reserveMultiplier);
+            return BudgetMath.Reserve(parties, ReserveMultiplier);
         }
 
         /// <summary>What the clan purse can still put towards gear today.</summary>
@@ -142,7 +154,7 @@ namespace HeroLoadoutFixer
         /// </summary>
         public int Available(Hero hero)
         {
-            return (int)(Wallet(hero) * _spendingShare);
+            return (int)(Wallet(hero) * SpendingShare);
         }
 
         /// <summary>

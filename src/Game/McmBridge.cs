@@ -94,8 +94,32 @@ namespace HeroLoadoutFixer
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static void Pull(McmSettings settings)
         {
+            Settings.EnableRepair = settings.EnableRepair;
+            Settings.EnableSkillGrowth = settings.EnableSkillGrowth;
+            Settings.EnablePurchases = settings.EnablePurchases;
+            Settings.EnableLogging = settings.EnableLogging;
+
+            Settings.SkillPerTier = settings.SkillPerTier;
+            Settings.SkillWeight = settings.SkillWeight;
+            Settings.ClanWeight = settings.ClanWeight;
+            Settings.MinimumTier = settings.MinimumTier;
+            Settings.DominanceMargin = settings.DominanceMargin;
+
+            Settings.ShopChancePerVisit = settings.ShopChancePerVisit;
+            Settings.SpendingShare = settings.SpendingShare;
+            Settings.ReserveMultiplier = settings.ReserveMultiplier;
+
             Settings.EnableCaptureLoss = settings.EnableCaptureLoss;
             Settings.PlunderChance = settings.PlunderChance;
+
+            // Two that are not plain fields, and both would have gone stale.
+            //
+            // The log's own switch lives on ModLog and was only ever set inside
+            // Settings.Load, so toggling it here would have changed a field
+            // nobody reads. And the exclusion list is held parsed, so it has to
+            // be handed the text rather than the array.
+            ModLog.Enabled = Settings.EnableLogging;
+            Settings.SetExcludedItems(settings.ExcludedItems);
         }
     }
 }
