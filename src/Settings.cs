@@ -100,7 +100,7 @@ namespace HeroesEvolve
         /// invented, so this is the dial that matters until a campaign has
         /// measured the rate.
         /// </summary>
-        public static float PlunderChance = 1.0f;
+        public static float PlunderChance = 0.5f;
 
         /// <summary>
         /// Item ids this campaign refuses to buy or grant, however good they

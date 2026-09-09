@@ -160,13 +160,15 @@ namespace HeroesEvolve
 
         [SettingPropertyFloatingInteger("Robbery chance multiplier", 0f, 5f, "0.00",
             RequireRestart = false,
-            HintText = "Scales every captor's chance. At 1.00, measured across 495 lords: the "
-                     + "median robs one prisoner in eight, the most honourable about one in fifty, "
-                     + "the worst one in two. His word binds him hardest, then his loyalty to his "
-                     + "own and his pity equally. Bandits always. 0.00 stops robbery without "
-                     + "switching the system off, so gear already taken still circulates.")]
+            HintText = "Scales every captor's chance. His word binds him hardest, then his "
+                     + "loyalty to his own and his pity equally; bandits always rob. At 1.00 this "
+                     + "stripped a third of the nobility every year and became the largest single "
+                     + "influence on what lords wear -- more than their skill, their wealth or the "
+                     + "market. Halved to 0.50 so it shapes the map without ruling it. 0.00 stops "
+                     + "robbery without switching the system off, so gear already taken still "
+                     + "circulates.")]
         [SettingPropertyGroup("Capture", GroupOrder = 3)]
-        public float PlunderChance { get; set; } = 1.0f;
+        public float PlunderChance { get; set; } = 0.5f;
 
         // ---- Items -------------------------------------------------------------
 

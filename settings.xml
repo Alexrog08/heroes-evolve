@@ -119,11 +119,16 @@
        this game are yours to earn. -->
   <EnableCaptureLoss>true</EnableCaptureLoss>
 
-  <!-- Scales how often a captor robs. 0 is the same as off, 1 runs the rules
-       as written, 2 doubles them. Every weight behind this is invented — no
-       vanilla behaviour exists to calibrate against — so this is the dial to
-       turn while judging whether the rate feels right. -->
-  <PlunderChance>1.0</PlunderChance>
+  <!-- Scales how often a captor robs. 0 is the same as off, 0.5 is the
+       default, 1 runs the character rules at full strength, 2 doubles them.
+
+       Halved after measurement. At full strength a census found 83 robberies
+       among 405 lords in seven months — a third of the nobility stripped every
+       year — which made robbery the largest single influence on what a lord
+       wears, ahead of his skill, his clan's wealth and the market put together.
+       The purchase engine was working; it simply could not build faster than
+       this tore down. At 0.5 it shapes the map without ruling it. -->
+  <PlunderChance>0.5</PlunderChance>
 
   <!-- You rob by asking. When EnableCaptureLoss is on and you are holding a
        captured lord, talking to him offers "Hand over your arms and armour."
