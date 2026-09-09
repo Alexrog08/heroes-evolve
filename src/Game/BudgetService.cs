@@ -158,6 +158,30 @@ namespace HeroesEvolve
         }
 
         /// <summary>
+        /// What a whole shopping trip may cost him, to be divided between the
+        /// slots he means to fill.
+        ///
+        /// The same arithmetic as Available and deliberately so: SpendingShare
+        /// used to mean "of his wallet, per piece" and now means "of his wallet,
+        /// per trip". The difference is where it is applied, not how it is
+        /// worked out.
+        ///
+        /// Why it moved. Per piece, the share said nothing about how much a man
+        /// needed -- a lord replacing his whole kit got the same allowance for
+        /// his first piece as a lord replacing one strap, so the one who had
+        /// just been robbed of everything could buy a magnificent helmet and
+        /// then eleven rags. Per trip, a man who needs everything spreads his
+        /// money thin and comes back in middling gear, and a man who needs one
+        /// thing spends it all on that one thing. He improves by buying fewer
+        /// pieces of better quality as he goes, which is what improving looks
+        /// like.
+        /// </summary>
+        public int TripBudget(Hero hero)
+        {
+            return Available(hero);
+        }
+
+        /// <summary>
         /// Splits a price between the hero and his house, or reports that it
         /// cannot be paid.
         ///

@@ -69,7 +69,7 @@ namespace HeroesEvolve
         /// gate on item tier: at a tenth, a tier-6 piece needs a house holding
         /// some 430,000.
         /// </summary>
-        public static float SpendingShare = 0.10f;
+        public static float SpendingShare = 0.30f;
 
         /// <summary>
         /// Scales the gold held back to keep troops paid. 1.0 keeps exactly the

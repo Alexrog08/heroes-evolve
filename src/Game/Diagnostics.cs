@@ -203,6 +203,79 @@ namespace HeroesEvolve
         }
 
         /// <summary>
+        /// What lords wear in each slot, separately.
+        ///
+        /// Written to settle one question: the trip budget divides a lord's
+        /// money evenly between the slots he can improve, which is only fair if
+        /// a given tier costs roughly the same everywhere. If it does not --
+        /// if boots are cheap and body armour dear -- then an even split dresses
+        /// him in the best boots in Calradia over a shirt, and the budget wants
+        /// weighting by slot instead.
+        ///
+        /// The purchase log said the slots are within about a factor of two at
+        /// tier 4, and that arrows cost twice what a bow of the same tier does,
+        /// which is the opposite of the feared case. But that was measured on
+        /// purchases, which are already filtered by what a lord could afford.
+        /// This measures what he ends up wearing, which is the thing actually
+        /// in question. A slot standing a whole tier above the others is the
+        /// signal that the even split is wrong.
+        /// </summary>
+        private static void ReportTierBySlot()
+        {
+            Dictionary<string, int> total = new Dictionary<string, int>();
+            Dictionary<string, int> count = new Dictionary<string, int>();
+
+            foreach (Hero hero in Hero.AllAliveHeroes)
+            {
+                try
+                {
+                    if (!HeroFilter.IsEligible(hero)) continue;
+                    if (hero.BattleEquipment == null) continue;
+
+                    for (int i = 0; i < SlotSnapshot.WeaponSlotCount; i++)
+                    {
+                        Tally(total, count, hero, SlotMapping.WeaponSlot(i));
+                    }
+                    foreach (EquipmentIndex slot in SlotMapping.ArmorSlots)
+                    {
+                        Tally(total, count, hero, slot);
+                    }
+                    Tally(total, count, hero, EquipmentIndex.Horse);
+                    Tally(total, count, hero, EquipmentIndex.HorseHarness);
+                }
+                catch
+                {
+                    // One unreadable hero must not cost the survey.
+                }
+            }
+
+            List<string> slots = new List<string>(count.Keys);
+            slots.Sort();
+            foreach (string slot in slots)
+            {
+                if (count[slot] == 0) continue;
+                ModLog.Info("SLOTTIER " + slot + " worn=" + count[slot]
+                            + " meanTier=" + Mean2(total[slot], count[slot] * 100));
+            }
+        }
+
+        private static void Tally(Dictionary<string, int> total, Dictionary<string, int> count,
+                                  Hero hero, EquipmentIndex slot)
+        {
+            ItemObject item = hero.BattleEquipment[slot].Item;
+            if (item == null) return;
+
+            string name = SlotMapping.NameOf(slot);
+            int t;
+            total.TryGetValue(name, out t);
+            total[name] = t + (int)(item.Tierf * 100f);
+
+            int n;
+            count.TryGetValue(name, out n);
+            count[name] = n + 1;
+        }
+
+        /// <summary>
         /// One pass over every item in the game, counted by the category our
         /// own classifier assigns it. If the mod is ever going to fail by
         /// finding nothing to equip, it shows up here first: a category with
@@ -1919,6 +1992,8 @@ namespace HeroesEvolve
             }
 
             ModLog.Info("GEARTIER wornTier(x100) " + Percentiles(wornTiers));
+
+            ReportTierBySlot();
             ModLog.Info("GEARTIER clanTier " + Percentiles(clanTiers));
         }
 

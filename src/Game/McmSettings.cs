@@ -129,14 +129,16 @@ namespace HeroesEvolve
         [SettingPropertyGroup("Money", GroupOrder = 4)]
         public float ShopChancePerVisit { get; set; } = 0.25f;
 
-        [SettingPropertyFloatingInteger("Share of the purse per purchase", 0f, 1f, "0.00",
+        [SettingPropertyFloatingInteger("Share of the purse per shopping trip", 0f, 1f, "0.00",
             RequireRestart = false,
-            HintText = "What makes wealth matter: at a tenth, a tier-6 piece needs a house holding "
-                     + "some 430,000. Measured on a mature campaign it almost never binds -- the "
-                     + "median lord holds a million and spends six thousand -- so lower it if you "
-                     + "want poverty to be felt.")]
+            HintText = "What a lord may spend on one trip to the market, divided between the slots "
+                     + "he can improve there. So a man who needs everything comes back in middling "
+                     + "gear, and a man who needs one thing spends it all on that one thing -- he "
+                     + "improves by buying fewer pieces of better quality. At 0.30 a median house "
+                     + "re-equips a robbed lord at tier 4, and reaches tier 6 once he is down to "
+                     + "his last slot or two. Lower it if you want poverty felt.")]
         [SettingPropertyGroup("Money", GroupOrder = 4)]
-        public float SpendingShare { get; set; } = 0.10f;
+        public float SpendingShare { get; set; } = 0.30f;
 
         [SettingPropertyFloatingInteger("Gold held back for troops", 0f, 10f, "0.00",
             RequireRestart = false,

@@ -82,11 +82,17 @@ namespace HeroesEvolve
         {
             if (settlement == null) return null;
 
-            // What one purchase may cost him. Read once: it does not move until
-            // something is actually bought.
             int limit = budget == null ? int.MaxValue : budget.Available(hero);
+            return BestOf(Candidates(hero, settlement, MarketScanner.Stock(settlement),
+                                     ceiling, limit));
+        }
 
-            return Best(hero, settlement, MarketScanner.Stock(settlement), ceiling, limit);
+        /// <summary>The best single thing in a given pile, kept for the callers
+        /// that hand over a captor's saddlebags rather than a town.</summary>
+        public static Candidate Best(Hero hero, Settlement settlement, List<StockEntry> stock,
+                                     int ceiling, int limit)
+        {
+            return BestOf(Candidates(hero, settlement, stock, ceiling, limit));
         }
 
         /// <summary>
@@ -98,11 +104,11 @@ namespace HeroesEvolve
         /// pile is his own, which is what taking a prisoner's kit leaves him
         /// with; a limit of int.MaxValue means nothing is being charged.
         /// </summary>
-        public static Candidate Best(Hero hero, Settlement settlement, List<StockEntry> stock,
-                                     int ceiling, int limit)
+        public static List<Candidate> Candidates(Hero hero, Settlement settlement,
+                                                 List<StockEntry> stock, int ceiling, int limit)
         {
-            if (hero == null || hero.BattleEquipment == null) return null;
-            if (stock == null || stock.Count == 0) return null;
+            if (hero == null || hero.BattleEquipment == null) return new List<Candidate>();
+            if (stock == null || stock.Count == 0) return new List<Candidate>();
 
             CultureObject culture = hero.Culture;
             if (culture == null && hero.Clan != null) culture = hero.Clan.Culture;
@@ -111,7 +117,7 @@ namespace HeroesEvolve
             SlotSnapshot current = HeroAdapter.ReadEquipment(hero.BattleEquipment);
             bool mounted = hero.BattleEquipment[EquipmentIndex.Horse].Item != null;
 
-            Candidate best = null;
+            List<Candidate> found = new List<Candidate>();
 
             for (int i = 0; i < SlotSnapshot.WeaponSlotCount; i++)
             {
@@ -143,7 +149,7 @@ namespace HeroesEvolve
                                                                  ItemCatalog.IsOwnCulture(worn, culture),
                                                                  skills, mounted, partner,
                                                                  prefersBlunt);
-                best = Better(best, slot, offers, worn, culture, limit);
+                Add(found, slot, offers, worn, culture, limit);
             }
 
             foreach (EquipmentIndex slot in SlotMapping.ArmorSlots)
@@ -155,7 +161,7 @@ namespace HeroesEvolve
                 List<MarketOffer> offers = MarketScanner.Armor(stock, settlement, hero, worn.ItemType,
                                                                culture, ceiling, FineOf(worn),
                                                                ItemCatalog.IsOwnCulture(worn, culture));
-                best = Better(best, slot, offers, worn, culture, limit);
+                Add(found, slot, offers, worn, culture, limit);
             }
 
             ItemObject mount = hero.BattleEquipment[EquipmentIndex.Horse].Item;
@@ -167,7 +173,7 @@ namespace HeroesEvolve
                                                                     ceiling, FineOf(mount),
                                                                     ItemCatalog.IsOwnCulture(mount, culture),
                                                                     skills);
-                    best = Better(best, EquipmentIndex.Horse, mounts, mount, culture, limit);
+                    Add(found, EquipmentIndex.Horse, mounts, mount, culture, limit);
                 }
 
                 // The harness hangs off the mount only for the family match -- a
@@ -182,10 +188,32 @@ namespace HeroesEvolve
                     List<MarketOffer> harnesses = MarketScanner.Harnesses(stock, settlement, hero, mount,
                                                                           culture, ceiling, FineOf(harness),
                                                                           ItemCatalog.IsOwnCulture(harness, culture));
-                    best = Better(best, EquipmentIndex.HorseHarness, harnesses, harness, culture, limit);
+                    Add(found, EquipmentIndex.HorseHarness, harnesses, harness, culture, limit);
                 }
             }
 
+            return found;
+        }
+
+        /// <summary>
+        /// The single best of them, by the same comparison that used to run
+        /// inline as the slots were walked.
+        /// </summary>
+        private static Candidate BestOf(List<Candidate> found)
+        {
+            Candidate best = null;
+            for (int i = 0; i < found.Count; i++)
+            {
+                Candidate c = found[i];
+                if (best != null
+                    && MarketRules.Compare(c.Gain, c.Offer.OwnClass, c.FineGain, c.Offer.Price,
+                                           best.Gain, best.Offer.OwnClass, best.FineGain,
+                                           best.Offer.Price) >= 0)
+                {
+                    continue;
+                }
+                best = c;
+            }
             return best;
         }
 
@@ -216,6 +244,29 @@ namespace HeroesEvolve
         public static int Shop(Hero hero, Settlement settlement, int ceiling, BudgetService budget)
         {
             int bought = 0;
+            if (settlement == null) return 0;
+
+            // Scanned once and reused. The shelves do not change while he is
+            // standing at them, and rebuilding this list for every purchase was
+            // the whole cost of letting him make more than one.
+            List<StockEntry> stock = MarketScanner.Stock(settlement);
+            if (stock == null || stock.Count == 0) return 0;
+
+            // What the trip may cost, and how many ways it has to stretch.
+            //
+            // Counted before a denar is spent, with no price limit, so the
+            // count is of slots this town could improve at all rather than of
+            // slots he happens to be able to afford first. A man who needs
+            // eleven things divides by eleven and comes back in middling gear;
+            // a man who needs one spends the lot on it. That progression --
+            // fewer pieces, better each time -- is the whole point of budgeting
+            // the trip instead of the piece, and it falls out of the division
+            // without anything having to decide it.
+            int pot = budget == null ? int.MaxValue : budget.TripBudget(hero);
+            int gaps = budget == null
+                ? 1
+                : Candidates(hero, settlement, stock, ceiling, int.MaxValue).Count;
+            if (gaps <= 0) return 0;
 
             // He shops until there is nothing here worth buying or nothing left
             // to buy it with. There used to be a hard stop at one item, and it
@@ -231,13 +282,17 @@ namespace HeroesEvolve
             // provably finite whatever the market does.
             for (int pass = 0; pass < MaximumPurchasesPerTrip; pass++)
             {
-                // Asked again each time rather than ranked once. The affordable
-                // limit shrinks with every purchase -- Better picks the best
-                // offer UNDER it -- so a list chosen against the opening budget
-                // would keep proposing what he could afford before he started
-                // spending, and skip what he can afford now.
-                Candidate candidate = Best(hero, settlement, ceiling, budget);
+                // His share of what is left, for the slots that are left. A
+                // piece bought under its slice leaves the remainder to the
+                // others, so a cheap helmet buys a better cloak rather than
+                // being quietly forfeited.
+                int slice = gaps > 0 ? pot / gaps : pot;
+                if (slice <= 0) break;
+
+                Candidate candidate = BestOf(Candidates(hero, settlement, stock, ceiling, slice));
                 if (candidate == null) break;
+
+                int price = candidate.Offer.Price;
 
                 string failure;
                 if (!PurchaseService.TryBuy(hero, settlement, candidate.Slot, candidate.Offer,
@@ -252,6 +307,9 @@ namespace HeroesEvolve
                 }
 
                 bought++;
+                pot -= price;
+                gaps--;
+                if (pot <= 0 || gaps <= 0) break;
             }
 
             return bought;
@@ -279,18 +337,22 @@ namespace HeroesEvolve
         /// splendid sword he cannot buy and walk out with nothing, while a
         /// perfectly good cheaper upgrade sat on the same shelf.
         /// </summary>
-        private static Candidate Better(Candidate best, EquipmentIndex slot,
-                                        List<MarketOffer> offers, ItemObject worn,
-                                        CultureObject culture, int limit)
+        private static void Add(List<Candidate> found, EquipmentIndex slot,
+                                List<MarketOffer> offers, ItemObject worn,
+                                CultureObject culture, int limit)
         {
-            if (offers == null || offers.Count == 0) return best;
+            if (offers == null || offers.Count == 0) return;
 
+            // Offers arrive best-first, so this is the best he can afford here.
+            // The limit chooses his quality, not his total: it is the reason a
+            // trip budget has to be divided between the slots before it is
+            // spent rather than handed to the first purchase whole.
             int chosen = -1;
             for (int i = 0; i < offers.Count; i++)
             {
                 if (offers[i].Price <= limit) { chosen = i; break; }
             }
-            if (chosen < 0) return best;
+            if (chosen < 0) return;
 
             int wornTier = TierOf(worn);
             int wornFine = FineOf(worn);
@@ -302,20 +364,13 @@ namespace HeroesEvolve
             int fineGain = MarketRules.Effective(offer.FineTier, offer.OwnCulture)
                          - MarketRules.Effective(wornFine, wornOwn);
 
-            if (best != null
-                && MarketRules.Compare(gain, offer.OwnClass, fineGain, offer.Price,
-                                       best.Gain, best.Offer.OwnClass, best.FineGain, best.Offer.Price) >= 0)
-            {
-                return best;
-            }
-
             Candidate candidate = new Candidate();
             candidate.Slot = slot;
             candidate.Offer = offer;
             candidate.WornTier = wornTier;
             candidate.WornFine = wornFine;
             candidate.WornOwnCulture = wornOwn;
-            return candidate;
+            found.Add(candidate);
         }
 
         /// <summary>1-based tier, as the ceiling speaks it.</summary>

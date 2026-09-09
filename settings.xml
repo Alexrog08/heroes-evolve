@@ -65,12 +65,23 @@
 
   <!-- ============ Money ============ -->
 
-  <!-- The share of his wallet a lord may put into ONE purchase. This is what
-       makes wealth matter: at a tenth, a tier-6 piece needs a house holding
-       some 430,000, so young clans are priced out of the best gear and grow
-       into it. Raise it and lords buy above their means; lower it and they
-       stay in cheap kit for longer. -->
-  <SpendingShare>0.10</SpendingShare>
+  <!-- The share of his wallet a lord may spend on ONE TRIP to the market,
+       divided between the slots that town can improve for him. This is what
+       makes wealth matter, and what decides how a lord gets better: a man who
+       needs everything spreads it thin and comes back in middling gear, while a
+       man who needs one thing spends it all on that one thing. He improves by
+       buying fewer pieces of better quality.
+
+       At 0.30 a house of median wealth re-equips a robbed lord at tier 4, and
+       reaches tier 6 once he is down to his last slot or two.
+
+       CHANGED MEANING. This used to cap a single piece, which said nothing
+       about how much a man needed: a lord who had lost his whole kit got the
+       same allowance for his first piece as one replacing a strap, and could
+       buy a magnificent helmet and then eleven rags. If you carry a value over
+       from an older install, raise it — a tenth per trip is far stingier than a
+       tenth per piece was. -->
+  <SpendingShare>0.30</SpendingShare>
 
   <!-- Scales the gold held back so buying gear can never stop a clan paying
        its troops. 1.0 keeps exactly the game's own threshold per war party.
