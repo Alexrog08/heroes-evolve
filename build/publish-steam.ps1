@@ -93,7 +93,15 @@ if ([string]::IsNullOrWhiteSpace($ItemId)) {
     $tasks.Add('  <CreateItem />')
     Write-Host "No ItemId given: this config CREATES a new Workshop item." -ForegroundColor Yellow
 } else {
-    $tasks.Add('  <GetItem ItemId="' + (Escape-Attr $ItemId) + '" />')
+    # GetItemTask.LoadFrom walks the node's CHILDREN looking for one named
+    # ItemId and reads its Value attribute -- the same shape UpdateItem uses.
+    # Written as an attribute on GetItem itself the id simply never arrives, and
+    # the tool dies in Convert.ToUInt64 on an empty string, having updated
+    # nothing. Every update before this fix failed exactly that way.
+    if ($ItemId -notmatch '^[0-9]+$') { throw "ItemId must be digits only, got '$ItemId'" }
+    $tasks.Add('  <GetItem>')
+    $tasks.Add('    <ItemId Value="' + (Escape-Attr $ItemId) + '" />')
+    $tasks.Add('  </GetItem>')
     Write-Host "Updating existing Workshop item $ItemId."
 }
 
@@ -173,6 +181,17 @@ $seen = $check.FirstChild.ChildNodes.Count
 if ($check.FirstChild.NodeType -ne 'Element' -or $seen -lt 2) {
     throw "the publisher would read $seen tasks from this file; it needs the root element first and at least a create/get plus an update"
 }
+# Read back the way the tool reads it. The id has to survive as a child of
+# GetItem carrying a numeric Value, and checking that here is cheaper than
+# finding out from a FormatException after the upload has not happened.
+if (-not [string]::IsNullOrWhiteSpace($ItemId)) {
+    $idNode = $check.SelectSingleNode('/Tasks/GetItem/ItemId')
+    $idValue = if ($idNode) { $idNode.GetAttribute('Value') } else { $null }
+    if ($idValue -notmatch '^[0-9]+$') {
+        throw "the publisher would read the item id as '$idValue' and crash converting it"
+    }
+}
+
 Write-Host "wrote $out ($seen tasks, as the publisher will read them)" -ForegroundColor Green
 
 $version = ([xml](Get-Content (Join-Path $module "SubModule.xml"))).Module.Version.value
