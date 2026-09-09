@@ -71,6 +71,7 @@ namespace HeroLoadoutFixer
             ReportPlayerCharacters();
             ReportAttributes();
             ReportTalentSpread();
+            ReportHonour();
             ReportAllSkills();
             ReportGaps();
             ReportNaval();
@@ -87,6 +88,70 @@ namespace HeroLoadoutFixer
             List<Hero> broken = ReportHeroes();
             ReportDryRuns(broken, clanWeight, skillWeight, minimumTier, dominanceMargin);
             ModLog.Info("===== CENSUS END =====");
+        }
+
+        /// <summary>
+        /// Every lord's Honor, and by name the ones who have none.
+        ///
+        /// Honor is the heaviest term in the whole plunder model -- weight 4 in
+        /// PlunderRules, against 3 for Generosity and 1 for Calculating -- and
+        /// it is also the sole test for whether robbing a man back counts as a
+        /// reprisal. The mod has been tuned against it for weeks without anyone
+        /// ever measuring how the map is distributed, which is the wrong way
+        /// round: a model weighted on a trait nobody has counted is a model
+        /// resting on a guess.
+        ///
+        /// The named list exists for a duller reason. The reprisal branch of
+        /// PrisonerDialogue can only be seen by capturing a lord whose Honor is
+        /// below zero, and the game puts traits behind an encyclopedia page you
+        /// have to already suspect someone to open. This says who they are.
+        /// </summary>
+        private static void ReportHonour()
+        {
+            int[] counts = new int[5];
+            List<string> dishonourable = new List<string>();
+            int examined = 0;
+
+            foreach (Hero hero in Hero.AllAliveHeroes)
+            {
+                try
+                {
+                    if (!HeroFilter.IsEligible(hero)) continue;
+                    examined++;
+
+                    int honour = hero.GetTraitLevel(DefaultTraits.Honor);
+                    int bucket = honour + 2;
+                    if (bucket < 0) bucket = 0;
+                    if (bucket > 4) bucket = 4;
+                    counts[bucket]++;
+
+                    if (honour >= 0) continue;
+
+                    dishonourable.Add(hero.Name
+                                      + " honour=" + honour
+                                      + " clan=" + (hero.Clan != null ? hero.Clan.Name.ToString() : "<none>")
+                                      + " culture=" + CultureIdOf(hero)
+                                      + " kingdom=" + (hero.MapFaction != null
+                                          ? hero.MapFaction.Name.ToString() : "<none>")
+                                      + (hero.IsPrisoner ? " PRISONER" : ""));
+                }
+                catch
+                {
+                    // One unreadable hero must not cost the survey.
+                }
+            }
+
+            ModLog.Info("HONOUR examined=" + examined
+                        + " minus2=" + counts[0] + " minus1=" + counts[1]
+                        + " zero=" + counts[2]
+                        + " plus1=" + counts[3] + " plus2=" + counts[4]);
+
+            // Every one of them, not a sample. There are rarely many, and the
+            // point of the list is to be able to go and find one.
+            for (int i = 0; i < dishonourable.Count; i++)
+            {
+                ModLog.Info("HONOUR dishonourable " + dishonourable[i]);
+            }
         }
 
         /// <summary>
