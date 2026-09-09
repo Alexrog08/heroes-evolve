@@ -52,6 +52,7 @@ namespace HeroesEvolve.Tests
             MountHarnessTests.RunAll();
             BattleRoleTests.RunAll();
             TalentTests.RunAll();
+            MountRulesTests.RunAll();
             SkillGrowthTests.RunAll();
             FocusGrowthTests.RunAll();
             GrantTierTests.RunAll();

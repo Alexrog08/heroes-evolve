@@ -73,19 +73,19 @@ namespace HeroesEvolve
             WeaponComponentData weapon = item.PrimaryWeapon;
             if (weapon == null) return true;
 
-            // A long bow cannot be drawn from horseback at all. The game says so
-            // through the item's usage set (ItemUsageSetFlags.RequiresNoMount),
-            // not through WeaponFlags -- noble_long_bow carries only
-            // NotUsableWithOneHand and TwoHandIdleOnMount, so the flag check
-            // below waves it straight through. Observed live: a mounted Vlandian
-            // king was handed noble_long_bow, a weapon he cannot use on the
-            // horse he was granted in the same pass.
+            // Some weapons cannot be used from a horse at all, and the game
+            // says so through the item's usage set rather than through
+            // WeaponFlags -- noble_long_bow carries only NotUsableWithOneHand
+            // and TwoHandIdleOnMount, so the flag check below waves it straight
+            // through. Observed live: a mounted Vlandian king was handed
+            // noble_long_bow, a weapon he cannot use on the horse he was granted
+            // in the same pass.
             //
-            // The usage string is read directly because the string -> flags
-            // lookup lives behind a native delegate. Mods follow the same
-            // naming, so this holds for them too; a mod inventing its own
-            // dismounted-only usage name would slip through, which is a smaller
-            // failure than the one being fixed.
+            // That was fixed by naming the long bow, which fixed one case out of
+            // five. Native's item_usage_sets.xml flags five sets
+            // requires_no_mount -- the long bow, the pike, the braced spear, the
+            // thrown polearm and shield-with-dagger -- and a pike is exactly the
+            // weapon a mounted lord has no business buying. See MountRules.
             if (RequiresNoMount(item)) return false;
 
             if ((weapon.WeaponFlags & WeaponFlags.CantReloadOnHorseback) == 0) return true;
@@ -101,16 +101,41 @@ namespace HeroesEvolve
         }
 
         /// <summary>
-        /// True when any of the item's usages is one the game forbids on a
-        /// mount. Only long bows use this today.
+        /// True when no way of wielding this item works from a mount.
+        ///
+        /// The judgement itself is MountRules, which holds the five usage sets
+        /// the game flags requires_no_mount and the reason one usable mode is
+        /// enough. This end only collects the names.
         /// </summary>
         private static bool RequiresNoMount(ItemObject item)
         {
+            return !MountRules.AllowsMounted(UsageNames(item));
+        }
+
+        /// <summary>
+        /// Whether a hero with no horse could use this weapon.
+        ///
+        /// The other half of IsUsableMounted. See MountRules.AllowsOnFoot for
+        /// why it is here despite rejecting nothing in the base game.
+        /// </summary>
+        public static bool IsUsableOnFoot(ItemObject item)
+        {
+            if (item == null) return false;
+            if (!item.HasWeaponComponent) return true;
+
+            return MountRules.AllowsOnFoot(UsageNames(item));
+        }
+
+        /// <summary>Every way this item can be wielded, by name.</summary>
+        private static string[] UsageNames(ItemObject item)
+        {
+            List<string> usages = new List<string>();
             foreach (WeaponComponentData usage in AllUsages(item))
             {
-                if (usage.ItemUsage == "long_bow") return true;
+                if (usage != null) usages.Add(usage.ItemUsage);
             }
-            return false;
+
+            return usages.ToArray();
         }
 
         /// <summary>

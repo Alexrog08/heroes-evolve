@@ -454,6 +454,7 @@ namespace HeroesEvolve
             if (!ItemClassifier.MeetsDifficulty(item, skills, category)) return false;
             if (!ItemClassifier.Supports(item, category)) return false;
             if (mounted && !ItemClassifier.IsUsableMounted(item, hero)) return false;
+            if (!mounted && !ItemClassifier.IsUsableOnFoot(item)) return false;
             return true;
         }
 
