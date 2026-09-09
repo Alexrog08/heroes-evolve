@@ -71,7 +71,7 @@ namespace HeroLoadoutFixer
             ReportPlayerCharacters();
             ReportAttributes();
             ReportTalentSpread();
-            ReportHonour();
+            ReportTraits();
             ReportAllSkills();
             ReportGaps();
             ReportNaval();
@@ -91,24 +91,35 @@ namespace HeroLoadoutFixer
         }
 
         /// <summary>
-        /// Every lord's Honor, and by name the ones who have none.
+        /// The four traits the plunder model weighs, the chance they produce,
+        /// and by name the lords with no honour.
         ///
-        /// Honor is the heaviest term in the whole plunder model -- weight 4 in
-        /// PlunderRules, against 3 for Generosity and 1 for Calculating -- and
-        /// it is also the sole test for whether robbing a man back counts as a
-        /// reprisal. The mod has been tuned against it for weeks without anyone
-        /// ever measuring how the map is distributed, which is the wrong way
-        /// round: a model weighted on a trait nobody has counted is a model
-        /// resting on a guess.
+        /// Written because the model was balanced against a range the game does
+        /// not generate. PlunderRules clamps every trait to minus two through
+        /// plus two and the design was reasoned in those terms -- a paragon at
+        /// zero percent, a brute at a hundred -- but the first measurement of a
+        /// live campaign found Honor confined to minus one through plus one,
+        /// with not one lord of 495 at either extreme. Months of tuning against
+        /// men who do not exist.
         ///
-        /// The named list exists for a duller reason. The reprisal branch of
+        /// So all four are counted now, and with them the thing that actually
+        /// wants balancing: the chance itself. It is computed against a
+        /// stranger -- relation zero, no kinship -- so what comes out is
+        /// character and nothing else, which is the only version of the number
+        /// that can be compared between two lords.
+        ///
+        /// The named list stays for a duller reason: the reprisal branch of
         /// PrisonerDialogue can only be seen by capturing a lord whose Honor is
-        /// below zero, and the game puts traits behind an encyclopedia page you
-        /// have to already suspect someone to open. This says who they are.
+        /// below zero, and the game keeps traits behind an encyclopedia page
+        /// you have to already suspect someone to open.
         /// </summary>
-        private static void ReportHonour()
+        private static void ReportTraits()
         {
-            int[] counts = new int[5];
+            int[] honour = new int[5];
+            int[] mercy = new int[5];
+            int[] generosity = new int[5];
+            int[] calculating = new int[5];
+            List<int> chances = new List<int>();
             List<string> dishonourable = new List<string>();
             int examined = 0;
 
@@ -119,16 +130,28 @@ namespace HeroLoadoutFixer
                     if (!HeroFilter.IsEligible(hero)) continue;
                     examined++;
 
-                    int honour = hero.GetTraitLevel(DefaultTraits.Honor);
-                    int bucket = honour + 2;
-                    if (bucket < 0) bucket = 0;
-                    if (bucket > 4) bucket = 4;
-                    counts[bucket]++;
+                    int h = hero.GetTraitLevel(DefaultTraits.Honor);
+                    int m = hero.GetTraitLevel(DefaultTraits.Mercy);
+                    int g = hero.GetTraitLevel(DefaultTraits.Generosity);
+                    int c = hero.GetTraitLevel(DefaultTraits.Calculating);
 
-                    if (honour >= 0) continue;
+                    Count(honour, h);
+                    Count(mercy, m);
+                    Count(generosity, g);
+                    Count(calculating, c);
+
+                    // Against a stranger, so relation and kinship cannot muddy
+                    // what is meant to be a reading of the man.
+                    float chance = PlunderRules.Chance(false, h, m, g, c,
+                                                       hero.GetSkillValue(DefaultSkills.Roguery),
+                                                       0, PlunderRules.Kinship.None,
+                                                       Settings.PlunderChance);
+                    chances.Add((int)(chance * 100f + 0.5f));
+
+                    if (h >= 0) continue;
 
                     dishonourable.Add(hero.Name
-                                      + " honour=" + honour
+                                      + " honour=" + h
                                       + " clan=" + (hero.Clan != null ? hero.Clan.Name.ToString() : "<none>")
                                       + " culture=" + CultureIdOf(hero)
                                       + " kingdom=" + (hero.MapFaction != null
@@ -141,17 +164,35 @@ namespace HeroLoadoutFixer
                 }
             }
 
-            ModLog.Info("HONOUR examined=" + examined
-                        + " minus2=" + counts[0] + " minus1=" + counts[1]
-                        + " zero=" + counts[2]
-                        + " plus1=" + counts[3] + " plus2=" + counts[4]);
+            ModLog.Info("TRAITS examined=" + examined);
+            ModLog.Info("TRAITS Honor       weight=" + PlunderRules.HonorWeight + " " + Spread(honour));
+            ModLog.Info("TRAITS Generosity  weight=" + PlunderRules.GenerosityWeight + " " + Spread(generosity));
+            ModLog.Info("TRAITS Mercy       weight=" + PlunderRules.MercyWeight + " " + Spread(mercy));
+            ModLog.Info("TRAITS Calculating weight=" + PlunderRules.CalculatingWeight + " " + Spread(calculating));
 
-            // Every one of them, not a sample. There are rarely many, and the
-            // point of the list is to be able to go and find one.
+            // The number every one of those weights exists to produce. Percent
+            // of prisoners this lord would rob, all else being neutral.
+            ModLog.Info("PLUNDERCHANCE percent " + Percentiles(chances));
+
             for (int i = 0; i < dishonourable.Count; i++)
             {
-                ModLog.Info("HONOUR dishonourable " + dishonourable[i]);
+                ModLog.Info("TRAITS dishonourable " + dishonourable[i]);
             }
+        }
+
+        /// <summary>Tallies one trait level into its bucket, clamped as the rules clamp it.</summary>
+        private static void Count(int[] buckets, int level)
+        {
+            int bucket = level + 2;
+            if (bucket < 0) bucket = 0;
+            if (bucket > 4) bucket = 4;
+            buckets[bucket]++;
+        }
+
+        private static string Spread(int[] buckets)
+        {
+            return "minus2=" + buckets[0] + " minus1=" + buckets[1] + " zero=" + buckets[2]
+                   + " plus1=" + buckets[3] + " plus2=" + buckets[4];
         }
 
         /// <summary>
