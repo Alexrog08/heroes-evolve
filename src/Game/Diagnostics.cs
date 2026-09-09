@@ -156,7 +156,14 @@ namespace HeroLoadoutFixer
                                       + " culture=" + CultureIdOf(hero)
                                       + " kingdom=" + (hero.MapFaction != null
                                           ? hero.MapFaction.Name.ToString() : "<none>")
-                                      + (hero.IsPrisoner ? " PRISONER" : ""));
+                                      + (hero.IsPrisoner ? " PRISONER" : "")
+                                      // Marked because a friend is never a
+                                      // reprisal, however poor his reputation
+                                      // elsewhere -- see PrisonerDialogue.
+                                      // IsReprisal. Without this the list names
+                                      // men the branch will refuse.
+                                      + (Hero.MainHero != null && hero.IsFriend(Hero.MainHero)
+                                         ? " YOUR FRIEND (no reprisal)" : ""));
                 }
                 catch
                 {
