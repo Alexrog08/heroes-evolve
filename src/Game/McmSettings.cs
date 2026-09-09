@@ -49,10 +49,10 @@ namespace HeroLoadoutFixer
 
         [SettingPropertyFloatingInteger("Robbery chance multiplier", 0f, 5f, "0.00",
             RequireRestart = false,
-            HintText = "Scales every captor's chance. 1.00 is the measured design: a paragon 0%, "
-                     + "an average lord 13%, a deceitful and tightfisted one 61%, bandits always. "
-                     + "0.00 stops robbery without switching the system off, so gear already taken "
-                     + "still circulates.")]
+            HintText = "Scales every captor's chance. At 1.00, measured across 495 lords: the "
+                     + "median robs one prisoner in eight, the most honourable about one in fifty, "
+                     + "the worst one in two. Bandits always. 0.00 stops robbery without switching "
+                     + "the system off, so gear already taken still circulates.")]
         [SettingPropertyGroup("Capture")]
         public float PlunderChance { get; set; } = 1.0f;
 

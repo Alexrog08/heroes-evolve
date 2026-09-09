@@ -36,6 +36,37 @@ namespace HeroLoadoutFixer.Core
         /// Relative pull of each trait, summing to ten so the weighted score
         /// stays on the traits' own -2..+2 scale.
         /// </summary>
+        /// <summary>
+        /// What the diamond is worth, measured rather than reasoned.
+        ///
+        /// These four weights were set against a scale of minus two to plus two
+        /// and argued about in those terms -- a paragon who never robs, a brute
+        /// who always does. A census of 495 lords found that campaign does not
+        /// contain either man. Every trait sits between minus one and plus one,
+        /// and one lord in the whole world holds a plus two, in Mercy:
+        ///
+        ///   Honor       weight 4    -1: 20%   0: 53%   +1: 27%
+        ///   Generosity  weight 3    -1: 20%   0: 55%   +1: 26%
+        ///   Mercy       weight 2    -1: 24%   0: 54%   +1: 22%
+        ///   Calculating weight 1    -1: 22%   0: 46%   +1: 32%
+        ///
+        /// So the extremes the design reasoned from were never reachable. What
+        /// matters is that the middle landed anyway. The chance those weights
+        /// produce, across the same 495 lords and against a stranger:
+        ///
+        ///   min 2%   p25 8%   median 13%   p75 19%   p90 26%   max 55%
+        ///
+        /// A median of thirteen percent is exactly the figure this model was
+        /// aimed at, and the spread runs twenty-seven fold from the most
+        /// honourable lord to the worst. The weights are doing their work
+        /// inside the range the game hands them; only the description of that
+        /// work was wrong, and it is corrected here and in the settings screen
+        /// the player reads.
+        ///
+        /// ClampTrait still guards minus two to plus two. It has never fired
+        /// and costs nothing, and a trait system is not something to assume
+        /// will stay as narrow as one campaign found it.
+        /// </summary>
         public const int HonorWeight = 4;
         public const int GenerosityWeight = 3;
         public const int MercyWeight = 2;
