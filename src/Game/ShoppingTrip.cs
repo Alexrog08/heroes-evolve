@@ -8,7 +8,7 @@ using HeroesEvolve.Core;
 namespace HeroesEvolve
 {
     /// <summary>
-    /// One lord, one town, one purchase.
+    /// One lord, one town, and whatever he can afford there.
     ///
     /// This is the class that keeps the promise the whole mod is built on: it
     /// reads the slots the hero already fills and looks for something better of
@@ -73,10 +73,10 @@ namespace HeroesEvolve
         /// <summary>
         /// The single best thing this hero could buy here, or null.
         ///
-        /// One purchase per visit, and the biggest gap first. Buying a whole kit
-        /// in one afternoon would undo the point of making lords earn their
-        /// gear, and closing the worst gap first is the same discipline the
-        /// skill growth uses: chase the shortfall, not the average.
+        /// The biggest gap first, which is the same discipline the skill growth
+        /// uses: chase the shortfall, not the average. Shop calls this until it
+        /// comes back empty, so a lord closes his worst gap, then his next
+        /// worst, for as long as the town and his purse allow.
         /// </summary>
         public static Candidate Best(Hero hero, Settlement settlement, int ceiling, BudgetService budget)
         {
@@ -190,13 +190,13 @@ namespace HeroesEvolve
         }
 
         /// <summary>
-        /// Buys the best thing on offer, working out the hero's ceiling from the
-        /// same weights the repair uses. Returns true when gold actually moved.
+        /// Buys what this town has for him, working out his ceiling from the
+        /// same weights the repair uses. Returns how many pieces he bought.
         /// </summary>
-        public static bool Shop(Hero hero, Settlement settlement, BudgetService budget,
-                                float clanWeight, float skillWeight, int minimumTier)
+        public static int Shop(Hero hero, Settlement settlement, BudgetService budget,
+                               float clanWeight, float skillWeight, int minimumTier)
         {
-            if (hero == null) return false;
+            if (hero == null) return 0;
 
             int ceiling = HeroAdapter.ReadCeiling(hero, HeroAdapter.ReadSkills(hero),
                                                   clanWeight, skillWeight, minimumTier);
@@ -213,22 +213,60 @@ namespace HeroesEvolve
         /// Buys the best thing on offer, if there is one and it can be paid for.
         /// Returns true when gold actually moved.
         /// </summary>
-        public static bool Shop(Hero hero, Settlement settlement, int ceiling, BudgetService budget)
+        public static int Shop(Hero hero, Settlement settlement, int ceiling, BudgetService budget)
         {
-            Candidate candidate = Best(hero, settlement, ceiling, budget);
-            if (candidate == null) return false;
+            int bought = 0;
 
-            string failure;
-            if (PurchaseService.TryBuy(hero, settlement, candidate.Slot, candidate.Offer, budget, out failure))
+            // He shops until there is nothing here worth buying or nothing left
+            // to buy it with. There used to be a hard stop at one item, and it
+            // was the wrong instrument: gradual improvement is supposed to come
+            // from a market that does not stock everything, a purse that does
+            // not stretch, and a skill ceiling that rises slowly -- three real
+            // constraints that were already doing the work. A counter on top of
+            // them just made a man who could afford a helmet walk out without
+            // one because he had already bought boots.
+            //
+            // Bounded by the number of slots because that is genuinely all he
+            // can wear, and because a loop that buys is a loop that must be
+            // provably finite whatever the market does.
+            for (int pass = 0; pass < MaximumPurchasesPerTrip; pass++)
             {
-                return true;
+                // Asked again each time rather than ranked once. The affordable
+                // limit shrinks with every purchase -- Better picks the best
+                // offer UNDER it -- so a list chosen against the opening budget
+                // would keep proposing what he could afford before he started
+                // spending, and skip what he can afford now.
+                Candidate candidate = Best(hero, settlement, ceiling, budget);
+                if (candidate == null) break;
+
+                string failure;
+                if (!PurchaseService.TryBuy(hero, settlement, candidate.Slot, candidate.Offer,
+                                            budget, out failure))
+                {
+                    // Not logged at Info: a lord walking past a sword he cannot
+                    // afford is the ordinary case, and six hundred lords doing
+                    // it daily would bury the file. The diagnostic command
+                    // reports it on demand. Stop rather than continue -- the
+                    // same candidate would be chosen again next pass.
+                    break;
+                }
+
+                bought++;
             }
 
-            // Not logged at Info: a lord walking past a sword he cannot afford
-            // is the ordinary case, and six hundred lords doing it daily would
-            // bury the file. The diagnostic command reports it on demand.
-            return false;
+            return bought;
         }
+
+        /// <summary>
+        /// The ceiling on one shopping trip: eleven, every slot a lord has.
+        ///
+        /// Not a balance figure. Nothing in the rules can offer him a twelfth
+        /// purchase -- each one improves a slot he already fills, and improving
+        /// it puts what he now wears beyond the reach of anything cheaper on
+        /// the same shelf -- so this is the bound that makes the loop provably
+        /// terminate, not a limit anybody is expected to hit.
+        /// </summary>
+        private const int MaximumPurchasesPerTrip = 11;
 
         /// <summary>
         /// Keeps whichever of two slots is the better buy, considering only what

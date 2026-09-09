@@ -68,9 +68,11 @@ namespace HeroesEvolve
         public bool EnableSkillGrowth { get; set; } = true;
 
         [SettingPropertyBool("Lords buy their own gear", RequireRestart = false,
-            HintText = "A lord entering a town may buy one thing. It only ever improves a slot he "
-                     + "already fills and never changes what kind of fighter he is: repair decides "
-                     + "what you are, buying decides how good you are.")]
+            HintText = "A lord entering a town buys what he can afford there. It only ever "
+                     + "improves a slot he already fills and never changes what kind of fighter he "
+                     + "is: repair decides what you are, buying decides how good you are. He goes "
+                     + "shopping once a day at most, and no town stocks everything, so he still "
+                     + "improves over years -- just not one buckle at a time.")]
         [SettingPropertyGroup("What runs", GroupOrder = 6)]
         public bool EnablePurchases { get; set; } = true;
 
@@ -120,9 +122,10 @@ namespace HeroesEvolve
 
         [SettingPropertyFloatingInteger("Chance of shopping per town visit", 0f, 1f, "0.00",
             RequireRestart = false,
-            HintText = "He buys at most one thing per trip and takes at most one trip a day, so "
-                     + "this is the pace of the whole engine. At 0.25 a lord converges on the gear "
-                     + "he deserves over years, paying for it, which is the point.")]
+            HintText = "Whether he bothers with the market at all this visit. He takes at most "
+                     + "one shopping trip a day and buys what that town has for him, so this "
+                     + "decides how often a lord walks past a market rather than how much he "
+                     + "leaves with. At 1.00 he stops at every town he enters.")]
         [SettingPropertyGroup("Money", GroupOrder = 4)]
         public float ShopChancePerVisit { get; set; } = 0.25f;
 
