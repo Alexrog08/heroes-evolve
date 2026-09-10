@@ -115,9 +115,11 @@
        switches on is a feature nobody has. Set it to false for the old shape.
 
        The gear is moved, never destroyed: it goes into the captor's own
-       inventory, so beating him gets it back. Gear no merchant sells — a
-       noble sword, a crown — is left on the prisoner, since a bandit would
-       put it in a shop and vanilla never lets one get there.
+       inventory, so beating him gets it back. That includes the unique gear
+       that makes a noble look like one — Caladog's gilded armour is a trophy
+       like anything else — and an AI captor sells it on at the next town, so
+       it circulates rather than rotting in a baggage train. Only quest items
+       are safe. A lord never trades his OWN unique gear away when shopping.
 
        Who robs is character, not dice. Bandits always do. A merciful and
        generous lord never does. Dishonour, closefistedness and roguery raise
