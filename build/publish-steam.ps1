@@ -35,10 +35,16 @@ param(
     [ValidateSet("private", "public", "friendsonly")]
     [string]$Visibility = "private",
 
-    # A .jpg or .png, 512x512 or larger. Defaults to the cover kept beside the
-    # store copy, and a relative path is resolved against the repository rather
-    # than against wherever you happened to be standing when you ran this.
-    [string]$Image = "docs/cover.jpg",
+    # The Workshop PREVIEW: the one image in search results and browse grids,
+    # which Steam shows as a square. So it is the square cover, drawn for that
+    # shape, not the wide one cropped into it.
+    #
+    # This is the only image the publisher can send. UpdateItemTask.DoJob calls
+    # SteamUGC.SetItemPreview and never AddItemPreviewFile, so the gallery in
+    # docs/gallery has to be uploaded by hand on the item's web page.
+    #
+    # Relative paths resolve against the repository, not the working directory.
+    [string]$Image = "docs/cover-square.jpg",
 
     # Workshop tags. Steam defines the valid set for this app and silently
     # discards anything else, so they are checked here against the list the
