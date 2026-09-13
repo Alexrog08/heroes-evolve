@@ -280,9 +280,38 @@ Write-Host ""
 if ($Publish) {
     Write-Host "Publishing. Steam must be running and logged in." -ForegroundColor Cyan
     Write-Host ""
-    & $publisher $out
+
+    # The publisher's exit code is not worth reading, and this is the second
+    # way it has misled. Program.ExitProgram ends with Console.ReadKey, a
+    # "press any key" that has no business in a tool driven by a script: run
+    # with a console it waits for a keystroke for ever and holds SubModule.xml
+    # open, which once needed a reboot to clear; run with its output captured
+    # it throws InvalidOperationException and exits 82 -- AFTER a completed
+    # upload, and the crash is the only thing a caller sees.
+    #
+    # So the transcript is the witness instead. The tool prints "Uploading
+    # done!" when the item has been committed, and that line is the one fact
+    # worth believing about the run.
+    $transcript = & $publisher $out 2>&1
+    $transcript | ForEach-Object { Write-Host $_ }
+
+    $uploaded = $transcript | Where-Object { $_ -match 'Uploading done' }
+    $readKeyCrash = $transcript | Where-Object { $_ -match 'Cannot read keys' }
+
     Write-Host ""
-    Write-Host "Done. Check the item page: https://steamcommunity.com/sharedfiles/filedetails/?id=$ItemId" -ForegroundColor Green
+    if ($uploaded) {
+        if ($readKeyCrash) {
+            Write-Host "The publisher crashed on exit at its 'press any key' prompt." -ForegroundColor Yellow
+            Write-Host "That happens after the upload and means nothing about it." -ForegroundColor Yellow
+        }
+        Write-Host "Published. Check the item page: https://steamcommunity.com/sharedfiles/filedetails/?id=$ItemId" -ForegroundColor Green
+    } else {
+        Write-Host "The publisher never reported 'Uploading done'. Nothing was committed." -ForegroundColor Red
+        Write-Host "Steam must be running, logged in, with Steam Cloud enabled for your" -ForegroundColor Yellow
+        Write-Host "account and for Bannerlord. Do NOT re-run blind: check the item page" -ForegroundColor Yellow
+        Write-Host "first, or a second attempt may leave you with two of something." -ForegroundColor Yellow
+        exit 1
+    }
 } else {
     Write-Host "Nothing published. Re-run with -Publish to send it." -ForegroundColor Yellow
 }
