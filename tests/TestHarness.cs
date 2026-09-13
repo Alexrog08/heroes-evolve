@@ -58,6 +58,7 @@ namespace HeroesEvolve.Tests
             GrantTierTests.RunAll();
             MarketRulesTests.RunAll();
             GearBalanceTests.RunAll();
+            SwapRulesTests.RunAll();
             PlunderRulesTests.RunAll();
 
             Console.WriteLine();

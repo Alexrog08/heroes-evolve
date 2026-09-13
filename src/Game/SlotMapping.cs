@@ -38,6 +38,13 @@ namespace HeroesEvolve
             EquipmentIndex.Cape
         };
 
+        /// <summary>Whether a slot is one of the four weapon slots -- never the banner.</summary>
+        public static bool IsWeapon(EquipmentIndex slot)
+        {
+            return slot == EquipmentIndex.Weapon0 || slot == EquipmentIndex.Weapon1
+                || slot == EquipmentIndex.Weapon2 || slot == EquipmentIndex.Weapon3;
+        }
+
         /// <summary>Whether a slot is one of the five armour slots.</summary>
         public static bool IsArmor(EquipmentIndex slot)
         {

@@ -89,6 +89,7 @@ namespace HeroesEvolve
             ReportMarkets();
             ReportHeadroom(clanWeight, skillWeight, minimumTier);
             ReportShopping(clanWeight, skillWeight, minimumTier);
+            PurchaseWatch.Report(clanWeight, skillWeight, minimumTier);
             List<Hero> broken = ReportHeroes();
             ReportDryRuns(broken, clanWeight, skillWeight, minimumTier, dominanceMargin);
             ModLog.Info("===== CENSUS END =====");
@@ -750,7 +751,7 @@ namespace HeroesEvolve
             ModLog.Info("RIDING mountedRole below: " + BelowCounts(mountedRoles));
         }
 
-        private static string Percentiles(List<int> values)
+        internal static string Percentiles(List<int> values)
         {
             if (values.Count == 0) return "n=0";
 

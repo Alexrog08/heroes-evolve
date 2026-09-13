@@ -73,6 +73,7 @@ namespace HeroesEvolve
             Diagnostics.ResetSession();
             CaravanWatch.ResetSession();
             CaravanPurse.ResetSession();
+            PurchaseWatch.ResetSession();
             ItemCatalog.ResetSession();
             CultureProfile.Reset();
             CultureArchetypes.Reset();

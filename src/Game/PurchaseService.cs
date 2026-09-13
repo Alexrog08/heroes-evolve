@@ -108,6 +108,8 @@ namespace HeroesEvolve
                         + " hero=" + heroPart + " clan=" + clanPart
                         + " sold=" + (displaced.Item != null ? displaced.Item.StringId : "<nothing>"));
 
+            PurchaseWatch.RecordPurchase(hero, slot, displaced.Item, offer.Item);
+
             return true;
         }
 

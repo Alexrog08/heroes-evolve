@@ -276,6 +276,7 @@ namespace HeroesEvolve
             // down once per purchase.
             List<EquipmentIndex> filled = new List<EquipmentIndex>();
             int gapsAtStart = -1;
+            int armorOnOffer = 0, armorHeldBack = 0;
 
             // He shops until there is nothing here worth buying or nothing left
             // to buy it with. There used to be a hard stop at one item, and it
@@ -300,9 +301,18 @@ namespace HeroesEvolve
                 // well as close one: once the coat catches up, the gloves that
                 // were waiting on it are due, and they need a share of what is
                 // left.
-                int gaps = Due(hero, Candidates(hero, settlement, stock, ceiling, int.MaxValue),
-                               ceiling, filled).Count;
-                if (gapsAtStart < 0) gapsAtStart = gaps;
+                List<Candidate> onOffer = Candidates(hero, settlement, stock, ceiling, int.MaxValue);
+                List<Candidate> due = Due(hero, onOffer, ceiling, filled);
+                int gaps = due.Count;
+                if (gapsAtStart < 0)
+                {
+                    gapsAtStart = gaps;
+
+                    // What the armour order held back as he walked in, for the
+                    // census (see PurchaseWatch.RecordTrip).
+                    armorOnOffer = CountArmor(onOffer);
+                    armorHeldBack = armorOnOffer - CountArmor(due);
+                }
                 if (gaps <= 0) break;
 
                 int slice = pot / gaps;
@@ -333,6 +343,7 @@ namespace HeroesEvolve
             }
 
             LastTripGaps = gapsAtStart > 0 ? gapsAtStart : 0;
+            PurchaseWatch.RecordTrip(hero, bought, armorOnOffer, armorHeldBack, CountArmor(filled) > 0);
             return bought;
         }
 
@@ -391,15 +402,49 @@ namespace HeroesEvolve
 
         /// <summary>
         /// Tiers one armour slot is behind the best it could hold. Zero for an
-        /// empty slot and for gear the market never takes off him: neither can
-        /// be bought for, so neither may be the piece the rest wait on.
+        /// empty slot, for gear the market never takes off him, and for
+        /// anything the game ranks below tier 1: none of those can be bought
+        /// for, so none may be the piece the rest wait on.
+        ///
+        /// Internal so the census measures evenness with this exact number
+        /// rather than a copy of it.
         /// </summary>
-        private static int ArmorShortfall(Hero hero, EquipmentIndex slot, int ceiling)
+        internal static int ArmorShortfall(Hero hero, EquipmentIndex slot, int ceiling)
         {
             ItemObject worn = hero.BattleEquipment[slot].Item;
-            if (worn == null || ItemCatalog.IsIrreplaceable(worn)) return 0;
+            if (!IsTradeable(worn)) return 0;
 
             return GearBalance.Shortfall(TierOf(worn), ceiling, ItemCatalog.BestBuyableTier(worn.ItemType));
+        }
+
+        /// <summary>
+        /// Whether the market could ever replace what is worn: something is
+        /// there, a merchant could have sold it, and the game ranks it on the
+        /// tier scale at all.
+        /// </summary>
+        internal static bool IsTradeable(ItemObject worn)
+        {
+            return worn != null && !ItemCatalog.IsIrreplaceable(worn) && TierOf(worn) >= 1;
+        }
+
+        private static int CountArmor(List<Candidate> candidates)
+        {
+            int n = 0;
+            for (int i = 0; i < candidates.Count; i++)
+            {
+                if (SlotMapping.IsArmor(candidates[i].Slot)) n++;
+            }
+            return n;
+        }
+
+        private static int CountArmor(List<EquipmentIndex> slots)
+        {
+            int n = 0;
+            for (int i = 0; i < slots.Count; i++)
+            {
+                if (SlotMapping.IsArmor(slots[i])) n++;
+            }
+            return n;
         }
 
         /// <summary>
