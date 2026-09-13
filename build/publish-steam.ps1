@@ -142,7 +142,24 @@ if ((Test-Path $deployedSettings) -and (Test-Path $sourceSettings)) {
 
 # The description lives in one place and is read from it, so the Workshop page
 # and the Nexus page cannot drift apart.
-$description = Get-Content $descriptionFile -Raw
+$source = Get-Content $descriptionFile -Raw
+
+# One passage the two pages must NOT share: how to install it. On Nexus that is
+# a real question -- you download an archive and put a folder somewhere. On the
+# Workshop you press Subscribe and there is nothing else to know, so a set of
+# installation steps there is noise at best and makes the mod look fiddlier
+# than it is at worst.
+#
+# Keeping two description files would answer it and start the drift this one
+# file exists to prevent, so the passage is marked in place instead and the
+# audience decides. Nexus keeps it; Steam does not see it. Both still come from
+# the same source, which is the property worth protecting.
+#
+# It also buys back the room it costs: the description was 36 characters under
+# Steam's cap with these steps in it, which is not headroom, it is a trap for
+# whoever edits this next.
+$nexusOnly = '(?s)\[nexus-only\].*?\[/nexus-only\]\r?\n?'
+$description = ($source -replace $nexusOnly, '').TrimEnd() + "`n"
 
 # Steam caps a Workshop description at 8000 characters and does not say so
 # politely: the whole upload runs, the content transfers, the preview transfers,
@@ -237,7 +254,10 @@ $update.Add('  </UpdateItem>')
 # than keep a second description that drifts from the first, the Nexus copy is
 # rendered from the same source every time this runs, using only tags both
 # sites agree on. Edit docs/store-description.bbcode; never edit the output.
-$nexus = $description
+# Built from the SOURCE, not from the Steam copy: Nexus is the page that wants
+# the installation steps, so it is the one that must not be handed a version
+# with them already cut out.
+$nexus = $source -replace '\[/?nexus-only\]\r?\n?', ''
 $nexus = $nexus -replace '\[h1\](.*?)\[/h1\]', '[size=5][b]$1[/b][/size]'
 $nexus = $nexus -replace '\[h2\](.*?)\[/h2\]', '[size=4][b]$1[/b][/size]'
 $nexusOut = Join-Path $root ".tmp\store-description-nexus.bbcode"
