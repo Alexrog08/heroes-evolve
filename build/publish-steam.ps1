@@ -76,6 +76,54 @@ foreach ($p in @($module, $publisher, $descriptionFile)) {
     if (-not (Test-Path $p)) { throw "not found: $p" }
 }
 
+# Steam uploads the DEPLOYED module folder, and build-mod.ps1 deliberately
+# refuses to copy settings.xml over one that already exists -- a deploy must
+# never reset a player's configuration. Those two rules together mean the
+# settings.xml that ships is whatever this machine's player last saved, and it
+# drifts from the repository the moment a setting is added.
+#
+# It very nearly shipped that way. The deployed file was three days old and had
+# no CaravanGearShare element at all, so every subscriber would have received a
+# configuration file missing the mod's newest setting -- working, because
+# Settings.Load falls back to the code default, but with no line to edit and no
+# comment explaining it, which for a player without MCM is the difference
+# between a setting and no setting.
+#
+# Compared by element rather than by bytes, so a comment reworded in the
+# repository does not block a publish, and a value the player has tuned locally
+# is reported by name instead of being silently overwritten.
+$deployedSettings = Join-Path $module "settings.xml"
+$sourceSettings = Join-Path $root "settings.xml"
+if ((Test-Path $deployedSettings) -and (Test-Path $sourceSettings)) {
+    function Get-SettingValues([string]$path) {
+        $doc = New-Object System.Xml.XmlDocument
+        $doc.Load($path)
+        $map = @{}
+        foreach ($node in $doc.DocumentElement.ChildNodes) {
+            if ($node.NodeType -eq 'Element') { $map[$node.Name] = $node.InnerText.Trim() }
+        }
+        return $map
+    }
+
+    $deployed = Get-SettingValues $deployedSettings
+    $source = Get-SettingValues $sourceSettings
+
+    $drift = @()
+    foreach ($key in ($deployed.Keys + $source.Keys | Sort-Object -Unique)) {
+        $a = if ($deployed.ContainsKey($key)) { $deployed[$key] } else { '(missing)' }
+        $b = if ($source.ContainsKey($key)) { $source[$key] } else { '(missing)' }
+        if ($a -ne $b) { $drift += "  $key : deployed=$a  repo=$b" }
+    }
+
+    if ($drift.Count -gt 0) {
+        Write-Host "the deployed settings.xml is not the one in the repository:" -ForegroundColor Red
+        $drift | ForEach-Object { Write-Host $_ -ForegroundColor Red }
+        Write-Host "  Steam ships the deployed file. Copy the repository's over it" -ForegroundColor Yellow
+        Write-Host "  (saving yours first if any value above is one you tuned)." -ForegroundColor Yellow
+        throw "settings.xml would ship stale"
+    }
+}
+
 # The description lives in one place and is read from it, so the Workshop page
 # and the Nexus page cannot drift apart.
 $description = Get-Content $descriptionFile -Raw
