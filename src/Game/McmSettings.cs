@@ -154,13 +154,14 @@ namespace HeroesEvolve
             RequireRestart = false,
             HintText = "A caravan master shops out of a commission on what he brings in, not out "
                      + "of your treasury. So a caravan that trades well arms its leader and a poor "
-                     + "one does not, and he can never outspend what he earns. At 0.30 you keep "
-                     + "seven denars in ten and he buys a fine piece every few years; at 1.00 he "
-                     + "spends exactly what the caravan makes and it stops paying you anything. "
-                     + "Set it to 0.00 and he buys only from his own pocket. Leaders of war "
-                     + "parties are untouched by this -- a war party is not there to make money.")]
+                     + "one does not, and he can never outspend what he earns. At 0.50 you keep "
+                     + "half of what the caravan makes, and about 37 per cent once the gear lost "
+                     + "to robbery is counted; a campaign of 5,968 caravan-days put the break-even "
+                     + "at 0.80, above which a caravan costs more than it earns. Set it to 0.00 "
+                     + "and he buys only from his own pocket. Leaders of war parties are untouched "
+                     + "by this -- a war party is not there to make money.")]
         [SettingPropertyGroup("Money", GroupOrder = 4)]
-        public float CaravanGearShare { get; set; } = 0.30f;
+        public float CaravanGearShare { get; set; } = 0.50f;
 
         [SettingPropertyFloatingInteger("Gold held back for troops", 0f, 10f, "0.00",
             RequireRestart = false,

@@ -120,7 +120,7 @@ namespace HeroesEvolve
         /// only from his own pocket -- never from the clan purse. The point of
         /// the feature is that his patron's treasury is not his to spend.
         /// </summary>
-        public static float CaravanGearShare = 0.30f;
+        public static float CaravanGearShare = 0.50f;
 
         /// <summary>
         /// Whether this mod dresses the heroes of the player's own clan.

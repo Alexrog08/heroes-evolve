@@ -102,15 +102,24 @@
        well arms its leader; a poor one does not; and he can never outspend what
        he produces.
 
-       At 0.30 the owner keeps seven denars in ten. At 1.00 the leader spends
-       exactly what the caravan makes and it stops paying anything at all, which
-       is a real choice rather than a misconfiguration. At 0.00 he buys only
-       from his own pocket and never from the clan purse.
+       At 0.50 the owner keeps half of what the caravan earns, and about 37 per
+       cent once the gear lost to robbery is counted too. A campaign of 5,968
+       caravan-days put the break-even at 0.80: above that a caravan costs its
+       owner more than it brings in. At 0.00 the leader buys only from his own
+       pocket and never from the clan purse.
+
+       The safety margin has a closed form worth writing down. A leader's kit
+       at the moment he is robbed averages the commission times the multiplier
+       times the robbery chance, as a share of the kit value that one year of
+       trading would pay for — so at 0.50 and a robbery chance of 0.5 he dies
+       wearing a quarter of what the caravan could afford to lose. The
+       caravan's earnings and its death rate cancel out of that entirely, which
+       is why the setting can be read without knowing either.
 
        Leaders of war parties are deliberately untouched by this. A war party
        does not exist to make money, so rationing its leader by what he earns
        would measure him against a target he was never given. -->
-  <CaravanGearShare>0.30</CaravanGearShare>
+  <CaravanGearShare>0.50</CaravanGearShare>
 
   <!-- Scales the gold held back so buying gear can never stop a clan paying
        its troops. 1.0 keeps exactly the game's own threshold per war party.
