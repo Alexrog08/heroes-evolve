@@ -20,10 +20,17 @@ namespace HeroesEvolve
     /// Defaults match settings.xml deliberately. A player who installs MCM
     /// halfway through a campaign should find the switches where he left them.
     ///
-    /// Every figure quoted in the hints was measured rather than asserted. A
-    /// man deciding whether to halve the spending share deserves to know it
-    /// almost never binds as it stands, and a mod that spent this long
-    /// measuring itself should say what it found.
+    /// Hints are kept short, and that is a constraint of the screen rather
+    /// than a style. MCM does not wrap or scroll a long hint, it runs it off
+    /// the edge, so a hint that does not fit is not a long explanation -- it
+    /// is a truncated one, which is worse than a brief one. These ran to 581
+    /// characters before anyone looked at them in the game.
+    ///
+    /// So each says what the setting does and, where it earns the room, what
+    /// moving it costs. The measurements that used to be quoted here -- how
+    /// many points a year, what a campaign of 5,968 caravan-days found -- live
+    /// in settings.xml instead, which is a file with no margins and is read by
+    /// anyone who cares enough to open it.
     ///
     /// MCM is not required. Nothing outside McmBridge names a type from it, and
     /// that one contact point is wrapped, so on a machine without MCM this
@@ -53,53 +60,34 @@ namespace HeroesEvolve
         // ---- What runs ------------------------------------------------------
 
         [SettingPropertyBool("Give a starting kit to lords who have none", RequireRestart = false,
-            HintText = "A lord with too few weapons to fight with, or still in the clothes he came "
-                     + "of age in, is given something to ride out in -- and so is one a captor has "
-                     + "stripped, once he is free again. A plain kit chosen for his culture and his "
-                     + "own skills, never a good one. Everything above it he buys himself.")]
+            HintText = "Dresses a lord who has nothing: born in civilian clothes, or stripped by a captor. A plain kit for his culture and skills. The rest he buys.")]
         [SettingPropertyGroup("What runs", GroupOrder = 6)]
         public bool EnableRepair { get; set; } = true;
 
         [SettingPropertyBool("Grow lords' skills", RequireRestart = false,
-            HintText = "Lords otherwise stagnate and end up weaker than the troops they lead. "
-                     + "Measured: one to three points a year in a given skill, about a hundred and "
-                     + "ten over a forty-two-year career, aimed at a peak of a hundred and fifty "
-                     + "times the man's own talent. He climbs all his life and never quite arrives.")]
+            HintText = "Without this a lord stagnates and ends up weaker than his own troops. One to three points a year, toward a ceiling set by his talent.")]
         [SettingPropertyGroup("What runs", GroupOrder = 6)]
         public bool EnableSkillGrowth { get; set; } = true;
 
         [SettingPropertyBool("Lords buy their own gear", RequireRestart = false,
-            HintText = "A lord entering a town buys what he can afford there. It only ever "
-                     + "improves a slot he already fills and never changes what kind of fighter he "
-                     + "is: repair decides what you are, buying decides how good you are. He goes "
-                     + "shopping once a day at most, and no town stocks everything, so he still "
-                     + "improves over years -- just not one buckle at a time.")]
+            HintText = "In a town, a lord buys a better version of what he already carries. Never changes what kind of fighter he is, never fills an empty slot.")]
         [SettingPropertyGroup("What runs", GroupOrder = 6)]
         public bool EnablePurchases { get; set; } = true;
 
         [SettingPropertyBool("Include my own clan", RequireRestart = false,
-            HintText = "Whether repair and shopping reach the heroes of your own clan -- your "
-                     + "family, and the companions leading your parties and caravans. On, because "
-                     + "a party your brother leads is one the AI takes into battle. Turn it off if "
-                     + "you outfit them by hand and want that left alone. Heroes travelling in "
-                     + "your own party are never touched either way. This does not stop their "
-                     + "skills growing.")]
+            HintText = "Your family and the companions leading your parties and caravans. Turn off if you outfit them by hand. Heroes inside your own party are never touched either way.")]
         [SettingPropertyGroup("What runs", GroupOrder = 6)]
         public bool ManageOwnClan { get; set; } = true;
 
         [SettingPropertyBool("Write hev.log", RequireRestart = false,
-            HintText = "Logs what the mod does, under the Bannerlord logs folder. Off costs nothing "
-                     + "and writes nothing. The census below needs this on.")]
+            HintText = "Logs what the mod does, in the Bannerlord logs folder. The census below needs it on.")]
         [SettingPropertyGroup("What runs", GroupOrder = 6)]
         public bool EnableLogging { get; set; } = true;
 
         // ---- How good a lord's gear may get ---------------------------------
 
         [SettingPropertyInteger("Skill per tier of gear", 1, 400, "0", RequireRestart = false,
-            HintText = "Combat skill points that buy one tier. LOWER MEANS BETTER EQUIPPED LORDS, "
-                     + "and this is the setting to reach for first. 28 puts the average lord one "
-                     + "tier above what the game already gave him, which leaves the top end to be "
-                     + "decided by his clan's money rather than by this number.")]
+            HintText = "Combat skill that buys one tier. LOWER MEANS BETTER EQUIPPED LORDS, and this is the first setting to reach for.")]
         [SettingPropertyGroup("Gear ceiling", GroupOrder = 5)]
         public int SkillPerTier { get; set; } = 28;
 
@@ -111,10 +99,7 @@ namespace HeroesEvolve
 
         [SettingPropertyFloatingInteger("Weight of clan standing", 0f, 10f, "0.00",
             RequireRestart = false,
-            HintText = "Zero from measurement rather than taste: across two campaigns, clan tier "
-                     + "neither predicted what a lord wears nor separated the population, since by "
-                     + "midgame every clan is tier 4 or better. Raise it if you want great houses "
-                     + "to outfit their lords well regardless of merit.")]
+            HintText = "Zero by default: two campaigns found clan tier does not predict what a lord wears. Raise it to have great houses dress their lords well regardless of merit.")]
         [SettingPropertyGroup("Gear ceiling", GroupOrder = 5)]
         public float ClanWeight { get; set; } = 0.0f;
 
@@ -124,8 +109,7 @@ namespace HeroesEvolve
         public int MinimumTier { get; set; } = 1;
 
         [SettingPropertyInteger("Archer threshold", 0, 300, "0", RequireRestart = false,
-            HintText = "How far a ranged skill must lead a lord's melee skills before the repair "
-                     + "commits him to a bow or a crossbow. Lower makes more archers.")]
+            HintText = "How far a ranged skill must lead his melee skills before he is given a bow or a crossbow. Lower makes more archers.")]
         [SettingPropertyGroup("Gear ceiling", GroupOrder = 5)]
         public int DominanceMargin { get; set; } = 30;
 
@@ -133,75 +117,45 @@ namespace HeroesEvolve
 
         [SettingPropertyFloatingInteger("Chance of shopping per town visit", 0f, 1f, "0.00",
             RequireRestart = false,
-            HintText = "Whether he bothers with the market at all this visit. He takes at most "
-                     + "one shopping trip a day and buys what that town has for him, so this "
-                     + "decides how often a lord walks past a market rather than how much he "
-                     + "leaves with. At 1.00 he stops at every town he enters.")]
+            HintText = "How often a lord bothers with the market. One trip a day at most. At 1.00 he stops at every town he enters.")]
         [SettingPropertyGroup("Money", GroupOrder = 4)]
         public float ShopChancePerVisit { get; set; } = 0.25f;
 
         [SettingPropertyFloatingInteger("Share of the purse per shopping trip", 0f, 1f, "0.00",
             RequireRestart = false,
-            HintText = "What a lord may spend on one trip to the market, divided between the slots "
-                     + "he can improve there. So a man who needs everything comes back in middling "
-                     + "gear, and a man who needs one thing spends it all on that one thing -- he "
-                     + "improves by buying fewer pieces of better quality. At 0.30 a median house "
-                     + "re-equips a robbed lord at tier 4, and reaches tier 6 once he is down to "
-                     + "his last slot or two. Lower it if you want poverty felt.")]
+            HintText = "What a lord may spend in one trip, split between the slots that town can improve. Lower means poorer lords and slower recovery after a robbery.")]
         [SettingPropertyGroup("Money", GroupOrder = 4)]
         public float SpendingShare { get; set; } = 0.30f;
 
         [SettingPropertyFloatingInteger("Caravan leader's commission", 0f, 1f, "0.00",
             RequireRestart = false,
-            HintText = "What a caravan's leader keeps of its profit, and the only money he has to "
-                     + "buy his own gear with -- never your treasury. So a caravan that trades "
-                     + "well arms the man running it and a poor one leaves him plain, and he can "
-                     + "never outspend what he has earned. Raise it and he arms himself better "
-                     + "while less reaches you; at 1.00 he keeps everything and the caravan pays "
-                     + "you nothing. Remember he is robbed of what he wears when his caravan is "
-                     + "beaten, so arming him well is also what makes losing him expensive. "
-                     + "Leaders of war parties are untouched -- a war party is not there to make "
-                     + "money.")]
+            HintText = "What a caravan's leader keeps of its profit, and the only money he buys gear with. Higher arms him better and pays you less. At 1.00 the caravan pays you nothing.")]
         [SettingPropertyGroup("Money", GroupOrder = 4)]
         public float CaravanGearShare { get; set; } = 0.50f;
 
         [SettingPropertyFloatingInteger("Gold held back for troops", 0f, 10f, "0.00",
             RequireRestart = false,
-            HintText = "Scales the reserve so buying gear can never stop a clan paying its men. "
-                     + "1.00 keeps exactly the game's own threshold per war party. Zero removes the "
-                     + "safety net.")]
+            HintText = "Reserve kept back so buying gear can never stop a clan paying its men. Zero removes the safety net.")]
         [SettingPropertyGroup("Money", GroupOrder = 4)]
         public float ReserveMultiplier { get; set; } = 1.0f;
 
         // ---- Losing gear ------------------------------------------------------
 
         [SettingPropertyBool("Lords rob their prisoners", RequireRestart = false,
-            HintText = "A captor may take a captured lord's arms and armour, by his own character. "
-                     + "Gear taken is moved and never destroyed, so it can be sold, worn, or won "
-                     + "back in battle. You are never rolled for -- you rob by asking, in "
-                     + "conversation, and pay for it.")]
+            HintText = "A captor may strip a captured lord, according to his character. Gear is moved and never destroyed, so it can be won back. You rob by asking, in conversation.")]
         [SettingPropertyGroup("Capture", GroupOrder = 3)]
         public bool EnableCaptureLoss { get; set; } = true;
 
         [SettingPropertyFloatingInteger("Robbery chance multiplier", 0f, 5f, "0.00",
             RequireRestart = false,
-            HintText = "Scales every captor's chance. His word binds him hardest, then his "
-                     + "loyalty to his own and his pity equally; bandits always rob. At 1.00 this "
-                     + "stripped a third of the nobility every year and became the largest single "
-                     + "influence on what lords wear -- more than their skill, their wealth or the "
-                     + "market. Halved to 0.50 so it shapes the map without ruling it. 0.00 stops "
-                     + "robbery without switching the system off, so gear already taken still "
-                     + "circulates.")]
+            HintText = "Scales every captor's chance; bandits always rob. At 1.00 robbery becomes the biggest influence on what lords wear. 0.00 stops it without switching the system off.")]
         [SettingPropertyGroup("Capture", GroupOrder = 3)]
         public float PlunderChance { get; set; } = 0.5f;
 
         // ---- Items -------------------------------------------------------------
 
         [SettingPropertyText("Items lords may never buy", RequireRestart = false,
-            HintText = "Item ids separated by commas, empty by default. This mod shops in a "
-                     + "catalogue it does not own, so any other mod can add an outlier and five "
-                     + "hundred lords will find it faster than you will. Incendiary weapons are "
-                     + "already refused outright and need no listing here.")]
+            HintText = "Item ids separated by commas. For outliers another mod adds -- five hundred lords will find one faster than you will. Incendiaries are already refused.")]
         [SettingPropertyGroup("Items", GroupOrder = 2)]
         public string ExcludedItems { get; set; } = "";
 
@@ -223,10 +177,7 @@ namespace HeroesEvolve
         [SettingPropertyButton("Write a census to hev.log",
             Content = "Run",
             RequireRestart = false,
-            HintText = "Surveys every lord in the campaign -- tiers, gear, skills, traits, and what "
-                     + "the engine would change -- and writes the report to hev.log in the "
-                     + "Bannerlord logs folder. Reads only; nothing in the campaign is modified. "
-                     + "About half a second on a mature save. Needs logging switched on.")]
+            HintText = "Surveys every lord -- tiers, gear, skills, traits -- into hev.log. Reads only and changes nothing. About half a second. Needs logging on.")]
         [SettingPropertyGroup("Diagnostics", GroupOrder = 1)]
         public Action RunCensus { get; set; } = Census;
 
