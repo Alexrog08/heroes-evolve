@@ -93,6 +93,23 @@ namespace HeroesEvolve
         private const int IncomeDivisor = 10;
 
         /// <summary>
+        /// What this caravan pays its owner today, by the engine's own rule.
+        ///
+        /// Public because the census needs the same number and was computing it
+        /// from its own copy of these two constants. That is how the bandit test
+        /// drifted into two versions earlier, and it would be worse here: the
+        /// census prints a commission as this figure times the share, so a
+        /// divergence would have it reporting a payment that was never made.
+        /// A measurement that lies about the thing it measures is worse than no
+        /// measurement, and this project decides by measurement.
+        /// </summary>
+        public static int DailyIncome(int partyTradeGold)
+        {
+            if (partyTradeGold <= IncomeFloor) return 0;
+            return (partyTradeGold - IncomeFloor) / IncomeDivisor;
+        }
+
+        /// <summary>
         /// Every hero the daily pass found leading a caravan, by id.
         ///
         /// Recorded from the party side because the hero side cannot be
@@ -198,11 +215,24 @@ namespace HeroesEvolve
                     if (leader.StringId != null) _leaders.Add(leader.StringId);
                     if (Settings.CaravanGearShare <= 0f) continue;
 
-                    // The engine's own daily payment, computed from the same
-                    // number it reads. See DefaultClanFinanceModel.
-                    int profit = party.PartyTradeGold > IncomeFloor
-                        ? (party.PartyTradeGold - IncomeFloor) / IncomeDivisor
-                        : 0;
+                    // Paid only to a man who could spend it. Two switches make
+                    // that false while leaving him leading a caravan: turning
+                    // purchases off stops all shopping, and turning off
+                    // ManageOwnClan tells the mod to leave the player's own
+                    // people alone. Either way he would go on drawing a
+                    // commission out of his patron's pocket for the rest of the
+                    // campaign and never buy a thing with it -- the player
+                    // switching the system off and still being charged for it.
+                    //
+                    // Asked of the shopping filter rather than of the switches
+                    // one by one, so a condition added there is honoured here
+                    // without anyone remembering to. Only EnablePurchases is
+                    // named, because it gates the behaviour rather than the
+                    // hero and the filter never sees it.
+                    if (!Settings.EnablePurchases) continue;
+                    if (!HeroFilter.IsEligibleToShop(leader)) continue;
+
+                    int profit = DailyIncome(party.PartyTradeGold);
                     if (profit <= 0) continue;
 
                     int cut = (int)(profit * Commission);

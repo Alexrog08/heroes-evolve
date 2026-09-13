@@ -2735,21 +2735,32 @@ namespace HeroesEvolve
             ModLog.Info("CLANGOLD " + Percentiles(gold));
             ModLog.Info("CLANGOLD " + Tally("clansByTier", byTier));
 
-            // What a tenth of each purse actually buys, in the game's own value
-            // curve: tier 3 ~2,080, tier 4 ~5,700, tier 5 ~15,700, tier 6
-            // ~43,300. Printed so the share can be judged against prices rather
-            // than against a feeling.
+            // What the share actually buys, in the game's own value curve:
+            // tier 3 ~2,080, tier 4 ~5,700, tier 5 ~15,700, tier 6 ~43,300.
+            // Printed so the share can be judged against prices rather than
+            // against a feeling.
+            //
+            // Read from Settings, which is the whole point of the line. It used
+            // BudgetService.DefaultSpendingShare, a shipped constant of 0.10
+            // that nothing else had read since the live default moved to 0.30 --
+            // so this counted how many clans could afford tier 6 at a third of
+            // the real allowance and printed atShare=0.1 beside it. Three times
+            // pessimistic, in a figure written to be used for balancing, and
+            // the same mistake the class comment on BudgetService records
+            // fixing once before: a census must report the campaign the player
+            // is running, not the one the mod shipped with.
+            float share = Settings.SpendingShare;
             int t4 = 0, t5 = 0, t6 = 0;
             for (int i = 0; i < gold.Count; i++)
             {
-                int limit = (int)(gold[i] * BudgetService.DefaultSpendingShare);
+                int limit = (int)(gold[i] * share);
                 if (limit >= 5700) t4++;
                 if (limit >= 15700) t5++;
                 if (limit >= 43300) t6++;
             }
             ModLog.Info("CLANGOLD clansAffording n=" + gold.Count
                         + " tier4=" + t4 + " tier5=" + t5 + " tier6=" + t6
-                        + " atShare=" + BudgetService.DefaultSpendingShare);
+                        + " atShare=" + share);
         }
 
         private static void ReportMarkets()

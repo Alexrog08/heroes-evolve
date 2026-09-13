@@ -65,9 +65,24 @@ namespace HeroesEvolve
         // --- Money ----------------------------------------------------------
 
         /// <summary>
-        /// Share of his wallet a hero may put into one purchase. This is the
-        /// gate on item tier: at a tenth, a tier-6 piece needs a house holding
-        /// some 430,000.
+        /// Share of his wallet a hero may put into ONE TRIP to the market,
+        /// divided between the slots that town can improve for him.
+        ///
+        /// This is what makes gold matter. A campaign measured 876,000 as the
+        /// median wallet against a 2,924 median purchase: without a share,
+        /// money is not a constraint and never becomes one, and the tier
+        /// ceiling is the only thing between a lord and the best item on the
+        /// shelf. With one, a price is measured against the wealth of the house
+        /// paying it -- a tier-6 piece runs about 43,300, so at three tenths it
+        /// takes a house holding some 145,000 to reach one, and a young clan is
+        /// priced out of the good stuff and grows into it.
+        ///
+        /// The figure began at a tenth, which is Lords Gear's own territory --
+        /// its AIGoldSpendingPercentage and ClanGoldSpendingPercentage multiply
+        /// the same wallet. It is the one number in this mod taken from
+        /// somebody else's play experience rather than from measurement, which
+        /// is why the census reports what it buys at the share actually in
+        /// force.
         /// </summary>
         public static float SpendingShare = 0.30f;
 

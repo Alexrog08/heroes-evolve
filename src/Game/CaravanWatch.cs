@@ -65,9 +65,6 @@ namespace HeroesEvolve
             return days > 0f ? days : StockDaysPerYear;
         }
 
-        /// <summary>The threshold and divisor AddIncomeFromParty applies, read from it.</summary>
-        private const int IncomeFloor = 10000;
-        private const int IncomeDivisor = 10;
 
         /// <summary>
         /// What each hero-led caravan was worth last time anyone looked.
@@ -353,11 +350,15 @@ namespace HeroesEvolve
                         + " hostile losses, counting nothing won back from the robbers)");
         }
 
-        /// <summary>Denars a day this caravan pays its owner, by the engine's own rule.</summary>
+        /// <summary>
+        /// Denars a day this caravan pays its owner. Borrowed from CaravanPurse
+        /// rather than worked out again: the commission printed beside it is
+        /// this number times the share, so the two must be the same number or
+        /// the census reports a payment nobody made.
+        /// </summary>
         private static int DailyIncome(int partyTradeGold)
         {
-            if (partyTradeGold <= IncomeFloor) return 0;
-            return (partyTradeGold - IncomeFloor) / IncomeDivisor;
+            return CaravanPurse.DailyIncome(partyTradeGold);
         }
 
         /// <summary>Everything he is wearing, priced as PlunderService would take it.</summary>

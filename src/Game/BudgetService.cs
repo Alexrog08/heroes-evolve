@@ -29,35 +29,19 @@ namespace HeroesEvolve
     /// </summary>
     public sealed class BudgetService
     {
-        /// <summary>
-        /// Scales the untouchable reserve. 1.0 keeps exactly the game's own
-        /// PartyGoldLowerThreshold per war party.
-        /// </summary>
-        public const float DefaultReserveMultiplier = 1.0f;
-
-        /// <summary>
-        /// The share of a hero's whole wallet he may put into one purchase.
-        ///
-        /// This is what makes gold matter. A campaign measured 876,000 as the
-        /// median wallet against a 2,924 median purchase: without a share, money
-        /// is not a constraint and never becomes one, and the tier ceiling is
-        /// the only thing standing between a lord and the best item in the shop.
-        ///
-        /// With a share, the price of a thing is measured against the wealth of
-        /// the house that buys it. A tier-6 piece runs about 43,000, so at a
-        /// tenth it takes a house holding some 430,000 to afford one; tier 5 at
-        /// 15,700 needs about 157,000. A young clan is priced out of the good
-        /// stuff and grows into it, which is the shape the ceiling alone cannot
-        /// express.
-        ///
-        /// A tenth is Lords Gear's own default territory -- its
-        /// AIGoldSpendingPercentage and ClanGoldSpendingPercentage multiply the
-        /// same wallet (hero gold plus clan gold, less pending) and its log line
-        /// literally reads "Wealth: {1}, Limit: {2}". It is the one number here
-        /// taken from someone else's play experience rather than a measurement,
-        /// and it is reported every census so it can become one.
-        /// </summary>
-        public const float DefaultSpendingShare = 0.10f;
+        // The shipped defaults used to be declared here as well as in Settings,
+        // and the second copy went stale the moment the live share moved from a
+        // tenth to three. Nothing read DefaultReserveMultiplier at all;
+        // DefaultSpendingShare was read by one census line, which therefore
+        // counted how many clans could afford tier-6 gear at a third of the
+        // real allowance and printed atShare=0.1 beside the answer. Its own
+        // doc comment promised the figure was "reported every census so it can
+        // become" a measurement rather than a borrowed guess -- and reporting
+        // the constant instead of the setting is precisely what stopped that
+        // from ever happening.
+        //
+        // Settings owns every default now. The reasoning that lived here is in
+        // Settings.SpendingShare, where the number it describes actually is.
 
         private readonly Dictionary<string, ClanDay> _today = new Dictionary<string, ClanDay>();
 
@@ -149,8 +133,8 @@ namespace HeroesEvolve
         }
 
         /// <summary>
-        /// The most this hero may put into one purchase: his share of the
-        /// wallet. See DefaultSpendingShare for why a share and not the lot.
+        /// The most this hero may put into one trip: his share of the wallet.
+        /// See Settings.SpendingShare for why a share and not the lot.
         /// </summary>
         public int Available(Hero hero)
         {
