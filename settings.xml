@@ -16,8 +16,10 @@
 
   <!-- ============ What runs ============ -->
 
-  <!-- Repairs lords the game's come-of-age bug left half-equipped: too few
-       weapons to fight with, or still in civilian clothing. -->
+  <!-- Gives a starting kit to a lord who has none: too few weapons to fight
+       with, or still in the clothes he came of age in. It covers a lord a
+       captor has stripped as well, once he is free again, so the same rule
+       dresses a man however he came to have nothing. -->
   <EnableRepair>true</EnableRepair>
 
   <!-- Grows every lord's skills over the years, so a hero does not end up
@@ -58,12 +60,12 @@
   <!-- Nobody is capped below this, however unskilled. -->
   <MinimumTier>1</MinimumTier>
 
-  <!-- How far a ranged skill must lead a lord's melee skills before the
-       repair commits him to a bow or a crossbow. -->
+  <!-- How far a ranged skill must lead a lord's melee skills before his
+       starting kit commits him to a bow or a crossbow. -->
   <DominanceMargin>30</DominanceMargin>
 
 
-  <!-- Whether repair and shopping reach the heroes of your own clan: your
+  <!-- Whether starting kits and shopping reach the heroes of your own clan: your
        family, and the companions leading your parties and caravans. True
        because a party your brother leads is one the AI takes into battle, and
        the argument for equipping any other lord applies to him.

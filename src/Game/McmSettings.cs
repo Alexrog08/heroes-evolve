@@ -52,10 +52,11 @@ namespace HeroesEvolve
 
         // ---- What runs ------------------------------------------------------
 
-        [SettingPropertyBool("Repair broken lords", RequireRestart = false,
-            HintText = "Fixes lords the game's come-of-age bug left half-equipped: too few weapons "
-                     + "to fight with, or still in civilian clothing. Gives them a basic kit chosen "
-                     + "for their skills, never the best one -- the rest they buy.")]
+        [SettingPropertyBool("Give a starting kit to lords who have none", RequireRestart = false,
+            HintText = "A lord with too few weapons to fight with, or still in the clothes he came "
+                     + "of age in, is given something to ride out in -- and so is one a captor has "
+                     + "stripped, once he is free again. A plain kit chosen for his culture and his "
+                     + "own skills, never a good one. Everything above it he buys himself.")]
         [SettingPropertyGroup("What runs", GroupOrder = 6)]
         public bool EnableRepair { get; set; } = true;
 
