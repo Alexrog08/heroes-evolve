@@ -120,6 +120,7 @@ namespace HeroesEvolve
 
             Settings.EnableCaptureLoss = settings.EnableCaptureLoss;
             Settings.PlunderChance = settings.PlunderChance;
+            Settings.CaravanGearShare = settings.CaravanGearShare;
 
             // Two that are not plain fields, and both would have gone stale.
             //

@@ -154,6 +154,12 @@ namespace HeroesEvolve
         /// </summary>
         public int Available(Hero hero)
         {
+            // A caravan master shops against what he has earned, not against
+            // his patron's treasury. See CaravanPurse for why this one hero is
+            // treated apart: a caravan exists to make money and can be
+            // measured, and a share of an unbounded purse is unbounded.
+            if (CaravanPurse.IsCaravanLeader(hero)) return CaravanPurse.Budget(hero);
+
             return (int)(Wallet(hero) * SpendingShare);
         }
 
@@ -218,6 +224,21 @@ namespace HeroesEvolve
             int own = OwnGold(hero);
             int room = ClanRoom(clan);
             if (own + room < price) return false;
+
+            // A caravan master pays every denar he has and his patron covers
+            // the rest, which is what the financing multiplier means and the
+            // only split that makes its arithmetic true. ClanShare would not do
+            // it: it returns between 0.30 and 0.80 on terms of its own, and at
+            // the high end the patron would pay more than the multiplier
+            // promised -- quietly breaking the one identity the whole feature
+            // rests on, that he keeps 1 - cM of what the caravan earns.
+            if (CaravanPurse.IsCaravanLeader(hero))
+            {
+                heroPart = own < price ? own : price;
+                clanPart = price - heroPart;
+                if (clanPart > room) return false;
+                return true;
+            }
 
             float share = BudgetMath.ClanShare(false, clan != null ? clan.Tier : 0, own,
                                                clan != null ? clan.Gold : 0);

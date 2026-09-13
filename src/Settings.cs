@@ -103,6 +103,26 @@ namespace HeroesEvolve
         public static float PlunderChance = 0.5f;
 
         /// <summary>
+        /// The share of a caravan's profit that ends up on its leader's back.
+        ///
+        /// One number rather than two, and the arithmetic in CaravanPurse says
+        /// why: with a commission c and a financing multiplier M, the owner
+        /// keeps G(1 - cM) of what the caravan earns and the leader reaches a
+        /// piece of price P in P/(cGM) days. Both depend only on the product,
+        /// so the product is the setting and the commission is a constant.
+        ///
+        /// Thirty hundredths leaves the owner seven denars in ten. At 1.00 the
+        /// leader spends exactly what the caravan makes and it stops being a
+        /// source of income -- a real choice, and the reason the slider runs
+        /// that far.
+        ///
+        /// Zero switches the feature off, and off means a caravan master buys
+        /// only from his own pocket -- never from the clan purse. The point of
+        /// the feature is that his patron's treasury is not his to spend.
+        /// </summary>
+        public static float CaravanGearShare = 0.30f;
+
+        /// <summary>
         /// Whether this mod dresses the heroes of the player's own clan.
         ///
         /// On by default, because a party led by your brother is a party the AI
@@ -219,6 +239,7 @@ namespace HeroesEvolve
                 ReserveMultiplier = Number(root, "ReserveMultiplier", ReserveMultiplier, 0f, 10f);
                 ShopChancePerVisit = Number(root, "ShopChancePerVisit", ShopChancePerVisit, 0f, 1f);
                 PlunderChance = Number(root, "PlunderChance", PlunderChance, 0f, 5f);
+                CaravanGearShare = Number(root, "CaravanGearShare", CaravanGearShare, 0f, 1f);
 
                 _excludedItems = List(root, "ExcludedItems");
 
@@ -252,6 +273,7 @@ namespace HeroesEvolve
                    + " shopChance=" + ShopChancePerVisit
                    + " captureLoss=" + EnableCaptureLoss
                    + " plunderChance=" + PlunderChance
+                   + " caravanGearShare=" + CaravanGearShare
                    + " excludedItems=" + _excludedItems.Length;
         }
 

@@ -246,6 +246,15 @@ namespace HeroesEvolve
                                 + " tradeGold=" + gold
                                 + " dailyIncome=" + DailyIncome(gold)
                                 + " kitWorth=" + Worth(leader)
+                                // His savings and what they buy. The pair is
+                                // the whole feature: purse is what he has
+                                // earned and kept, budget is that matched by
+                                // his patron, and a budget far under kitWorth
+                                // means he is wearing more than he could now
+                                // afford -- bought under the old rule, or given.
+                                + " purse=" + leader.Gold
+                                + " gearBudget=" + CaravanPurse.Budget(leader)
+                                + " commission=" + (DailyIncome(gold) * CaravanPurse.Commission)
                                 + " bestCombat=" + combat
                                 + " ceiling=" + TierCeiling.Compute(
                                       leader.Clan != null ? leader.Clan.Tier : 0, combat,

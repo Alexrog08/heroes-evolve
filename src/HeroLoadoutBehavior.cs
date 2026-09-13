@@ -235,6 +235,11 @@ namespace HeroesEvolve
             // its back -- both of which have to be taken while the caravan is
             // alive, since MobilePartyDestroyed arrives too late to read either.
             CaravanWatch.DailyTick();
+
+            // And the caravan masters draw their commission. After the survey,
+            // so the census reads the purse as it stood when the day's gear was
+            // being priced rather than a moment after it was topped up.
+            CaravanPurse.DailyTick();
         }
 
         /// <summary>

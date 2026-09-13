@@ -94,6 +94,24 @@
        tenth per piece was. -->
   <SpendingShare>0.30</SpendingShare>
 
+  <!-- The share of a caravan's profit that ends up on its leader's back.
+
+       A caravan master is the one hero who is not a clan leader and still has
+       an income anyone can measure, so he shops out of a commission on what he
+       brings in rather than out of his patron's treasury. A caravan that trades
+       well arms its leader; a poor one does not; and he can never outspend what
+       he produces.
+
+       At 0.30 the owner keeps seven denars in ten. At 1.00 the leader spends
+       exactly what the caravan makes and it stops paying anything at all, which
+       is a real choice rather than a misconfiguration. At 0.00 he buys only
+       from his own pocket and never from the clan purse.
+
+       Leaders of war parties are deliberately untouched by this. A war party
+       does not exist to make money, so rationing its leader by what he earns
+       would measure him against a target he was never given. -->
+  <CaravanGearShare>0.30</CaravanGearShare>
+
   <!-- Scales the gold held back so buying gear can never stop a clan paying
        its troops. 1.0 keeps exactly the game's own threshold per war party.
        Zero removes the safety net. -->
