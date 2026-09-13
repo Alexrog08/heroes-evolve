@@ -16,6 +16,18 @@ namespace HeroesEvolve.Tests
     {
         public static void RunAll()
         {
+            // Thrown weapons stand apart whatever else they can do. A javelin's
+            // melee mode must not make it a spear, a throwing axe's must not
+            // make it a sword, and a spear's throw must not make it javelins.
+            Check.True(CategoryRules.CrossesThrowingLine(WeaponCategory.Spear, WeaponCategory.Throwing), "javelins do not answer for a spear");
+            Check.True(CategoryRules.CrossesThrowingLine(WeaponCategory.OneHandedSword, WeaponCategory.Throwing), "throwing axes do not answer for a sword");
+            Check.True(CategoryRules.CrossesThrowingLine(WeaponCategory.Throwing, WeaponCategory.Spear), "a spear does not answer for javelins");
+            Check.True(CategoryRules.CrossesThrowingLine(WeaponCategory.Throwing, WeaponCategory.Polearm), "nor does a pike");
+            Check.False(CategoryRules.CrossesThrowingLine(WeaponCategory.Throwing, WeaponCategory.Throwing), "javelins answer for javelins");
+            Check.False(CategoryRules.CrossesThrowingLine(WeaponCategory.Spear, WeaponCategory.Polearm), "a pike still answers for a spear");
+            Check.False(CategoryRules.CrossesThrowingLine(WeaponCategory.TwoHandedSword, WeaponCategory.OneHandedSword), "a bastard sword still answers for a two-hander");
+            Check.False(CategoryRules.CrossesThrowingLine(WeaponCategory.Bow, WeaponCategory.Bow), "the line is about thrown weapons, not every ranged one");
+
             // One-handed melee family: OneHandedSword, OneHandedAxe, OneHandedMace.
             // Every pair within the family matches, in both directions --
             // SameFamily must not favor whichever argument happens to be

@@ -2145,7 +2145,6 @@ namespace HeroesEvolve
 
             int shoppers = 0, atCeiling = 0;
             BudgetService budget = new BudgetService();
-            Dictionary<string, int> cap = BuildCatalogCap();
 
             foreach (Hero hero in Hero.AllAliveHeroes)
             {
@@ -2162,20 +2161,17 @@ namespace HeroesEvolve
                     purses.Add(budget.Wallet(hero));
                     limits.Add(budget.Available(hero));
 
-                    CultureObject culture = hero.Culture;
-                    if (culture == null && hero.Clan != null) culture = hero.Clan.Culture;
-
                     int behind = 0;
                     for (int i = 0; i < SlotSnapshot.WeaponSlotCount; i++)
                     {
-                        behind += SlotShortfall(hero, SlotMapping.WeaponSlot(i), ceiling, shortBySlot, cap, culture);
+                        behind += SlotShortfall(hero, SlotMapping.WeaponSlot(i), ceiling, shortBySlot);
                     }
                     foreach (EquipmentIndex slot in SlotMapping.ArmorSlots)
                     {
-                        behind += SlotShortfall(hero, slot, ceiling, shortBySlot, cap, culture);
+                        behind += SlotShortfall(hero, slot, ceiling, shortBySlot);
                     }
-                    behind += SlotShortfall(hero, EquipmentIndex.Horse, ceiling, shortBySlot, cap, culture);
-                    behind += SlotShortfall(hero, EquipmentIndex.HorseHarness, ceiling, shortBySlot, cap, culture);
+                    behind += SlotShortfall(hero, EquipmentIndex.Horse, ceiling, shortBySlot);
+                    behind += SlotShortfall(hero, EquipmentIndex.HorseHarness, ceiling, shortBySlot);
 
                     headroom.Add(behind);
                     if (behind == 0) atCeiling++;
@@ -2189,7 +2185,7 @@ namespace HeroesEvolve
             ModLog.Info("HEADROOM shoppers=" + shoppers + " alreadyAtCeiling=" + atCeiling);
             ModLog.Info("HEADROOM tiersBehind (summed over slots) " + Percentiles(headroom));
             ModLog.Info("HEADROOM ceiling " + Percentiles(ceilings));
-            ReportCatalogCap(cap);
+            ReportCatalogCap();
             ModLog.Info("HEADROOM wallet " + Percentiles(purses));
             ModLog.Info("HEADROOM perPurchaseLimit " + Percentiles(limits));
 
@@ -2210,25 +2206,21 @@ namespace HeroesEvolve
         /// either: the engine deliberately refuses to touch one, so counting it
         /// as behind reports demand that will never be served by design.
         ///
-        /// The ceiling is narrowed to the best tier that exists for this kind of
-        /// item in this hero's culture. His merit may say tier 6, but if the
-        /// game holds no leg armour above tier 3 then he is not behind on boots,
-        /// he is wearing the best boots there are.
+        /// The ceiling is narrowed to the best tier sold of this kind of item,
+        /// by the same measure the shopping order uses (GearBalance.Shortfall),
+        /// so the census cannot call a slot behind that the engine calls
+        /// finished. His merit may say tier 6, but if nobody sells leg armour
+        /// above tier 4 then he is not behind on boots, he is wearing the best
+        /// boots there are.
         /// </summary>
         private static int SlotShortfall(Hero hero, EquipmentIndex slot, int ceiling,
-                                         Dictionary<string, int> shortBySlot,
-                                         Dictionary<string, int> cap, CultureObject culture)
+                                         Dictionary<string, int> shortBySlot)
         {
             ItemObject worn = hero.BattleEquipment[slot].Item;
             if (worn == null) return 0;
 
-            int wornTier = (int)worn.Tier + 1;
-            if (wornTier < 1) return 0;
-
-            int reachable = CapFor(cap, worn.ItemType, culture);
-            if (reachable < ceiling) ceiling = reachable;
-
-            int behind = ceiling - wornTier;
+            int behind = GearBalance.Shortfall((int)worn.Tier + 1, ceiling,
+                                               ItemCatalog.BestBuyableTier(worn.ItemType));
             if (behind <= 0) return 0;
 
             Bump(shortBySlot, SlotMapping.NameOf(slot));
@@ -2425,7 +2417,7 @@ namespace HeroesEvolve
         /// culture folded into one best. A slot whose cap is well below six is a
         /// slot no lord can ever fill to his ceiling, however rich or skilled.
         /// </summary>
-        private static void ReportCatalogCap(Dictionary<string, int> cap)
+        private static void ReportCatalogCap()
         {
             ItemObject.ItemTypeEnum[] kinds =
             {
@@ -2442,57 +2434,9 @@ namespace HeroesEvolve
             StringBuilder text = new StringBuilder("CATALOGCAP bestBuyableTier");
             for (int i = 0; i < kinds.Length; i++)
             {
-                int best = 0;
-                foreach (KeyValuePair<string, int> pair in cap)
-                {
-                    if (!pair.Key.StartsWith(kinds[i] + "/")) continue;
-                    if (pair.Value > best) best = pair.Value;
-                }
-                text.Append(' ').Append(kinds[i]).Append('=').Append(best);
+                text.Append(' ').Append(kinds[i]).Append('=').Append(ItemCatalog.BestBuyableTier(kinds[i]));
             }
             ModLog.Info(text.ToString());
-        }
-
-        private static Dictionary<string, int> BuildCatalogCap()
-        {
-            Dictionary<string, int> cap = new Dictionary<string, int>();
-
-            MBReadOnlyList<ItemObject> all = MBObjectManager.Instance.GetObjectTypeList<ItemObject>();
-            for (int i = 0; i < all.Count; i++)
-            {
-                ItemObject item = all[i];
-                if (item == null) continue;
-                if (item.NotMerchandise || item.IsCraftedByPlayer) continue;
-
-                int tier = (int)item.Tier + 1;
-                if (tier < 1) continue;
-
-                // Culture-less gear is available to everyone, so it is recorded
-                // under the wildcard as well as counting for no one culture.
-                string culture = item.Culture == null ? "*" : item.Culture.StringId;
-                Raise(cap, item.ItemType + "/" + culture, tier);
-            }
-
-            return cap;
-        }
-
-        private static void Raise(Dictionary<string, int> cap, string key, int tier)
-        {
-            int current;
-            if (cap.TryGetValue(key, out current) && current >= tier) return;
-            cap[key] = tier;
-        }
-
-        /// <summary>
-        /// The best tier of this kind a hero of this culture could ever obtain:
-        /// his own culture's best, or the best with no culture at all.
-        /// </summary>
-        private static int CapFor(Dictionary<string, int> cap, ItemObject.ItemTypeEnum type, CultureObject culture)
-        {
-            int neutral, own = 0;
-            cap.TryGetValue(type + "/*", out neutral);
-            if (culture != null) cap.TryGetValue(type + "/" + culture.StringId, out own);
-            return own > neutral ? own : neutral;
         }
 
         /// <summary>

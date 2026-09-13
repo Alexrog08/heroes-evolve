@@ -149,6 +149,23 @@ namespace HeroesEvolve.Core
             return planned == candidate;
         }
 
+        /// <summary>
+        /// True when answering a request for <paramref name="wanted"/> with an
+        /// item whose own identity is <paramref name="primary"/> would cross
+        /// between thrown weapons and everything else, in either direction.
+        ///
+        /// A family says which weapons are interchangeable; this says which
+        /// never are, whatever else an item can do. Thrown weapons mostly carry
+        /// a melee mode as well -- a javelin can be jabbed with, a throwing axe
+        /// swung -- and some spears carry a throw, so a test that only asks
+        /// "can it be wielded this way" lets a stack of javelins stand in for a
+        /// spear. That is a different soldier, not a better spear.
+        /// </summary>
+        public static bool CrossesThrowingLine(WeaponCategory wanted, WeaponCategory primary)
+        {
+            return (wanted == WeaponCategory.Throwing) != (primary == WeaponCategory.Throwing);
+        }
+
         private static bool IsOneHandedMeleeFamily(WeaponCategory category)
         {
             return category == WeaponCategory.OneHandedSword

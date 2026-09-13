@@ -82,9 +82,11 @@ namespace HeroesEvolve
         {
             if (settlement == null) return null;
 
+            // In the order a trip buys, so the census cannot report a lord about
+            // to buy the gloves his coat is holding back.
             int limit = budget == null ? int.MaxValue : budget.Available(hero);
-            return BestOf(Candidates(hero, settlement, MarketScanner.Stock(settlement),
-                                     ceiling, limit));
+            return BestOf(Due(hero, Candidates(hero, settlement, MarketScanner.Stock(settlement),
+                                               ceiling, limit), ceiling, null));
         }
 
         /// <summary>The best single thing in a given pile, kept for the callers
@@ -254,21 +256,26 @@ namespace HeroesEvolve
 
             // What the trip may cost, and how many ways it has to stretch.
             //
-            // Counted before a denar is spent, with no price limit, so the
-            // count is of slots this town could improve at all rather than of
-            // slots he happens to be able to afford first. A man who needs
-            // eleven things divides by eleven and comes back in middling gear;
-            // a man who needs one spends the lot on it. That progression --
-            // fewer pieces, better each time -- is the whole point of budgeting
-            // the trip instead of the piece, and it falls out of the division
-            // without anything having to decide it.
+            // Counted with no price limit, so the count is of slots this town
+            // could improve at all rather than of slots he happens to be able
+            // to afford first. A man who needs eleven things divides by eleven
+            // and comes back in middling gear; a man who needs one spends the
+            // lot on it. That progression -- fewer pieces, better each time --
+            // is the whole point of budgeting the trip instead of the piece,
+            // and it falls out of the division without anything having to
+            // decide it.
+            //
+            // Only slots that are due count (see Due). Armour held back behind
+            // a poorer piece is not a way for this trip's money to stretch, so
+            // the piece holding it back takes that share as well: that is how
+            // the coat that kept losing to the gloves comes to win.
             int pot = budget == null ? int.MaxValue : budget.TripBudget(hero);
-            int gaps = budget == null
-                ? 1
-                : Candidates(hero, settlement, stock, ceiling, int.MaxValue).Count;
-            if (gaps <= 0) return 0;
 
-            int gapsAtStart = gaps;
+            // Slots already bought for on this trip. Struck off by name,
+            // because the count is taken afresh every pass rather than ticked
+            // down once per purchase.
+            List<EquipmentIndex> filled = new List<EquipmentIndex>();
+            int gapsAtStart = -1;
 
             // He shops until there is nothing here worth buying or nothing left
             // to buy it with. There used to be a hard stop at one item, and it
@@ -288,10 +295,21 @@ namespace HeroesEvolve
                 // piece bought under its slice leaves the remainder to the
                 // others, so a cheap helmet buys a better cloak rather than
                 // being quietly forfeited.
-                int slice = gaps > 0 ? pot / gaps : pot;
+                //
+                // Recounted every pass, because a purchase can open slots as
+                // well as close one: once the coat catches up, the gloves that
+                // were waiting on it are due, and they need a share of what is
+                // left.
+                int gaps = Due(hero, Candidates(hero, settlement, stock, ceiling, int.MaxValue),
+                               ceiling, filled).Count;
+                if (gapsAtStart < 0) gapsAtStart = gaps;
+                if (gaps <= 0) break;
+
+                int slice = pot / gaps;
                 if (slice <= 0) break;
 
-                Candidate candidate = BestOf(Candidates(hero, settlement, stock, ceiling, slice));
+                Candidate candidate = BestOf(Due(hero, Candidates(hero, settlement, stock, ceiling, slice),
+                                                 ceiling, filled));
                 if (candidate == null) break;
 
                 int price = candidate.Offer.Price;
@@ -309,17 +327,84 @@ namespace HeroesEvolve
                 }
 
                 bought++;
+                filled.Add(candidate.Slot);
                 pot -= price;
-                gaps--;
-                if (pot <= 0 || gaps <= 0) break;
+                if (pot <= 0) break;
             }
 
-            LastTripGaps = gapsAtStart;
+            LastTripGaps = gapsAtStart > 0 ? gapsAtStart : 0;
             return bought;
         }
 
         /// <summary>
-        /// How many slots the last trip had to divide its money between.
+        /// The candidates a trip may still spend on: none for a slot already
+        /// bought for on this trip, and no armour more than a tier ahead of the
+        /// poorest piece he wears (see GearBalance). Weapons, the horse and its
+        /// harness pass untouched.
+        ///
+        /// A slot bought for stays closed because the slices grow as a trip
+        /// goes on. Without that, a helmet bought on a thin early share could
+        /// be traded straight back in for a better one the moment a later share
+        /// allowed it, and he would pay twice for one head.
+        ///
+        /// The poorest piece is read off what he wears, not off what this town
+        /// sells. A town with no coat for him sells him none of the gloves the
+        /// coat is holding back either, and he keeps the money for a town that
+        /// has one.
+        /// </summary>
+        private static List<Candidate> Due(Hero hero, List<Candidate> found, int ceiling,
+                                           List<EquipmentIndex> filled)
+        {
+            if (found.Count == 0) return found;
+
+            int worst = WorstArmorShortfall(hero, ceiling);
+
+            List<Candidate> due = new List<Candidate>(found.Count);
+            for (int i = 0; i < found.Count; i++)
+            {
+                Candidate candidate = found[i];
+                if (filled != null && filled.Contains(candidate.Slot)) continue;
+
+                if (SlotMapping.IsArmor(candidate.Slot)
+                    && !GearBalance.IsDue(ArmorShortfall(hero, candidate.Slot, ceiling), worst))
+                {
+                    continue;
+                }
+
+                due.Add(candidate);
+            }
+
+            return due;
+        }
+
+        /// <summary>How far behind the poorest armour he could trade is.</summary>
+        private static int WorstArmorShortfall(Hero hero, int ceiling)
+        {
+            int worst = 0;
+            foreach (EquipmentIndex slot in SlotMapping.ArmorSlots)
+            {
+                int shortfall = ArmorShortfall(hero, slot, ceiling);
+                if (shortfall > worst) worst = shortfall;
+            }
+            return worst;
+        }
+
+        /// <summary>
+        /// Tiers one armour slot is behind the best it could hold. Zero for an
+        /// empty slot and for gear the market never takes off him: neither can
+        /// be bought for, so neither may be the piece the rest wait on.
+        /// </summary>
+        private static int ArmorShortfall(Hero hero, EquipmentIndex slot, int ceiling)
+        {
+            ItemObject worn = hero.BattleEquipment[slot].Item;
+            if (worn == null || ItemCatalog.IsIrreplaceable(worn)) return 0;
+
+            return GearBalance.Shortfall(TierOf(worn), ceiling, ItemCatalog.BestBuyableTier(worn.ItemType));
+        }
+
+        /// <summary>
+        /// How many slots the last trip had to divide its money between, as
+        /// first counted: armour waiting on a poorer piece is not among them.
         ///
         /// Reported so the log can say whether a small purchase was a lord with
         /// little to fix or a lord whose share came out too thin to buy
@@ -341,10 +426,10 @@ namespace HeroesEvolve
         /// The ceiling on one shopping trip: eleven, every slot a lord has.
         ///
         /// Not a balance figure. Nothing in the rules can offer him a twelfth
-        /// purchase -- each one improves a slot he already fills, and improving
-        /// it puts what he now wears beyond the reach of anything cheaper on
-        /// the same shelf -- so this is the bound that makes the loop provably
-        /// terminate, not a limit anybody is expected to hit.
+        /// purchase -- each one improves a slot he already fills, and a slot
+        /// bought for is closed for the rest of the trip -- so this is the
+        /// bound that makes the loop provably terminate, not a limit anybody
+        /// is expected to hit.
         /// </summary>
         private const int MaximumPurchasesPerTrip = 11;
 

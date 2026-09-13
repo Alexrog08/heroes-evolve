@@ -229,6 +229,69 @@ namespace HeroesEvolve
         }
 
         /// <summary>
+        /// The best whole tier of this kind of item on sale anywhere, in any
+        /// culture's colours. Zero when nothing of the kind is sold.
+        ///
+        /// What a slot can reach is the lower of this and the hero's ceiling:
+        /// his merit may say tier 6, but if nobody sells leg armour above tier
+        /// 4 he is not behind on boots, he is wearing the best boots there are.
+        /// The shopping order and the census's headroom both ask it, so it is
+        /// answered in one place -- it used to be built inside the census
+        /// alone, where the engine could not reach it.
+        ///
+        /// Any culture, because the market sells across cultures and only
+        /// prefers a man's own (see MarketRules.CulturePreference): what he
+        /// could be sold is what anyone sells.
+        ///
+        /// Scanned once per campaign load and kept. The catalogue does not
+        /// change while a campaign runs, and the shopping order asks this for
+        /// every armour slot on every pass of every trip.
+        /// </summary>
+        public static int BestBuyableTier(ItemObject.ItemTypeEnum type)
+        {
+            if (_bestBuyable == null) _bestBuyable = ScanBestBuyable();
+
+            int tier;
+            return _bestBuyable != null && _bestBuyable.TryGetValue(type, out tier) ? tier : 0;
+        }
+
+        /// <summary>Forgets the scan, so the next campaign loaded reads its own catalogue.</summary>
+        public static void ResetSession()
+        {
+            _bestBuyable = null;
+        }
+
+        private static Dictionary<ItemObject.ItemTypeEnum, int> _bestBuyable;
+
+        private static Dictionary<ItemObject.ItemTypeEnum, int> ScanBestBuyable()
+        {
+            // No item list yet is not a catalogue with nothing in it. Left
+            // unscanned, so the first question asked in a campaign scans.
+            MBReadOnlyList<ItemObject> all = MBObjectManager.Instance != null
+                ? MBObjectManager.Instance.GetObjectTypeList<ItemObject>() : null;
+            if (all == null || all.Count == 0) return null;
+
+            Dictionary<ItemObject.ItemTypeEnum, int> best = new Dictionary<ItemObject.ItemTypeEnum, int>();
+            for (int i = 0; i < all.Count; i++)
+            {
+                // Buyable, not merely existing: gear no merchant could ever
+                // sell sets no standard a lord could be behind on. It is why
+                // horses top out at 5 while lords are seen riding 6.
+                ItemObject item = all[i];
+                if (item == null || IsIrreplaceable(item)) continue;
+
+                int tier = (int)item.Tier + 1;
+                if (tier < 1) continue;
+
+                int current;
+                if (best.TryGetValue(item.ItemType, out current) && current >= tier) continue;
+                best[item.ItemType] = tier;
+            }
+
+            return best;
+        }
+
+        /// <summary>
         /// The filters every catalogue lookup shares: not a quest or crafted
         /// item, within the tier ceiling, and either the hero's culture or
         /// unassigned. One policy, so armour and weapons cannot drift apart --

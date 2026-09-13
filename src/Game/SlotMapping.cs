@@ -38,6 +38,16 @@ namespace HeroesEvolve
             EquipmentIndex.Cape
         };
 
+        /// <summary>Whether a slot is one of the five armour slots.</summary>
+        public static bool IsArmor(EquipmentIndex slot)
+        {
+            for (int i = 0; i < ArmorSlots.Length; i++)
+            {
+                if (ArmorSlots[i] == slot) return true;
+            }
+            return false;
+        }
+
         /// <summary>
         /// A readable slot name for logging. EquipmentIndex.ToString() cannot be
         /// used: Head shares its numeric value with NumAllWeaponSlots, and the
