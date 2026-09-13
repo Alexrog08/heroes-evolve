@@ -46,8 +46,24 @@ namespace HeroesEvolve
     /// </summary>
     public static class CaravanWatch
     {
-        /// <summary>Days in a campaign year: four seasons of twenty-one.</summary>
-        private const int DaysPerYear = 84;
+        /// <summary>
+        /// Days in a campaign year, asked of the game rather than assumed.
+        ///
+        /// Eighty-four is the stock answer -- four seasons of twenty-one -- and
+        /// writing it down as a constant is a mistake this project has already
+        /// made once and fixed once, in SkillGrowthService.CyclesPerYear.
+        /// CampaignTime derives its calendar from static fields any mod may
+        /// change, and FastMode cuts a season to a single week. A death rate
+        /// computed per stock year on a FastMode calendar would be wrong by a
+        /// factor of three and would look perfectly reasonable while being so.
+        /// </summary>
+        private const float StockDaysPerYear = 84f;
+
+        private static float DaysPerYear()
+        {
+            float days = CampaignTime.DaysInYear;
+            return days > 0f ? days : StockDaysPerYear;
+        }
 
         /// <summary>The threshold and divisor AddIncomeFromParty applies, read from it.</summary>
         private const int IncomeFloor = 10000;
@@ -259,11 +275,13 @@ namespace HeroesEvolve
         /// </summary>
         private static void ReportMortality(int alive, long meanIncome)
         {
+            float year = DaysPerYear();
             float perCaravanYear = _caravanDays > 0
-                ? _lost * (float)DaysPerYear / _caravanDays
+                ? _lost * year / _caravanDays
                 : 0f;
 
             ModLog.Info("CARAVANDEATHS observedDays=" + _daysObserved
+                        + " daysPerYear=" + (int)year
                         + " caravanDays=" + _caravanDays
                         + " lost=" + _lost
                         + " toBandits=" + _lostToBandits
@@ -271,16 +289,18 @@ namespace HeroesEvolve
                         + " worthLost=" + _worthLost
                         + " lossRatePerCaravanPerYear=" + (int)(perCaravanYear * 100f) + "%");
 
-            if (_daysObserved < DaysPerYear / 4)
+            // One season of whatever calendar this campaign is running.
+            if (_daysObserved < (int)(year / 4f))
             {
                 ModLog.Info("CARAVANDEATHS (watched " + _daysObserved
-                            + " days; too few to trust a rate -- let a season pass)");
+                            + " days of a " + (int)(year / 4f)
+                            + "-day season; too few to trust a rate -- keep playing)");
             }
 
             if (perCaravanYear <= 0f || meanIncome <= 0) return;
 
             // What a caravan brings in against what its leader stands to lose.
-            long yearlyIncome = meanIncome * DaysPerYear;
+            long yearlyIncome = (long)(meanIncome * year);
             float robbed = perCaravanYear * Settings.PlunderChance;
             if (robbed <= 0f) return;
 
