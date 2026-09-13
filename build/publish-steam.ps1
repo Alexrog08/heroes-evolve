@@ -321,6 +321,13 @@ if ($Publish) {
             Write-Host "That happens after the upload and means nothing about it." -ForegroundColor Yellow
         }
         Write-Host "Published. Check the item page: https://steamcommunity.com/sharedfiles/filedetails/?id=$ItemId" -ForegroundColor Green
+
+        # Said out loud, because reading the transcript is only half the job.
+        # PowerShell hands on the last exit code it saw, so without this the
+        # script prints "Published." and then exits 82 anyway -- and a caller
+        # who trusts exit codes over console output, which is the sane thing to
+        # trust, still sees a failed publish.
+        exit 0
     } else {
         Write-Host "The publisher never reported 'Uploading done'. Nothing was committed." -ForegroundColor Red
         Write-Host "Steam must be running, logged in, with Steam Cloud enabled for your" -ForegroundColor Yellow
