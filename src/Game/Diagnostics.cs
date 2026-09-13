@@ -69,6 +69,7 @@ namespace HeroesEvolve
             ReportVariety(dominanceMargin);
             ReportDefectRate();
             ReportSkillCurve();
+            ReportChase();
             ReportPlayerCharacters();
             ReportMyClan();
             ReportAttributes();
@@ -1550,6 +1551,126 @@ namespace HeroesEvolve
             if (values == null || values.Count == 0) return 0;
             values.Sort();
             return values[values.Count / 2];
+        }
+
+        /// <summary>
+        /// The player's skills against everyone else's, and how far each hero
+        /// is behind the target this mod is walking him toward.
+        ///
+        /// Written for one question the rest of the census cannot answer: does
+        /// a lord climb the way the player does, only lower? That is the shape
+        /// the design asks for -- the player fastest and furthest, the lords on
+        /// a similar curve beneath him, separated by talent -- and nothing has
+        /// ever checked it. The two men are grown by completely different
+        /// machinery: the player earns experience by swinging a weapon, and a
+        /// lord is moved by SkillGrowth on a weekly tick. There is no reason
+        /// the two curves should match except that somebody looked.
+        ///
+        /// The line to watch is the gap. PointsStep closes twelve hundredths of
+        /// the distance to the target each year and returns exactly zero once a
+        /// hero arrives, so if growth were a staircase -- climb, stall at the
+        /// cap, wait for a birthday to raise it, climb again -- the heroes would
+        /// pile up AT their targets and gapAtOrOver would be most of them.
+        ///
+        /// What the arithmetic predicts instead is a steady chase. The target
+        /// is peak * Maturity(age), and maturity runs from 0.55 at eighteen to
+        /// 1.0 at sixty, so it rises by peak * 0.0107 a year. Growth is
+        /// gap * 0.12 * talent and the target's rise is peak * 0.0107 * talent
+        /// with the same peak, so the two balance where
+        ///
+        ///     gap * 0.12 = 150 * 0.0107   ->   gap = 13.4
+        ///
+        /// and the talent cancels out of it entirely. Every hero, gifted or
+        /// hopeless, should settle about thirteen points short and travel
+        /// alongside his target rather than sitting on it.
+        ///
+        /// So the census prints the prediction beside the measurement. If the
+        /// gaps cluster near thirteen the curve is smooth and the rate is
+        /// right; if they cluster at zero it is a staircase and the rate is too
+        /// fast for the target that restrains it.
+        /// </summary>
+        private static void ReportChase()
+        {
+            // Stamped so two censuses become a rate rather than two snapshots.
+            ModLog.Info("CHASE date day=" + (int)CampaignTime.Now.ToDays
+                        + " daysPerYear=" + (int)CampaignTime.DaysInYear);
+
+            Hero me = Hero.MainHero;
+            if (me != null)
+            {
+                try
+                {
+                    ModLog.Info("CHASE player name=" + me.Name
+                                + " age=" + (int)me.Age
+                                + " level=" + me.Level
+                                + " bestWeapon=" + BestWeaponSkill(me)
+                                + " allSkills=" + AllSkillTotal(me));
+                    ModLog.Info("CHASE player skills " + EverySkill(me));
+                }
+                catch
+                {
+                    // The player is one hero; losing him costs the comparison
+                    // and not the census.
+                }
+            }
+
+            List<int> best = new List<int>();
+            List<int> targets = new List<int>();
+            List<int> gaps = new List<int>();
+            List<int> totals = new List<int>();
+            int atOrOver = 0;
+
+            // Banded by talent, because the prediction is that the band makes
+            // no difference to the gap. If it does, the cancellation above is
+            // wrong somewhere.
+            string[] bands = { "talent<1.0", "talent1.0-1.3", "talent>1.3" };
+            List<int>[] gapByBand = new List<int>[bands.Length];
+            for (int i = 0; i < gapByBand.Length; i++) gapByBand[i] = new List<int>();
+
+            foreach (Hero hero in Hero.AllAliveHeroes)
+            {
+                try
+                {
+                    if (!HeroFilter.IsEligibleToGrow(hero)) continue;
+
+                    float talent = Talent.For(hero.StringId, Talent.Combat);
+                    int target = SkillGrowth.PrimaryTarget(hero.Age, talent);
+                    if (target <= 0) continue;
+
+                    int top = BestWeaponSkill(hero);
+                    int gap = target - top;
+
+                    best.Add(top);
+                    targets.Add(target);
+                    gaps.Add(gap);
+                    totals.Add(AllSkillTotal(hero));
+                    if (gap <= 0) atOrOver++;
+
+                    int band = talent < 1.0f ? 0 : (talent <= 1.3f ? 1 : 2);
+                    gapByBand[band].Add(gap);
+                }
+                catch
+                {
+                    // One unreadable hero must not cost the population.
+                }
+            }
+
+            ModLog.Info("CHASE heroes n=" + best.Count
+                        + " atOrOverTarget=" + atOrOver
+                        + " (" + (best.Count > 0 ? atOrOver * 100 / best.Count : 0) + "%)");
+            ModLog.Info("CHASE heroes bestWeapon " + Percentiles(best));
+            ModLog.Info("CHASE heroes target     " + Percentiles(targets));
+            ModLog.Info("CHASE heroes gap        " + Percentiles(gaps));
+            ModLog.Info("CHASE heroes allSkills  " + Percentiles(totals));
+
+            for (int i = 0; i < bands.Length; i++)
+            {
+                ModLog.Info("CHASE gapByTalent " + bands[i] + " " + Percentiles(gapByBand[i]));
+            }
+
+            ModLog.Info("CHASE predicted equilibriumGap=13"
+                        + " (talent cancels; a median near 13 is a smooth chase,"
+                        + " near 0 is a staircase and the rate is too fast)");
         }
 
         private static void ReportPlayerCharacters()
