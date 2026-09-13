@@ -71,6 +71,7 @@ namespace HeroesEvolve
             McmBridge.Attach();
 
             Diagnostics.ResetSession();
+            CaravanWatch.ResetSession();
             CultureProfile.Reset();
             CultureArchetypes.Reset();
             WeaponPerks.Reset();
@@ -114,6 +115,13 @@ namespace HeroesEvolve
             // Losing gear. Off unless the player asks for it, so the listener
             // costs one branch per capture when it is not wanted.
             CampaignEvents.HeroPrisonerTaken.AddNonSerializedListener(this, OnHeroPrisonerTaken);
+
+            // Measurement only, and it changes nothing in the campaign. A
+            // caravan that dies is the numerator of the rate CaravanWatch
+            // exists to produce, and it cannot be inferred from the population
+            // shrinking: a caravan disbanded at its home town leaves the same
+            // gap as one ridden down by bandits.
+            CampaignEvents.MobilePartyDestroyed.AddNonSerializedListener(this, OnMobilePartyDestroyed);
 
             // Winning a battle should win back what was stolen from you. The
             // game's own loot pass refuses to move that gear, so this adds the
@@ -171,6 +179,11 @@ namespace HeroesEvolve
             TryRepair(hero, "daily_tick");
         }
 
+        private void OnMobilePartyDestroyed(MobileParty party, PartyBase destroyer)
+        {
+            CaravanWatch.OnPartyDestroyed(party, destroyer);
+        }
+
         /// <summary>
         /// A captor going through his prisoner's kit. Guarded like every other
         /// per-hero path: one bad capture must not take down an event the whole
@@ -215,6 +228,13 @@ namespace HeroesEvolve
         {
             _budget.StartDay();
             _shoppedToday.Clear();
+
+            // One walk of the party list, to answer whether a caravan earns
+            // more than its leader spends on himself. It is the denominator of
+            // a death rate and a snapshot of what each hero-led caravan has on
+            // its back -- both of which have to be taken while the caravan is
+            // alive, since MobilePartyDestroyed arrives too late to read either.
+            CaravanWatch.DailyTick();
         }
 
         /// <summary>

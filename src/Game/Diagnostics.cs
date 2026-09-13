@@ -77,6 +77,7 @@ namespace HeroesEvolve
             ReportAllSkills();
             ReportGaps();
             ReportNaval();
+            CaravanWatch.Report();
             ReportClanWealth();
             ReportGearVsClan();
             ReportWornBySlot();
