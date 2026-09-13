@@ -1442,6 +1442,12 @@ namespace HeroesEvolve
                                 + " where=" + place
                                 + " grown=" + HeroFilter.IsEligibleToGrow(hero)
                                 + " geared=" + HeroFilter.IsEligible(hero)
+                                // The third filter, and it was missing. A
+                                // census that reports two of the three answers
+                                // cannot show a hero the mod repairs and grows
+                                // but never shops for, which is exactly what
+                                // every companion was.
+                                + " shops=" + HeroFilter.IsEligibleToShop(hero)
                                 + " why=" + (HeroFilter.WhyIneligible(hero) ?? "-")
                                 + " isLord=" + hero.IsLord
                                 + " companionOf=" + (hero.CompanionOf != null

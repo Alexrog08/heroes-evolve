@@ -225,7 +225,30 @@ namespace HeroesEvolve
             if (hero.IsHumanPlayerCharacter) return false;
             if (hero == Hero.MainHero) return false;
             if (hero.IsChild) return false;
-            if (!hero.IsLord) return false;
+            // Lords, and companions who lead a party of their own.
+            //
+            // This clause read "if (!hero.IsLord) return false" and threw out
+            // every companion in the campaign -- including the caravan master
+            // the paragraph above names by hand. Hero.IsLord is Occupation ==
+            // Lord, and AddCompanionAction.ApplyInternal writes CompanionOf and
+            // nothing else, so a hired companion keeps Occupation.Wanderer for
+            // life. Of the two things in the whole assembly that call
+            // SetNewOccupation, one is hero creation and the other is a
+            // companion founding his own clan.
+            //
+            // So the man the comment described as away doing his own job and
+            // buying his own kit was the one hero the engine could never
+            // describe that way. Repair dressed him once and his gear then
+            // stood still for the rest of the campaign while every lord on the
+            // map went on improving.
+            //
+            // A companion must lead a party and a lord need not, and that
+            // asymmetry is the rule rather than an oversight. A lord has a
+            // house and a station to keep up whether or not he is in the field.
+            // A companion with no party has no job and no purse -- he is
+            // waiting in a tavern, and the unhired wanderers waiting beside him
+            // are refused by the same line.
+            if (!hero.IsLord && hero.CompanionOf == null) return false;
             if (hero.IsTemplate) return false;
 
             if (hero.Clan == null) return false;
@@ -233,6 +256,8 @@ namespace HeroesEvolve
 
             MobileParty party = hero.PartyBelongedTo;
             if (party != null && party == MobileParty.MainParty) return false;
+
+            if (!hero.IsLord && (party == null || party.LeaderHero != hero)) return false;
 
             if (hero.Clan == Clan.PlayerClan)
             {
