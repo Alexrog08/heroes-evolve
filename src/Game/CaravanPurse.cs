@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.Actions;
 using TaleWorlds.CampaignSystem.Party;
@@ -80,15 +81,47 @@ namespace HeroesEvolve
         }
 
         /// <summary>
+        /// Every hero the daily pass found leading a caravan, by id.
+        ///
+        /// Recorded from the party side because the hero side cannot be
+        /// trusted, and a live campaign proved it. Larstan the Sea-Raider was
+        /// listed as a caravan leader by the census -- which walks
+        /// MobileParty.All and reads party.LeaderHero -- in the census before
+        /// his purchase and in the census after it. Between them he bought a
+        /// 13,323-denar harness on a purse of 752, which is the wallet path and
+        /// not the purse path: seventeen times what his savings allowed. The
+        /// only test that separates the two is the one asked of
+        /// hero.PartyBelongedTo, so that lookup disagreed with the walk that
+        /// had just found him twice.
+        ///
+        /// Rather than guess which of the two is right in which frame, the
+        /// answer is taken from the side that demonstrably works and kept.
+        /// Session-local and rebuilt every day, like every other state here, so
+        /// it adds nothing to the save.
+        /// </summary>
+        private static readonly HashSet<string> _leaders = new HashSet<string>();
+
+        /// <summary>
         /// Whether this hero leads a caravan, which is the one place in the
         /// campaign where a hero who is not a clan leader has an income that
         /// can be measured.
+        ///
+        /// Either view will do and neither is trusted alone. The live lookup
+        /// catches a man given a caravan since this morning, whom the record
+        /// cannot know about yet; the record catches the case above, where the
+        /// live lookup fails on a hero the daily walk can see perfectly well.
+        /// Both failures are of the same kind -- a caravan leader treated as an
+        /// ordinary hero and handed the clan treasury -- so the union is the
+        /// safe combination rather than the lazy one.
         /// </summary>
         public static bool IsCaravanLeader(Hero hero)
         {
             if (hero == null) return false;
+
             MobileParty party = hero.PartyBelongedTo;
-            return party != null && party.IsCaravan && party.LeaderHero == hero;
+            if (party != null && party.IsCaravan && party.LeaderHero == hero) return true;
+
+            return hero.StringId != null && _leaders.Contains(hero.StringId);
         }
 
         /// <summary>
@@ -113,6 +146,21 @@ namespace HeroesEvolve
         }
 
         /// <summary>
+        /// Called when a campaign is loaded; statics outlive one campaign.
+        ///
+        /// The roll is empty until the first daily tick fills it, so for that
+        /// one day a caravan master is known only by the live lookup. That is
+        /// the weaker of the two views and the reason this class exists, but a
+        /// single day of it after a load is a far smaller hole than carrying
+        /// yesterday's roll into a campaign that may not contain the same
+        /// heroes -- or the same caravans.
+        /// </summary>
+        public static void ResetSession()
+        {
+            _leaders.Clear();
+        }
+
+        /// <summary>
         /// Pays every caravan master his cut of the day.
         ///
         /// Taken from the man whose gold the caravan's income lands in, which
@@ -126,7 +174,11 @@ namespace HeroesEvolve
         /// </summary>
         public static void DailyTick()
         {
-            if (Settings.CaravanGearShare <= 0f) return;
+            // The roll is rebuilt whatever the share is set to. At zero nobody
+            // is paid, but a caravan master must still be known for one, or
+            // switching the feature off would quietly hand him the clan purse
+            // again -- the opposite of what off means.
+            _leaders.Clear();
 
             foreach (MobileParty party in MobileParty.All)
             {
@@ -136,6 +188,9 @@ namespace HeroesEvolve
 
                     Hero leader = party.LeaderHero;
                     if (leader == null || leader.IsDead) continue;
+
+                    if (leader.StringId != null) _leaders.Add(leader.StringId);
+                    if (Settings.CaravanGearShare <= 0f) continue;
 
                     // The engine's own daily payment, computed from the same
                     // number it reads. See DefaultClanFinanceModel.

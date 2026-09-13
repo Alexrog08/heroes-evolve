@@ -72,6 +72,7 @@ namespace HeroesEvolve
 
             Diagnostics.ResetSession();
             CaravanWatch.ResetSession();
+            CaravanPurse.ResetSession();
             CultureProfile.Reset();
             CultureArchetypes.Reset();
             WeaponPerks.Reset();
