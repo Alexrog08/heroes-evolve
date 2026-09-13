@@ -123,12 +123,20 @@ namespace HeroesEvolve
 
         /// <summary>
         /// The one-handed sword vanilla's dummy fallback hands out when a hero
-        /// comes of age with no usable equipment template. Kept in step with
-        /// GrantService.DummySwordId, which is what detects the same state.
+        /// comes of age with no usable equipment template.
+        ///
+        /// It lived on GrantService, which never read it: only this class and
+        /// the console command did, and the reach back up made the service and
+        /// its own adapter depend on each other. It is a fact about a game
+        /// item, and this is the class that knows about game items, so it lives
+        /// here now and the dependency runs one way again.
         /// </summary>
+        internal const string DummySwordId = "iron_spatha_sword_t2";
+
+        /// <summary>Whether this is that sword, and so the marker of the bare start.</summary>
         internal static bool IsVanillaDummySword(ItemObject item)
         {
-            return item != null && item.StringId == GrantService.DummySwordId;
+            return item != null && item.StringId == DummySwordId;
         }
 
     }

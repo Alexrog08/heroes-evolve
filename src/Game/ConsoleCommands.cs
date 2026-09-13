@@ -161,7 +161,7 @@ namespace HeroesEvolve
             hero.BattleEquipment[EquipmentIndex.Horse] = EquipmentElement.Invalid;
             hero.BattleEquipment[EquipmentIndex.HorseHarness] = EquipmentElement.Invalid;
 
-            ItemObject spatha = MBObjectManager.Instance.GetObject<ItemObject>(GrantService.DummySwordId);
+            ItemObject spatha = MBObjectManager.Instance.GetObject<ItemObject>(HeroAdapter.DummySwordId);
             if (spatha != null)
             {
                 hero.BattleEquipment[EquipmentIndex.Weapon0] = new EquipmentElement(spatha, null, null, false);

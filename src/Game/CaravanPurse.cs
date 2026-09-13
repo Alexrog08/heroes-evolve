@@ -202,58 +202,117 @@ namespace HeroesEvolve
             // switching the feature off would quietly hand him the clan purse
             // again -- the opposite of what off means.
             _leaders.Clear();
+            List<Wage> due = new List<Wage>();
 
-            foreach (MobileParty party in MobileParty.All)
+            // The walk itself is guarded as well as each step of it, matching
+            // CaravanWatch. Nothing in here mutates any more, so we cannot be
+            // the one to break the enumeration -- but MobileParty.All belongs
+            // to the campaign and is shared with every other mod loaded, and a
+            // daily tick is not the place to find out that somebody else was
+            // writing to it.
+            try
+            {
+                foreach (MobileParty party in MobileParty.All)
+                {
+                    try
+                    {
+                        if (party == null || !party.IsCaravan) continue;
+
+                        Hero leader = party.LeaderHero;
+                        if (leader == null || leader.IsDead) continue;
+
+                        if (leader.StringId != null) _leaders.Add(leader.StringId);
+                        if (Settings.CaravanGearShare <= 0f) continue;
+
+                        // Paid only to a man who could spend it. Two switches make
+                        // that false while leaving him leading a caravan: turning
+                        // purchases off stops all shopping, and turning off
+                        // ManageOwnClan tells the mod to leave the player's own
+                        // people alone. Either way he would go on drawing a
+                        // commission out of his patron's pocket for the rest of the
+                        // campaign and never buy a thing with it -- the player
+                        // switching the system off and still being charged for it.
+                        //
+                        // Asked of the shopping filter rather than of the switches
+                        // one by one, so a condition added there is honoured here
+                        // without anyone remembering to. Only EnablePurchases is
+                        // named, because it gates the behaviour rather than the
+                        // hero and the filter never sees it.
+                        if (!Settings.EnablePurchases) continue;
+                        if (!HeroFilter.IsEligibleToShop(leader)) continue;
+
+                        int profit = DailyIncome(party.PartyTradeGold);
+                        if (profit <= 0) continue;
+
+                        int cut = (int)(profit * Commission);
+                        if (cut <= 0) continue;
+
+                        Hero payer = party.Party != null ? party.Party.Owner : null;
+                        if (payer != null && payer.Clan != null && payer.Clan.Leader != null)
+                        {
+                            payer = payer.Clan.Leader;
+                        }
+                        if (payer == null || payer == leader) continue;
+
+                        if (cut > payer.Gold) cut = payer.Gold;
+                        if (cut <= 0) continue;
+
+                        // Recorded, not paid. See below.
+                        due.Add(new Wage(payer, leader, cut));
+                    }
+                    catch
+                    {
+                        // One unreadable caravan must not cost the rest their wages.
+                    }
+                }
+            }
+            catch
+            {
+                // A broken walk costs the day's commissions and nothing else;
+                // whatever was worked out before it broke is still paid below.
+            }
+
+            // Paid only now that the walk is over.
+            //
+            // GiveGoldAction is a campaign action: it raises events, and what
+            // any of them do is not this class's to know. Calling it while
+            // enumerating MobileParty.All meant mutating game state in the
+            // middle of reading a live game collection, and if anything
+            // downstream ever added or removed a party the enumerator would
+            // throw on its next step -- outside the per-caravan try, which sits
+            // inside the loop, and therefore straight out into the campaign's
+            // daily tick.
+            //
+            // Its sibling CaravanWatch.DailyTick wraps the whole walk instead
+            // and never had the hole, which is the wrong way round: that one
+            // only reads, and this one is the one that writes. Rather than
+            // widen the net, the hazard is removed -- read first, pay after.
+            for (int i = 0; i < due.Count; i++)
             {
                 try
                 {
-                    if (party == null || !party.IsCaravan) continue;
-
-                    Hero leader = party.LeaderHero;
-                    if (leader == null || leader.IsDead) continue;
-
-                    if (leader.StringId != null) _leaders.Add(leader.StringId);
-                    if (Settings.CaravanGearShare <= 0f) continue;
-
-                    // Paid only to a man who could spend it. Two switches make
-                    // that false while leaving him leading a caravan: turning
-                    // purchases off stops all shopping, and turning off
-                    // ManageOwnClan tells the mod to leave the player's own
-                    // people alone. Either way he would go on drawing a
-                    // commission out of his patron's pocket for the rest of the
-                    // campaign and never buy a thing with it -- the player
-                    // switching the system off and still being charged for it.
-                    //
-                    // Asked of the shopping filter rather than of the switches
-                    // one by one, so a condition added there is honoured here
-                    // without anyone remembering to. Only EnablePurchases is
-                    // named, because it gates the behaviour rather than the
-                    // hero and the filter never sees it.
-                    if (!Settings.EnablePurchases) continue;
-                    if (!HeroFilter.IsEligibleToShop(leader)) continue;
-
-                    int profit = DailyIncome(party.PartyTradeGold);
-                    if (profit <= 0) continue;
-
-                    int cut = (int)(profit * Commission);
-                    if (cut <= 0) continue;
-
-                    Hero payer = party.Party != null ? party.Party.Owner : null;
-                    if (payer != null && payer.Clan != null && payer.Clan.Leader != null)
-                    {
-                        payer = payer.Clan.Leader;
-                    }
-                    if (payer == null || payer == leader) continue;
-
-                    if (cut > payer.Gold) cut = payer.Gold;
-                    if (cut <= 0) continue;
-
-                    GiveGoldAction.ApplyBetweenCharacters(payer, leader, cut, true);
+                    GiveGoldAction.ApplyBetweenCharacters(due[i].Payer, due[i].Earner,
+                                                          due[i].Amount, true);
                 }
                 catch
                 {
-                    // One unreadable caravan must not cost the rest their wages.
+                    // As above: one failed payment must not stop the others.
                 }
+            }
+        }
+
+        /// <summary>One commission, worked out during the walk and paid after it.</summary>
+        private struct Wage
+        {
+            public readonly Hero Payer;
+            public readonly Hero Earner;
+            public readonly int Amount;
+
+            public Wage(Hero payer, Hero earner, int amount)
+            {
+                Payer = payer;
+                Earner = earner;
+                Amount = amount;
             }
         }
     }

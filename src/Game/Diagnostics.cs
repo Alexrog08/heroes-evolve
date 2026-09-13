@@ -1077,9 +1077,9 @@ namespace HeroesEvolve
             SkillProfile skills = HeroAdapter.ReadSkills(hero);
             int clanTier = hero.Clan != null ? hero.Clan.Tier : 0;
             int ceiling = TierCeiling.Compute(clanTier, skills.MaxCombatSkill,
-                                              HeroLoadoutBehavior.ClanWeight,
-                                              HeroLoadoutBehavior.SkillWeight,
-                                              HeroLoadoutBehavior.MinimumTier);
+                                              Settings.ClanWeight,
+                                              Settings.SkillWeight,
+                                              Settings.MinimumTier);
 
             if (!CultureProfile.MountsItsLords(culture)) role = BattleRoleRules.Dismounted(role);
 
@@ -1252,7 +1252,15 @@ namespace HeroesEvolve
                     double born = probe.BirthDay.ToYears;
                     if (born > latestAuthoredBirthYear) latestAuthoredBirthYear = born;
                 }
-                catch { }
+                catch
+                {
+                    // One unreadable hero must not cost the rest of the probe.
+                    // Silent because this is a survey and the worst a skipped
+                    // hero can do is move the boundary it is looking for by a
+                    // year -- logging it per hero would bury the census it is
+                    // part of. Every other swallow in this mod says why; this
+                    // one had said nothing at all.
+                }
             }
 
             List<int>[] authoredByBucket = new List<int>[labels.Length];
@@ -3540,7 +3548,7 @@ namespace HeroesEvolve
 
             List<PlannedSlot> plan = LoadoutPlanner.Plan(HeroAdapter.ReadSkills(hero), empty,
                                                          resolved.Availability,
-                                                         HeroLoadoutBehavior.DominanceMargin,
+                                                         Settings.DominanceMargin,
                                                          resolved.CultureMountsLords,
                                                          HeroAdapter.ReadRole(hero));
 

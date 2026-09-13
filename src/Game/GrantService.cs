@@ -6,14 +6,21 @@ using HeroesEvolve.Core;
 namespace HeroesEvolve
 {
     /// <summary>
-    /// Repairs the vanilla come-of-age bug by handing a hero a coherent loadout
-    /// for free. This is fixing a defect, not economy: it must work for a lord
-    /// with no gold who never visits a town.
+    /// Hands a hero with nothing a coherent loadout, for free.
+    ///
+    /// It began as a repair for the vanilla come-of-age bug and has not been
+    /// only that for a long time: the same grant dresses a lord the engine left
+    /// in civilian clothes and a lord a captor stripped bare, and calling the
+    /// second a repair would be calling the robbery a defect.
+    ///
+    /// Free, and that is the point rather than an oversight. A man with nothing
+    /// has no gold either and may never see a town, so a grant that charged him
+    /// would never reach the heroes it exists for. What it gives is a floor --
+    /// GrantTier caps it at the low band deliberately, so that everything above
+    /// it is left for the purchase engine to sell him.
     /// </summary>
     public static class GrantService
     {
-        /// <summary>The one-handed sword vanilla's dummy fallback hands out.</summary>
-        internal const string DummySwordId = "iron_spatha_sword_t2";
 
         /// <summary>A lord fielding fewer than this many weapons cannot fight.</summary>
         private const int MinimumWeapons = 2;
