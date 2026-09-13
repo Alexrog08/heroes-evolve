@@ -103,22 +103,20 @@ namespace HeroesEvolve
         public static float PlunderChance = 0.5f;
 
         /// <summary>
-        /// The share of a caravan's profit that ends up on its leader's back.
+        /// The commission a caravan's leader keeps out of what it earns, and
+        /// the only money he has to dress himself with.
         ///
-        /// One number rather than two, and the arithmetic in CaravanPurse says
-        /// why: with a commission c and a financing multiplier M, the owner
-        /// keeps G(1 - cM) of what the caravan earns and the leader reaches a
-        /// piece of price P in P/(cGM) days. Both depend only on the product,
-        /// so the product is the setting and the commission is a constant.
+        /// Half leaves the owner the other half. A campaign of 5,968
+        /// caravan-days measured the loss rate at 22% a year and the kit that
+        /// one year of trading pays for at some 290,000 denars; against that a
+        /// leader's savings never come close, which is the point. At 1.00 he
+        /// keeps everything and the caravan stops paying its owner at all -- a
+        /// real choice, and the reason the slider runs that far.
         ///
-        /// Thirty hundredths leaves the owner seven denars in ten. At 1.00 the
-        /// leader spends exactly what the caravan makes and it stops being a
-        /// source of income -- a real choice, and the reason the slider runs
-        /// that far.
-        ///
-        /// Zero switches the feature off, and off means a caravan master buys
-        /// only from his own pocket -- never from the clan purse. The point of
-        /// the feature is that his patron's treasury is not his to spend.
+        /// Zero does not hand him back the clan purse. It stops the commission
+        /// and leaves him spending down whatever he has until he has nothing,
+        /// because the feature is that his patron's treasury is not his to
+        /// spend, and that has to hold at every setting rather than most.
         /// </summary>
         public static float CaravanGearShare = 0.50f;
 

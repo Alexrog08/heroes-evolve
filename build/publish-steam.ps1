@@ -122,6 +122,22 @@ if ((Test-Path $deployedSettings) -and (Test-Path $sourceSettings)) {
         Write-Host "  (saving yours first if any value above is one you tuned)." -ForegroundColor Yellow
         throw "settings.xml would ship stale"
     }
+
+    # Values agree, so nothing of the player's is at stake -- but the file can
+    # still differ in its comments, and those are not decoration. Without MCM
+    # they are the only explanation of a setting a player has, and they go
+    # stale exactly when a mechanism changes, which is when a reader most needs
+    # them right. This very publish would have shipped a paragraph describing a
+    # financing multiplier that no longer exists.
+    #
+    # Refusing over a reworded comment would be tiresome, and silently shipping
+    # a wrong one is worse. Since the values already match, the repository's
+    # copy can simply be taken: it says the same thing about the player's
+    # configuration and says it correctly.
+    if ((Get-FileHash $deployedSettings).Hash -ne (Get-FileHash $sourceSettings).Hash) {
+        Copy-Item $sourceSettings $deployedSettings -Force
+        Write-Host "settings.xml: same values, refreshed the comments from the repository." -ForegroundColor Cyan
+    }
 }
 
 # The description lives in one place and is read from it, so the Workshop page

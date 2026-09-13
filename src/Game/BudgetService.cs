@@ -225,18 +225,18 @@ namespace HeroesEvolve
             int room = ClanRoom(clan);
             if (own + room < price) return false;
 
-            // A caravan master pays every denar he has and his patron covers
-            // the rest, which is what the financing multiplier means and the
-            // only split that makes its arithmetic true. ClanShare would not do
-            // it: it returns between 0.30 and 0.80 on terms of its own, and at
-            // the high end the patron would pay more than the multiplier
-            // promised -- quietly breaking the one identity the whole feature
-            // rests on, that he keeps 1 - cM of what the caravan earns.
+            // A caravan master pays the whole price himself, and can, because
+            // Available already refused anything dearer than his savings. The
+            // clan contributes nothing at all: he shops on a commission, and a
+            // commission his patron then tops up at the counter would not be a
+            // commission. ClanShare is not consulted -- it would hand part of
+            // the bill to the clan on terms of its own and quietly turn this
+            // back into the matched arrangement it replaced.
             if (CaravanPurse.IsCaravanLeader(hero))
             {
-                heroPart = own < price ? own : price;
-                clanPart = price - heroPart;
-                if (clanPart > room) return false;
+                if (own < price) return false;
+                heroPart = price;
+                clanPart = 0;
                 return true;
             }
 

@@ -43,42 +43,54 @@ namespace HeroesEvolve
     public static class CaravanPurse
     {
         /// <summary>
-        /// The share of a caravan's daily profit its master keeps for himself.
+        /// The share of a caravan's daily profit its master keeps for himself,
+        /// and the whole of the mechanism.
         ///
-        /// Fixed rather than exposed, and the arithmetic says why. With a
-        /// commission c and a financing multiplier M, a master accumulates cG a
-        /// day and may spend cGM, of which he pays cG and his patron pays
-        /// cG(M-1). The patron therefore keeps
+        /// This was briefly a commission plus a financing multiplier: he kept a
+        /// tenth, and his patron matched it several times over at the counter.
+        /// The arithmetic was identical either way -- with commission c and
+        /// multiplier M the patron keeps G(1 - cM) and a piece of price P takes
+        /// P/(cGM) days, so c and M never appear apart and only their product
+        /// means anything.
         ///
-        ///     (1-c)G - cG(M-1)  =  G(1 - cM)
+        /// It came out because of WHEN the money moved rather than how much.
+        /// The matched half was taken at the moment of purchase, which is a
+        /// sum leaving the player's purse suddenly, at a time he did not
+        /// choose, for a decision he did not make. A commission is a standing
+        /// cost he can plan around. Same denars, better manners.
         ///
-        /// of everything the caravan earns, and the time to afford a piece of
-        /// price P is P / (cGM) days. Both depend on the PRODUCT and on nothing
-        /// else: c and M never appear apart. Two sliders for one number is a
-        /// trap -- a player moves both and lands somewhere he did not intend --
-        /// so the product is the setting and this is a constant.
+        /// What that gave up is worth writing down, because it is the one real
+        /// cost of the change: under the multiplier an idle master was cheap,
+        /// since his patron paid the small commission daily and the large
+        /// matching part only when something was actually bought. Now the whole
+        /// share is paid every day whether he spends it or not, and a master
+        /// who has reached his ceiling in every slot accumulates money he has
+        /// no use for.
         ///
-        /// Which makes the boundary legible: at cM = 1 the master spends
-        /// precisely everything the caravan makes, and the caravan stops being
-        /// a source of income at all. That is the top of the slider, and it is
-        /// a real choice rather than a misconfiguration.
+        /// Nothing is done about that yet, deliberately. Every cap anyone can
+        /// name is a number pulled out of the air -- stop at twice the kit he
+        /// wears, stop at some figure in denars -- and the one rule that sounds
+        /// principled, stop once he has saved more than he is wearing, would
+        /// freeze a poorly dressed master below the price of any upgrade he
+        /// might want. The case also needs a hero at his ceiling in all eleven
+        /// slots, which a census of six caravan masters found exactly once. The
+        /// money is not destroyed either: his ceiling rises as his skills do,
+        /// and a companion who is later made a lord takes his savings with him
+        /// as his clan's treasury. Left alone until a campaign says it matters.
         /// </summary>
-        public const float Commission = 0.10f;
+        public static float Commission
+        {
+            get
+            {
+                float share = Settings.CaravanGearShare;
+                if (share < 0f) return 0f;
+                return share > 1f ? 1f : share;
+            }
+        }
 
         /// <summary>The threshold and divisor AddIncomeFromParty applies, read from it.</summary>
         private const int IncomeFloor = 10000;
         private const int IncomeDivisor = 10;
-
-        /// <summary>
-        /// How much of his own money a master's patron matches. Derived from the
-        /// share the player actually set, so the setting means what it says.
-        /// </summary>
-        public static float Multiplier()
-        {
-            float share = Settings.CaravanGearShare;
-            if (share <= 0f) return 0f;
-            return share / Commission;
-        }
 
         /// <summary>
         /// Every hero the daily pass found leading a caravan, by id.
@@ -125,24 +137,18 @@ namespace HeroesEvolve
         }
 
         /// <summary>
-        /// What this master may spend on gear: his savings, matched by his
-        /// patron.
+        /// What this master may spend on gear: his savings, and not a denar
+        /// more.
         ///
-        /// Zero when the share is zero, which switches the whole thing off and
-        /// leaves him shopping on whatever he happens to be carrying -- not on
-        /// the clan purse. That is the point of the feature and not a corner of
-        /// it, so it holds at every setting.
+        /// At a share of zero nothing is paid in, so a master left long enough
+        /// spends down to nothing and shops no further -- on his own money to
+        /// the end, never on the clan purse. That is the point of the feature
+        /// rather than a corner of it, so it has to hold at every setting.
         /// </summary>
         public static int Budget(Hero hero)
         {
             if (hero == null) return 0;
-
-            int purse = hero.Gold;
-            if (purse <= 0) return 0;
-
-            float matched = purse * Multiplier();
-            if (matched <= 0f) return 0;
-            return matched > int.MaxValue ? int.MaxValue : (int)matched;
+            return hero.Gold > 0 ? hero.Gold : 0;
         }
 
         /// <summary>
