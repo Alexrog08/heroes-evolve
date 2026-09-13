@@ -502,7 +502,16 @@ namespace HeroesEvolve
             return null;
         }
 
-        private static bool IsBanditParty(PartyBase party)
+        /// <summary>
+        /// Whether this party robs as a bandit does, with no honour to appeal
+        /// to. Public because CaravanWatch asks the same question and asked it
+        /// differently: it tested MobileParty.IsBandit alone and reported
+        /// "bandits=False" for the party of Nal of the Wolfskins, whose clan is
+        /// an outlaw clan and who had just been given the bandit branch by this
+        /// very method -- a log line contradicting the log line above it. Two
+        /// copies of a predicate drift; one does not.
+        /// </summary>
+        public static bool IsBanditParty(PartyBase party)
         {
             MobileParty mobile = party.MobileParty;
             if (mobile != null && mobile.IsBandit) return true;

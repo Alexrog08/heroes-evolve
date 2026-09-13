@@ -91,6 +91,7 @@ namespace HeroesEvolve
         private static readonly Dictionary<string, Seen> _withHero = new Dictionary<string, Seen>();
 
         private static int _lost;
+        private static int _lostToHostile;
         private static int _lostWithHero;
         private static int _lostToBandits;
         private static long _worthLost;
@@ -102,6 +103,7 @@ namespace HeroesEvolve
         {
             _withHero.Clear();
             _lost = 0;
+            _lostToHostile = 0;
             _lostWithHero = 0;
             _lostToBandits = 0;
             _worthLost = 0;
@@ -167,9 +169,18 @@ namespace HeroesEvolve
 
                 _lost++;
 
-                bool bandit = destroyer != null
-                              && destroyer.MobileParty != null
-                              && destroyer.MobileParty.IsBandit;
+                // A null destroyer is a caravan disbanding in peace:
+                // DestroyPartyAction.ApplyForDisbanding calls ApplyInternal
+                // with null, while the battle path hands over the party that
+                // won. Only the second kind can leave anyone in a cell, which
+                // is why the break-even below divides by this and not by every
+                // caravan that stopped existing.
+                bool hostile = destroyer != null;
+                if (hostile) _lostToHostile++;
+
+                // The mod's one definition of a bandit, borrowed rather than
+                // rewritten. See PlunderService.IsBanditParty.
+                bool bandit = hostile && PlunderService.IsBanditParty(destroyer);
                 if (bandit) _lostToBandits++;
 
                 string id = party.StringId;
@@ -276,18 +287,29 @@ namespace HeroesEvolve
         private static void ReportMortality(int alive, long meanIncome)
         {
             float year = DaysPerYear();
+
+            // Two rates, because they answer different questions. Every death
+            // ends a caravan's earnings; only a hostile one can end with its
+            // leader in a cell, and the gear risk hangs on the second.
             float perCaravanYear = _caravanDays > 0
                 ? _lost * year / _caravanDays
+                : 0f;
+            float hostilePerCaravanYear = _caravanDays > 0
+                ? _lostToHostile * year / _caravanDays
                 : 0f;
 
             ModLog.Info("CARAVANDEATHS observedDays=" + _daysObserved
                         + " daysPerYear=" + (int)year
                         + " caravanDays=" + _caravanDays
                         + " lost=" + _lost
+                        + " hostile=" + _lostToHostile
+                        + " disbanded=" + (_lost - _lostToHostile)
                         + " toBandits=" + _lostToBandits
                         + " withHero=" + _lostWithHero
                         + " worthLost=" + _worthLost
-                        + " lossRatePerCaravanPerYear=" + (int)(perCaravanYear * 100f) + "%");
+                        + " lossRatePerCaravanPerYear=" + (int)(perCaravanYear * 100f) + "%"
+                        + " hostileRatePerCaravanPerYear="
+                        + (int)(hostilePerCaravanYear * 100f) + "%");
 
             // One season of whatever calendar this campaign is running.
             if (_daysObserved < (int)(year / 4f))
@@ -297,18 +319,30 @@ namespace HeroesEvolve
                             + "-day season; too few to trust a rate -- keep playing)");
             }
 
-            if (perCaravanYear <= 0f || meanIncome <= 0) return;
+            if (hostilePerCaravanYear <= 0f || meanIncome <= 0) return;
 
             // What a caravan brings in against what its leader stands to lose.
+            //
+            // Note that the calendar cancels: the income is multiplied by the
+            // year and the rate is divided by it, so the figure below is the
+            // same on a FastMode campaign as on a stock one. It is a ratio of
+            // denars earned to denars exposed and nothing else.
+            //
+            // Pessimistic twice over, on purpose. It assumes the leader is
+            // always taken when his caravan is ridden down, where in truth he
+            // may be killed or get away; and it assumes the gear never comes
+            // back, where PlunderService puts it in the captor's baggage and
+            // beating him returns it. Both errors point the same way, so a kit
+            // this says is safe really is safe.
             long yearlyIncome = (long)(meanIncome * year);
-            float robbed = perCaravanYear * Settings.PlunderChance;
+            float robbed = hostilePerCaravanYear * Settings.PlunderChance;
             if (robbed <= 0f) return;
 
             ModLog.Info("CARAVANBREAKEVEN yearlyIncomePerCaravan=" + yearlyIncome
                         + " chanceRobbedPerYear=" + (int)(robbed * 100f) + "%"
                         + " kitPaidForByOneYear=" + (int)(yearlyIncome / robbed)
-                        + " (a kit worth more than that loses money at this death rate,"
-                        + " counting nothing recovered by beating the robbers)");
+                        + " (a kit worth more than that loses money at this rate of"
+                        + " hostile losses, counting nothing won back from the robbers)");
         }
 
         /// <summary>Denars a day this caravan pays its owner, by the engine's own rule.</summary>
