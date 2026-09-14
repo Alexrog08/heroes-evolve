@@ -41,6 +41,14 @@ namespace HeroesEvolve
             public bool WornOwnCulture;
 
             /// <summary>
+            /// Every offer for this slot, best first, of which Offer is the
+            /// first inside the limit the candidate was built with. Kept so a
+            /// trip can choose again under a smaller share without reading the
+            /// shelves again.
+            /// </summary>
+            public List<MarketOffer> Offers;
+
+            /// <summary>
             /// Whole tiers gained, as this hero values them. The reason this
             /// slot beats another.
             ///
@@ -265,18 +273,23 @@ namespace HeroesEvolve
             // and it falls out of the division without anything having to
             // decide it.
             //
-            // Only slots that are due count (see Due). Armour held back behind
-            // a poorer piece is not a way for this trip's money to stretch, so
-            // the piece holding it back takes that share as well: that is how
-            // the coat that kept losing to the gloves comes to win.
+            // Only slots that are due share the money (see Due). Armour held
+            // back behind a poorer piece takes no share, so what it would have
+            // had goes to the slots that are due -- the piece holding it back
+            // among them, which is how the coat that kept losing to the gloves
+            // comes to win. Whatever nothing due here can use stays in his
+            // purse.
             int pot = budget == null ? int.MaxValue : budget.TripBudget(hero);
 
-            // Slots already bought for on this trip. Struck off by name,
-            // because the count is taken afresh every pass rather than ticked
-            // down once per purchase.
+            // The slots this trip is finished with -- bought for, or found sold
+            // out -- and the ones actually bought. Struck off by name, because
+            // the count is taken afresh every pass rather than ticked down once
+            // per purchase.
+            List<EquipmentIndex> closed = new List<EquipmentIndex>();
             List<EquipmentIndex> filled = new List<EquipmentIndex>();
-            int gapsAtStart = -1;
-            int armorOnOffer = 0, armorHeldBack = 0;
+            bool counted = false;
+            int improvable = 0, dueAtStart = 0, armorOnOffer = 0, armorHeldBack = 0;
+            string heldBehind = null;
 
             // He shops until there is nothing here worth buying or nothing left
             // to buy it with. There used to be a hard stop at one item, and it
@@ -292,35 +305,53 @@ namespace HeroesEvolve
             // provably finite whatever the market does.
             for (int pass = 0; pass < MaximumPurchasesPerTrip; pass++)
             {
+                // Read once a pass, with no price limit, and recounted every
+                // pass because a purchase can open slots as well as close one:
+                // once the coat catches up, the gloves that were waiting on it
+                // are due, and they need a share of what is left.
+                List<Candidate> onOffer = Candidates(hero, settlement, stock, ceiling, int.MaxValue);
+                List<Candidate> due = Due(hero, onOffer, ceiling, closed);
+
+                if (!counted)
+                {
+                    counted = true;
+                    improvable = onOffer.Count;
+                    dueAtStart = due.Count;
+
+                    // What the armour order held back as he walked in, and
+                    // behind which piece, for the census (see PurchaseWatch).
+                    armorOnOffer = CountArmor(onOffer);
+                    armorHeldBack = armorOnOffer - CountArmor(due);
+                    if (armorHeldBack > 0)
+                    {
+                        EquipmentIndex behind;
+                        WorstArmorShortfall(hero, ceiling, out behind);
+                        heldBehind = SlotMapping.NameOf(behind);
+                    }
+                }
+
+                int gaps = due.Count;
+                if (gaps <= 0) break;
+
                 // His share of what is left, for the slots that are left. A
                 // piece bought under its slice leaves the remainder to the
                 // others, so a cheap helmet buys a better cloak rather than
                 // being quietly forfeited.
-                //
-                // Recounted every pass, because a purchase can open slots as
-                // well as close one: once the coat catches up, the gloves that
-                // were waiting on it are due, and they need a share of what is
-                // left.
-                List<Candidate> onOffer = Candidates(hero, settlement, stock, ceiling, int.MaxValue);
-                List<Candidate> due = Due(hero, onOffer, ceiling, filled);
-                int gaps = due.Count;
-                if (gapsAtStart < 0)
-                {
-                    gapsAtStart = gaps;
-
-                    // What the armour order held back as he walked in, for the
-                    // census (see PurchaseWatch.RecordTrip).
-                    armorOnOffer = CountArmor(onOffer);
-                    armorHeldBack = armorOnOffer - CountArmor(due);
-                }
-                if (gaps <= 0) break;
-
                 int slice = pot / gaps;
                 if (slice <= 0) break;
 
-                Candidate candidate = BestOf(Due(hero, Candidates(hero, settlement, stock, ceiling, slice),
-                                                 ceiling, filled));
+                Candidate candidate = BestOf(Within(due, slice));
                 if (candidate == null) break;
+
+                // The shelves were read once, so a second slot can be offered
+                // the unit the first has just bought -- two quivers after the
+                // town's last stack of arrows. That closes the one slot; it
+                // used to end the whole trip.
+                if (!PurchaseService.InStock(settlement, candidate.Offer))
+                {
+                    closed.Add(candidate.Slot);
+                    continue;
+                }
 
                 int price = candidate.Offer.Price;
 
@@ -337,21 +368,24 @@ namespace HeroesEvolve
                 }
 
                 bought++;
+                closed.Add(candidate.Slot);
                 filled.Add(candidate.Slot);
                 pot -= price;
                 if (pot <= 0) break;
             }
 
-            LastTripGaps = gapsAtStart > 0 ? gapsAtStart : 0;
-            PurchaseWatch.RecordTrip(hero, bought, armorOnOffer, armorHeldBack, CountArmor(filled) > 0);
+            LastTripGaps = improvable;
+            LastTripDue = dueAtStart;
+            PurchaseWatch.RecordTrip(hero, bought, armorOnOffer, armorHeldBack, heldBehind,
+                                     CountArmor(filled) > 0);
             return bought;
         }
 
         /// <summary>
-        /// The candidates a trip may still spend on: none for a slot already
-        /// bought for on this trip, and no armour more than a tier ahead of the
-        /// poorest piece he wears (see GearBalance). Weapons, the horse and its
-        /// harness pass untouched.
+        /// The candidates a trip may still spend on: none for a slot this trip
+        /// has closed, and no armour more than a tier ahead of the poorest
+        /// piece he wears (see GearBalance). Weapons, the horse and its harness
+        /// pass untouched.
         ///
         /// A slot bought for stays closed because the slices grow as a trip
         /// goes on. Without that, a helmet bought on a thin early share could
@@ -360,24 +394,26 @@ namespace HeroesEvolve
         ///
         /// The poorest piece is read off what he wears, not off what this town
         /// sells. A town with no coat for him sells him none of the gloves the
-        /// coat is holding back either, and he keeps the money for a town that
-        /// has one.
+        /// coat is holding back either: their share goes to whatever else is
+        /// due here, and what nothing due can use stays in his purse for a town
+        /// that has a coat.
         /// </summary>
         private static List<Candidate> Due(Hero hero, List<Candidate> found, int ceiling,
-                                           List<EquipmentIndex> filled)
+                                           List<EquipmentIndex> closed)
         {
             if (found.Count == 0) return found;
 
-            int worst = WorstArmorShortfall(hero, ceiling);
+            EquipmentIndex worstSlot;
+            int worst = WorstArmorShortfall(hero, ceiling, out worstSlot);
 
             List<Candidate> due = new List<Candidate>(found.Count);
             for (int i = 0; i < found.Count; i++)
             {
                 Candidate candidate = found[i];
-                if (filled != null && filled.Contains(candidate.Slot)) continue;
+                if (closed != null && closed.Contains(candidate.Slot)) continue;
 
                 if (SlotMapping.IsArmor(candidate.Slot)
-                    && !GearBalance.IsDue(ArmorShortfall(hero, candidate.Slot, ceiling), worst))
+                    && !GearBalance.IsDue(Shortfall(hero, candidate.Slot, ceiling), worst))
                 {
                     continue;
                 }
@@ -388,28 +424,89 @@ namespace HeroesEvolve
             return due;
         }
 
-        /// <summary>How far behind the poorest armour he could trade is.</summary>
-        private static int WorstArmorShortfall(Hero hero, int ceiling)
+        /// <summary>
+        /// The same candidates chosen again under a smaller limit: each slot's
+        /// best offer that fits, and no slot at all where none does.
+        ///
+        /// Exactly what building them afresh at that limit would give -- the
+        /// offers do not depend on the limit, only the choice among them does
+        /// -- without reading the shelves a second time on every pass.
+        /// </summary>
+        private static List<Candidate> Within(List<Candidate> found, int limit)
+        {
+            List<Candidate> fitting = new List<Candidate>(found.Count);
+            for (int i = 0; i < found.Count; i++)
+            {
+                Candidate candidate = found[i];
+                List<MarketOffer> offers = candidate.Offers;
+                if (offers == null) continue;
+
+                for (int j = 0; j < offers.Count; j++)
+                {
+                    if (offers[j].Price > limit) continue;
+
+                    Candidate pick = new Candidate();
+                    pick.Slot = candidate.Slot;
+                    pick.Offer = offers[j];
+                    pick.WornTier = candidate.WornTier;
+                    pick.WornFine = candidate.WornFine;
+                    pick.WornOwnCulture = candidate.WornOwnCulture;
+                    pick.Offers = offers;
+                    fitting.Add(pick);
+                    break;
+                }
+            }
+            return fitting;
+        }
+
+        /// <summary>How far behind the poorest armour he could trade is, and which piece that is.</summary>
+        private static int WorstArmorShortfall(Hero hero, int ceiling, out EquipmentIndex worstSlot)
         {
             int worst = 0;
+            worstSlot = EquipmentIndex.None;
             foreach (EquipmentIndex slot in SlotMapping.ArmorSlots)
             {
-                int shortfall = ArmorShortfall(hero, slot, ceiling);
-                if (shortfall > worst) worst = shortfall;
+                int shortfall = Shortfall(hero, slot, ceiling);
+                if (shortfall > worst)
+                {
+                    worst = shortfall;
+                    worstSlot = slot;
+                }
             }
             return worst;
         }
 
         /// <summary>
-        /// Tiers one armour slot is behind the best it could hold. Zero for an
-        /// empty slot, for gear the market never takes off him, and for
-        /// anything the game ranks below tier 1: none of those can be bought
-        /// for, so none may be the piece the rest wait on.
+        /// Whether the armour order keeps this slot from being bought for right
+        /// now, and behind which piece.
         ///
-        /// Internal so the census measures evenness with this exact number
-        /// rather than a copy of it.
+        /// For the census and the dry run. Without it both could see gloves on
+        /// the shelf beside a lord who bought nothing, and could only blame
+        /// the wrong thing for it.
         /// </summary>
-        internal static int ArmorShortfall(Hero hero, EquipmentIndex slot, int ceiling)
+        internal static bool IsHeldBack(Hero hero, EquipmentIndex slot, int ceiling,
+                                        out EquipmentIndex behind, out int shortfall, out int worst)
+        {
+            behind = EquipmentIndex.None;
+            shortfall = 0;
+            worst = 0;
+            if (hero == null || hero.BattleEquipment == null || !SlotMapping.IsArmor(slot)) return false;
+
+            worst = WorstArmorShortfall(hero, ceiling, out behind);
+            shortfall = Shortfall(hero, slot, ceiling);
+            return !GearBalance.IsDue(shortfall, worst);
+        }
+
+        /// <summary>
+        /// Tiers one slot is behind the best it could hold. Zero for an empty
+        /// slot, for gear the market never takes off him, and for anything the
+        /// game ranks below tier 1: none of those can be bought for, so none
+        /// may be the piece the rest wait on.
+        ///
+        /// Internal so the census measures with this exact number rather than
+        /// a copy of it: headroom for every slot, evenness for the armour.
+        /// </summary>
+        internal static int Shortfall(Hero hero, EquipmentIndex slot, int ceiling)
         {
             ItemObject worn = hero.BattleEquipment[slot].Item;
             if (!IsTradeable(worn)) return 0;
@@ -448,8 +545,9 @@ namespace HeroesEvolve
         }
 
         /// <summary>
-        /// How many slots the last trip had to divide its money between, as
-        /// first counted: armour waiting on a poorer piece is not among them.
+        /// How many slots the town could improve when the last trip began,
+        /// before the armour order held any back. LastTripDue is how many of
+        /// them the money was first divided between.
         ///
         /// Reported so the log can say whether a small purchase was a lord with
         /// little to fix or a lord whose share came out too thin to buy
@@ -466,6 +564,14 @@ namespace HeroesEvolve
         /// being too small and raises it.
         /// </summary>
         public static int LastTripGaps;
+
+        /// <summary>
+        /// How many of LastTripGaps were due when the trip began. Fewer means
+        /// the armour order held pieces back. A trip may still buy more than
+        /// this, since pieces held back reopen once the one holding them back
+        /// has been bought.
+        /// </summary>
+        public static int LastTripDue;
 
         /// <summary>
         /// The ceiling on one shopping trip: eleven, every slot a lord has.
@@ -522,6 +628,7 @@ namespace HeroesEvolve
             candidate.WornTier = wornTier;
             candidate.WornFine = wornFine;
             candidate.WornOwnCulture = wornOwn;
+            candidate.Offers = offers;
             found.Add(candidate);
         }
 

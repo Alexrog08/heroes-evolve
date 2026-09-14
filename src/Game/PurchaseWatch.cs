@@ -65,6 +65,7 @@ namespace HeroesEvolve
         private static int _tripsHeldBack;
         private static int _tripsHeldBackNoArmor;
         private static int _piecesHeldBack;
+        private static readonly Dictionary<string, int> _heldBackBehind = new Dictionary<string, int>();
         private static readonly Dictionary<string, Streak> _held = new Dictionary<string, Streak>();
 
         /// <summary>Called when a campaign is loaded; statics outlive one campaign.</summary>
@@ -86,6 +87,7 @@ namespace HeroesEvolve
             _tripsHeldBack = 0;
             _tripsHeldBackNoArmor = 0;
             _piecesHeldBack = 0;
+            _heldBackBehind.Clear();
             _held.Clear();
         }
 
@@ -98,9 +100,12 @@ namespace HeroesEvolve
         /// him no armour at all is the order waiting on a piece this town does
         /// not have -- the behaviour it was built to have, and the one that must
         /// not go on for long.
+        ///
+        /// heldBehind names the piece they were held back behind, so the census
+        /// can say which slot most often keeps lords waiting.
         /// </summary>
         public static void RecordTrip(Hero hero, int bought, int armorOnOffer, int armorHeldBack,
-                                      bool boughtArmor)
+                                      string heldBehind, bool boughtArmor)
         {
             try
             {
@@ -115,6 +120,7 @@ namespace HeroesEvolve
                 {
                     _tripsHeldBack++;
                     _piecesHeldBack += armorHeldBack;
+                    if (heldBehind != null) Bump(_heldBackBehind, heldBehind);
                     if (waited) _tripsHeldBackNoArmor++;
                 }
 
@@ -253,6 +259,7 @@ namespace HeroesEvolve
                             + " heldBack=" + _tripsHeldBack
                             + " heldBackBoughtNoArmour=" + _tripsHeldBackNoArmor
                             + " piecesHeldBack=" + _piecesHeldBack);
+                ModLog.Info("ARMOURORDER heldBackBehind " + Top(_heldBackBehind, 5));
                 ModLog.Info("ARMOURORDER " + Streaks());
             }
             catch
@@ -308,7 +315,7 @@ namespace HeroesEvolve
                         if (!ShoppingTrip.IsTradeable(hero.BattleEquipment[slots[i]].Item)) continue;
 
                         has[i] = true;
-                        shortfall[i] = ShoppingTrip.ArmorShortfall(hero, slots[i], ceiling);
+                        shortfall[i] = ShoppingTrip.Shortfall(hero, slots[i], ceiling);
                         pieces++;
                         if (shortfall[i] > most) most = shortfall[i];
                         if (shortfall[i] < least) least = shortfall[i];

@@ -131,6 +131,11 @@ namespace HeroesEvolve
             ModLog.Enabled = Settings.EnableLogging;
             Settings.SetExcludedItems(settings.ExcludedItems);
 
+            // The best tier on sale was scanned against the old list. Forgotten
+            // every time rather than only on a change, because swapping one id
+            // for another leaves the settings description below the same.
+            ItemCatalog.ResetSession();
+
             // Only when something actually moved. MCM does not raise a change
             // per property or per slider step: BaseSettingsContainer.SaveSettings
             // writes the file and then raises PropertyChanged exactly once, with

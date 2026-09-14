@@ -255,7 +255,10 @@ namespace HeroesEvolve
             return _bestBuyable != null && _bestBuyable.TryGetValue(type, out tier) ? tier : 0;
         }
 
-        /// <summary>Forgets the scan, so the next campaign loaded reads its own catalogue.</summary>
+        /// <summary>
+        /// Forgets the scan: on every campaign load, and whenever the exclusion
+        /// list may have changed, since the scan leaves refused items out.
+        /// </summary>
         public static void ResetSession()
         {
             _bestBuyable = null;
@@ -279,6 +282,13 @@ namespace HeroesEvolve
                 // horses top out at 5 while lords are seen riding 6.
                 ItemObject item = all[i];
                 if (item == null || IsIrreplaceable(item)) continue;
+
+                // Nor anything the market refuses outright. The exclusion list
+                // exists for mod outliers, and an outlier is exactly what sets a
+                // best: exclude the only tier-6 cape, leave the cap at 6, and a
+                // lord in a tier-3 cape waits for ever on a piece nobody will
+                // sell him, with the rest of his armour held back behind it.
+                if (IsRefused(item)) continue;
 
                 int tier = (int)item.Tier + 1;
                 if (tier < 1) continue;

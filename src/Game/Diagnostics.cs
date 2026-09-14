@@ -2201,27 +2201,25 @@ namespace HeroesEvolve
         /// <summary>
         /// Tiers this one slot is below what the hero could actually reach.
         ///
-        /// Two things are excluded, and both were inflating the number. An empty
-        /// slot contributes nothing, because the market only ever replaces what
-        /// a hero already wears. And an unranked item contributes nothing
-        /// either: the engine deliberately refuses to touch one, so counting it
-        /// as behind reports demand that will never be served by design.
+        /// Three things are excluded, and all of them were inflating the number.
+        /// An empty slot contributes nothing, because the market only ever
+        /// replaces what a hero already wears. An unranked item contributes
+        /// nothing either: the engine deliberately refuses to touch one, so
+        /// counting it as behind reports demand that will never be served by
+        /// design. Nor does gear no merchant could have sold him, which the
+        /// engine refuses to take off him for the same reason.
         ///
-        /// The ceiling is narrowed to the best tier sold of this kind of item,
-        /// by the same measure the shopping order uses (GearBalance.Shortfall),
-        /// so the census cannot call a slot behind that the engine calls
-        /// finished. His merit may say tier 6, but if nobody sells leg armour
-        /// above tier 4 then he is not behind on boots, he is wearing the best
-        /// boots there are.
+        /// The ceiling is narrowed to the best tier sold of this kind of item.
+        /// All of it comes from ShoppingTrip.Shortfall, the number the armour
+        /// order itself runs on, so the census cannot call a slot behind that
+        /// the engine calls finished. His merit may say tier 6, but if nobody
+        /// sells leg armour above tier 4 then he is not behind on boots, he is
+        /// wearing the best boots there are.
         /// </summary>
         private static int SlotShortfall(Hero hero, EquipmentIndex slot, int ceiling,
                                          Dictionary<string, int> shortBySlot)
         {
-            ItemObject worn = hero.BattleEquipment[slot].Item;
-            if (worn == null) return 0;
-
-            int behind = GearBalance.Shortfall((int)worn.Tier + 1, ceiling,
-                                               ItemCatalog.BestBuyableTier(worn.ItemType));
+            int behind = ShoppingTrip.Shortfall(hero, slot, ceiling);
             if (behind <= 0) return 0;
 
             Bump(shortBySlot, SlotMapping.NameOf(slot));
@@ -2400,23 +2398,17 @@ namespace HeroesEvolve
         /// cheap boots.
         /// </summary>
         /// <summary>
-        /// The best tier that exists, per item type and culture. Built once per
-        /// census from the whole catalogue.
+        /// The best tier on sale for each armour slot, the mount and its
+        /// harness, in any culture: the numbers the headroom report and the
+        /// armour order both measure against (ItemCatalog.BestBuyableTier).
         ///
-        /// Without it the headroom report counts demand nobody can ever serve.
-        /// There is no leg armour above tier 3 in any culture but battania, and
-        /// no hand armour above tier 4 anywhere, while helmets run to tier 6 --
-        /// so a lord with a ceiling of 6 reads as three tiers behind on his
-        /// boots forever, and 445 lords "behind on legs" turns out to be mostly
-        /// a number about the catalogue rather than about him.
-        ///
-        /// That is the same trap as always in this project: a metric that cannot
-        /// tell "the engine is not working" from "there is nothing to do".
-        /// </summary>
-        /// <summary>
-        /// The best tier the catalogue holds for each armour slot, culture by
-        /// culture folded into one best. A slot whose cap is well below six is a
-        /// slot no lord can ever fill to his ceiling, however rich or skilled.
+        /// Without them the headroom report counts demand nobody can ever serve.
+        /// In the campaign this was measured on, nothing of leg or hand armour
+        /// was sold above tier 4 while helmets ran to 6, so a lord with a
+        /// ceiling of 6 would read as two tiers behind on his boots for ever --
+        /// a number about the catalogue rather than about him. The same trap as
+        /// always in this project: a metric that cannot tell "the engine is not
+        /// working" from "there is nothing to do".
         /// </summary>
         private static void ReportCatalogCap()
         {
@@ -2937,11 +2929,28 @@ namespace HeroesEvolve
             if (best == null)
             {
                 ShoppingTrip.Candidate ignoringMoney = ShoppingTrip.Best(hero, settlement, ceiling, null);
-                report.AppendLine(ignoringMoney == null
-                    ? "would buy: nothing"
-                    : "would buy: nothing -- priced out, best on offer is "
-                      + ignoringMoney.Offer.Item.StringId + " at " + ignoringMoney.Offer.Price
-                      + " against a limit of " + budget.Available(hero));
+
+                // The pile overload skips the armour order, so anything it finds
+                // that the town overload did not is armour held back behind a
+                // poorer piece.
+                ShoppingTrip.Candidate ignoringOrder = ShoppingTrip.Best(hero, settlement, stock, ceiling,
+                                                                         int.MaxValue);
+
+                if (ignoringMoney != null)
+                {
+                    report.AppendLine("would buy: nothing -- priced out, best on offer is "
+                                      + ignoringMoney.Offer.Item.StringId + " at " + ignoringMoney.Offer.Price
+                                      + " against a limit of " + budget.Available(hero));
+                }
+                else if (ignoringOrder != null)
+                {
+                    report.AppendLine("would buy: nothing -- everything on offer is armour held back"
+                                      + " behind a poorer piece (see HELD BACK above)");
+                }
+                else
+                {
+                    report.AppendLine("would buy: nothing");
+                }
             }
             else
             {
@@ -3030,11 +3039,17 @@ namespace HeroesEvolve
                 return;
             }
 
+            EquipmentIndex behind;
+            int shortfall, worst;
+            bool held = ShoppingTrip.IsHeldBack(hero, slot, ceiling, out behind, out shortfall, out worst);
+
             report.AppendLine("  " + name + ": " + worn.StringId + " t" + wornTier
                               + " -> " + offers[0].Item.StringId + " t" + offers[0].Tier
                               + " " + offers[0].Price + "d"
                               + (offers[0].OwnClass ? "" : " (different class)")
-                              + " [" + offers.Count + " offers]");
+                              + " [" + offers.Count + " offers]"
+                              + (held ? " HELD BACK: " + SlotMapping.NameOf(behind) + " is " + worst
+                                        + " tiers behind, this piece " + shortfall : ""));
         }
 
         /// <summary>
@@ -3122,9 +3137,9 @@ namespace HeroesEvolve
         ///
         /// The blocked tally is the point. Each key leads somewhere different:
         /// emptyShelf and wrongTier mean the engine is right and the lord waits
-        /// for a better market, while culture means the one policy chosen by
-        /// argument is what is stopping him, and that is the number worth
-        /// arguing about.
+        /// for a better market; heldBackByArmourOrder means he is waiting on a
+        /// poorer piece of armour, by design; and skillOrUsage means a policy
+        /// is what is stopping him, and that is the number worth arguing about.
         /// </summary>
         private static void ReportShopping(float clanWeight, float skillWeight, int minimumTier)
         {
@@ -3245,8 +3260,22 @@ namespace HeroesEvolve
             if (wornTier >= ceiling) return false;
 
             int sameKind, rightTier, foreign;
-            Bump(blockedBy, Blocker(stock, worn, culture, ceiling, MarketScanner.FineTierOf(worn),
-                                    out sameKind, out rightTier, out foreign));
+            string reason = Blocker(stock, worn, culture, ceiling, MarketScanner.FineTierOf(worn),
+                                    out sameKind, out rightTier, out foreign);
+
+            // Armour has no skill or usage to fail, so a piece that passed the
+            // tier test and still found nothing is, short of an excluded item,
+            // the armour order making him wait on a poorer piece. Named for what
+            // it is, or the census blames a policy that never touched it.
+            EquipmentIndex behind;
+            int shortfall, worst;
+            if (reason == "skillOrUsage"
+                && ShoppingTrip.IsHeldBack(hero, slot, ceiling, out behind, out shortfall, out worst))
+            {
+                reason = "heldBackByArmourOrder";
+            }
+
+            Bump(blockedBy, reason);
             return true;
         }
 

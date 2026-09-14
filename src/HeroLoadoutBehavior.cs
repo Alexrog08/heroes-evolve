@@ -319,6 +319,7 @@ namespace HeroesEvolve
                                 + " at=" + settlement.Name
                                 + " bought=" + bought
                                 + " gaps=" + ShoppingTrip.LastTripGaps
+                                + " due=" + ShoppingTrip.LastTripDue
                                 + " clanGold=" + (shopper.Clan != null ? shopper.Clan.Gold : 0));
                 }
             }

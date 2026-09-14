@@ -114,6 +114,26 @@ namespace HeroesEvolve
         }
 
         /// <summary>
+        /// Whether the town still holds the exact entry an offer was priced
+        /// from.
+        ///
+        /// A trip reads the shelves once, so a second slot can be offered the
+        /// unit the first has just bought. TryBuy refuses that as well, but a
+        /// refusal ends the trip; asking first lets the trip close that one
+        /// slot and carry on.
+        /// </summary>
+        internal static bool InStock(Settlement settlement, MarketOffer offer)
+        {
+            if (settlement == null || offer.Item == null) return false;
+
+            ItemRoster roster = settlement.ItemRoster;
+            if (roster == null) return false;
+
+            int index = roster.FindIndexOfElement(offer.Element);
+            return index >= 0 && roster.GetElementNumber(index) > 0;
+        }
+
+        /// <summary>
         /// Puts the displaced piece back on the town's shelf and pays for it,
         /// returning the part of that money the clan got back.
         ///
