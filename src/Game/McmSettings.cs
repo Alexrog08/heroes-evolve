@@ -40,139 +40,151 @@ namespace HeroesEvolve
     /// </summary>
     public class McmSettings : AttributeGlobalSettings<McmSettings>
     {
-        // GroupOrder counts DOWN the screen: 6 is the top group, 1 the bottom.
+        // Sections follow what the mod does, one area each, in the order the
+        // store page tells it: skills, the kit a stripped lord is given, what a
+        // lord may wear and buy, caravans, robbery, then the switches that are
+        // about you and about the log. Each area's on switch comes first in its
+        // section and its dials after it, so nothing about buying sits among
+        // the skills or the other way round.
         //
+        // GroupOrder counts DOWN the screen: 8 is the top section, 1 the bottom.
         // Backwards from the obvious reading, and not a matter of taste --
         // MCM's CollectionExtensions.SortDefault orders groups by
         // OrderByDescending(isDefaultGroup).ThenByDescending(Order), so the
-        // largest number is drawn first. Numbering these 0..5 in the natural
-        // direction stands the screen on its head and puts the diagnostic
-        // button above the switches. Renumber only in this direction.
+        // largest number is drawn first. Renumber only in this direction.
         //
-        // Within a group the properties sort the other way (OrderBy, then by
-        // display name), so declaration order here does not survive; nothing
-        // sets a per-property Order, which leaves them alphabetical.
+        // Within a section properties sort the other way, OrderBy(Order) and then
+        // by display name, which is why every property sets Order: without it
+        // they fall alphabetical and the switch lands among its own dials.
+        //
+        // Property names are what MCM saves values under. Moving a property to
+        // another section or renaming its label keeps the player's value;
+        // renaming the property itself would silently reset it.
 
         public override string Id { get { return "HeroesEvolve"; } }
         public override string DisplayName { get { return "Heroes Evolve"; } }
         public override string FolderName { get { return "HeroesEvolve"; } }
         public override string FormatType { get { return "json2"; } }
 
-        // ---- What runs ------------------------------------------------------
+        // ---- Skills -----------------------------------------------------------
 
-        [SettingPropertyBool("Give a starting kit to lords who have none", RequireRestart = false,
-            HintText = "Dresses a lord who has nothing: born in civilian clothes, or stripped by a captor. A plain kit for his culture and skills. The rest he buys.")]
-        [SettingPropertyGroup("What runs", GroupOrder = 6)]
-        public bool EnableRepair { get; set; } = true;
-
-        [SettingPropertyBool("Grow lords' skills", RequireRestart = false,
+        [SettingPropertyBool("Grow lords' skills", RequireRestart = false, Order = 0,
             HintText = "Without this a lord stagnates and ends up weaker than his own troops. One to three points a year, toward a ceiling set by his talent.")]
-        [SettingPropertyGroup("What runs", GroupOrder = 6)]
+        [SettingPropertyGroup("Skills", GroupOrder = 8)]
         public bool EnableSkillGrowth { get; set; } = true;
 
-        [SettingPropertyBool("Start lords on their curve", RequireRestart = false,
+        [SettingPropertyBool("Start lords on their curve", RequireRestart = false, Order = 1,
             HintText = "New campaigns only, and only with skill growth on. Every lord starts where his age and talent put him, then grows. Saves already under way are left alone.")]
-        [SettingPropertyGroup("What runs", GroupOrder = 6)]
+        [SettingPropertyGroup("Skills", GroupOrder = 8)]
         public bool StartLordsOnCurve { get; set; } = true;
 
-        [SettingPropertyBool("Lords buy their own gear", RequireRestart = false,
-            HintText = "In a town, a lord buys a better version of what he already carries. Never changes what kind of fighter he is, never fills an empty slot.")]
-        [SettingPropertyGroup("What runs", GroupOrder = 6)]
-        public bool EnablePurchases { get; set; } = true;
+        // ---- Starting kits --------------------------------------------------
 
-        [SettingPropertyBool("Include my own clan", RequireRestart = false,
-            HintText = "Your family and the companions leading your parties and caravans. Turn off if you outfit them by hand. Heroes inside your own party are never touched either way.")]
-        [SettingPropertyGroup("What runs", GroupOrder = 6)]
-        public bool ManageOwnClan { get; set; } = true;
+        [SettingPropertyBool("Give a starting kit to lords who have none", RequireRestart = false, Order = 0,
+            HintText = "Dresses a lord who has nothing: born in civilian clothes, or stripped by a captor. A plain kit for his culture and skills. The rest he buys.")]
+        [SettingPropertyGroup("Starting kits", GroupOrder = 7)]
+        public bool EnableRepair { get; set; } = true;
 
-        [SettingPropertyBool("Write hev.log", RequireRestart = false,
-            HintText = "Logs what the mod does, in the Bannerlord logs folder. The census below needs it on.")]
-        [SettingPropertyGroup("What runs", GroupOrder = 6)]
-        public bool EnableLogging { get; set; } = true;
-
-        // ---- How good a lord's gear may get ---------------------------------
-
-        [SettingPropertyInteger("Skill per tier of gear", 1, 400, "0", RequireRestart = false,
-            HintText = "Combat skill that buys one tier. LOWER MEANS BETTER EQUIPPED LORDS, and this is the first setting to reach for.")]
-        [SettingPropertyGroup("Gear ceiling", GroupOrder = 5)]
-        public int SkillPerTier { get; set; } = 28;
-
-        [SettingPropertyFloatingInteger("Weight of personal skill", 0f, 10f, "0.00",
-            RequireRestart = false,
-            HintText = "How far a lord's own fighting skill decides what he is allowed to wear.")]
-        [SettingPropertyGroup("Gear ceiling", GroupOrder = 5)]
-        public float SkillWeight { get; set; } = 1.0f;
-
-        [SettingPropertyFloatingInteger("Weight of clan standing", 0f, 10f, "0.00",
-            RequireRestart = false,
-            HintText = "Zero by default: two campaigns found clan tier does not predict what a lord wears. Raise it to have great houses dress their lords well regardless of merit.")]
-        [SettingPropertyGroup("Gear ceiling", GroupOrder = 5)]
-        public float ClanWeight { get; set; } = 0.0f;
-
-        [SettingPropertyInteger("Lowest ceiling", 1, 6, "0", RequireRestart = false,
-            HintText = "Nobody is capped below this, however unskilled.")]
-        [SettingPropertyGroup("Gear ceiling", GroupOrder = 5)]
-        public int MinimumTier { get; set; } = 1;
-
-        [SettingPropertyInteger("Archer threshold", 0, 300, "0", RequireRestart = false,
-            HintText = "How far a ranged skill must lead his melee skills before he is given a bow or a crossbow. Lower makes more archers.")]
-        [SettingPropertyGroup("Gear ceiling", GroupOrder = 5)]
+        [SettingPropertyInteger("Archer threshold", 0, 300, "0", RequireRestart = false, Order = 1,
+            HintText = "How far a ranged skill must lead his melee skills before his kit is a bow or a crossbow. Lower makes more archers.")]
+        [SettingPropertyGroup("Starting kits", GroupOrder = 7)]
         public int DominanceMargin { get; set; } = 30;
 
-        // ---- Money ----------------------------------------------------------
+        // ---- Shopping ---------------------------------------------------------
+
+        [SettingPropertyBool("Lords buy their own gear", RequireRestart = false, Order = 0,
+            HintText = "In a town, a lord buys a better version of what he already carries. Never changes what kind of fighter he is, never fills an empty slot.")]
+        [SettingPropertyGroup("Shopping", GroupOrder = 6)]
+        public bool EnablePurchases { get; set; } = true;
 
         [SettingPropertyFloatingInteger("Chance of shopping per town visit", 0f, 1f, "0.00",
-            RequireRestart = false,
+            RequireRestart = false, Order = 1,
             HintText = "How often a lord bothers with the market. One trip a day at most. At 1.00 he stops at every town he enters.")]
-        [SettingPropertyGroup("Money", GroupOrder = 4)]
+        [SettingPropertyGroup("Shopping", GroupOrder = 6)]
         public float ShopChancePerVisit { get; set; } = 0.25f;
 
+        [SettingPropertyFloatingInteger("Share of the purse per shopping trip", 0f, 1f, "0.00",
+            RequireRestart = false, Order = 2,
+            HintText = "What a lord may spend in one trip, split between the slots that town can improve. Lower means poorer lords and slower recovery after a robbery.")]
+        [SettingPropertyGroup("Shopping", GroupOrder = 6)]
+        public float SpendingShare { get; set; } = 0.30f;
+
+        [SettingPropertyFloatingInteger("Gold held back for troops", 0f, 10f, "0.00",
+            RequireRestart = false, Order = 3,
+            HintText = "Reserve kept back so buying gear can never stop a clan paying its men. Zero removes the safety net.")]
+        [SettingPropertyGroup("Shopping", GroupOrder = 6)]
+        public float ReserveMultiplier { get; set; } = 1.0f;
+
         // Listed in CultureChoice's own order, so the selected index is the value.
-        [SettingPropertyDropdown("Culture favoured when buying", RequireRestart = false,
+        [SettingPropertyDropdown("Culture favoured when buying", RequireRestart = false, Order = 4,
             HintText = "Whose colours a lord prefers at market: his clan's, his own, or none. Worth one tier. Repair still dresses him as his own people.")]
-        [SettingPropertyGroup("Money", GroupOrder = 4)]
+        [SettingPropertyGroup("Shopping", GroupOrder = 6)]
         public Dropdown<string> ShoppingCulture { get; set; } =
             new Dropdown<string>(new string[] { "His clan's culture", "His own culture", "No preference" }, 1);
 
-        [SettingPropertyFloatingInteger("Share of the purse per shopping trip", 0f, 1f, "0.00",
-            RequireRestart = false,
-            HintText = "What a lord may spend in one trip, split between the slots that town can improve. Lower means poorer lords and slower recovery after a robbery.")]
-        [SettingPropertyGroup("Money", GroupOrder = 4)]
-        public float SpendingShare { get; set; } = 0.30f;
+        // ---- Gear limits: what a lord may wear, from a kit or a market --------------
+
+        [SettingPropertyInteger("Skill per tier of gear", 1, 400, "0", RequireRestart = false, Order = 0,
+            HintText = "Combat skill that buys one tier. LOWER MEANS BETTER EQUIPPED LORDS, and this is the first setting to reach for.")]
+        [SettingPropertyGroup("Gear limits", GroupOrder = 5)]
+        public int SkillPerTier { get; set; } = 28;
+
+        [SettingPropertyFloatingInteger("Weight of personal skill", 0f, 10f, "0.00",
+            RequireRestart = false, Order = 1,
+            HintText = "How far a lord's own fighting skill decides what he is allowed to wear.")]
+        [SettingPropertyGroup("Gear limits", GroupOrder = 5)]
+        public float SkillWeight { get; set; } = 1.0f;
+
+        [SettingPropertyFloatingInteger("Weight of clan standing", 0f, 10f, "0.00",
+            RequireRestart = false, Order = 2,
+            HintText = "Zero by default: two campaigns found clan tier does not predict what a lord wears. Raise it to have great houses dress their lords well regardless of merit.")]
+        [SettingPropertyGroup("Gear limits", GroupOrder = 5)]
+        public float ClanWeight { get; set; } = 0.0f;
+
+        [SettingPropertyInteger("Lowest ceiling", 1, 6, "0", RequireRestart = false, Order = 3,
+            HintText = "Nobody is capped below this, however unskilled.")]
+        [SettingPropertyGroup("Gear limits", GroupOrder = 5)]
+        public int MinimumTier { get; set; } = 1;
+
+        [SettingPropertyText("Items lords never get", RequireRestart = false, Order = 4,
+            HintText = "Item ids separated by commas: never bought, never given in a kit. For outliers another mod adds. Incendiaries are already refused.")]
+        [SettingPropertyGroup("Gear limits", GroupOrder = 5)]
+        public string ExcludedItems { get; set; } = "";
+
+        // ---- Caravans ------------------------------------------------------------
 
         [SettingPropertyFloatingInteger("Caravan leader's commission", 0f, 1f, "0.00",
-            RequireRestart = false,
+            RequireRestart = false, Order = 0,
             HintText = "What a caravan's leader keeps of its profit, and the only money he buys gear with. Higher arms him better and pays you less. At 1.00 the caravan pays you nothing.")]
-        [SettingPropertyGroup("Money", GroupOrder = 4)]
+        [SettingPropertyGroup("Caravans", GroupOrder = 4)]
         public float CaravanGearShare { get; set; } = 0.50f;
 
-        [SettingPropertyFloatingInteger("Gold held back for troops", 0f, 10f, "0.00",
-            RequireRestart = false,
-            HintText = "Reserve kept back so buying gear can never stop a clan paying its men. Zero removes the safety net.")]
-        [SettingPropertyGroup("Money", GroupOrder = 4)]
-        public float ReserveMultiplier { get; set; } = 1.0f;
+        // ---- Robbery ---------------------------------------------------------------
 
-        // ---- Losing gear ------------------------------------------------------
-
-        [SettingPropertyBool("Lords rob their prisoners", RequireRestart = false,
+        [SettingPropertyBool("Lords rob their prisoners", RequireRestart = false, Order = 0,
             HintText = "A captor may strip a captured lord, according to his character. Gear is moved and never destroyed, so it can be won back. You rob by asking, in conversation.")]
-        [SettingPropertyGroup("Capture", GroupOrder = 3)]
+        [SettingPropertyGroup("Robbery", GroupOrder = 3)]
         public bool EnableCaptureLoss { get; set; } = true;
 
         [SettingPropertyFloatingInteger("Robbery chance multiplier", 0f, 5f, "0.00",
-            RequireRestart = false,
+            RequireRestart = false, Order = 1,
             HintText = "Scales every captor's chance; bandits always rob. At 1.00 robbery becomes the biggest influence on what lords wear. 0.00 stops it without switching the system off.")]
-        [SettingPropertyGroup("Capture", GroupOrder = 3)]
+        [SettingPropertyGroup("Robbery", GroupOrder = 3)]
         public float PlunderChance { get; set; } = 0.5f;
 
-        // ---- Items -------------------------------------------------------------
+        // ---- Your own clan ----------------------------------------------------------
 
-        [SettingPropertyText("Items lords may never buy", RequireRestart = false,
-            HintText = "Item ids separated by commas. For outliers another mod adds -- five hundred lords will find one faster than you will. Incendiaries are already refused.")]
-        [SettingPropertyGroup("Items", GroupOrder = 2)]
-        public string ExcludedItems { get; set; } = "";
+        [SettingPropertyBool("Include my own clan", RequireRestart = false, Order = 0,
+            HintText = "Your family and the companions leading your parties and caravans. Turn off if you outfit them by hand. Heroes inside your own party are never touched either way.")]
+        [SettingPropertyGroup("Your own clan", GroupOrder = 2)]
+        public bool ManageOwnClan { get; set; } = true;
 
         // ---- Diagnostics --------------------------------------------------------
+
+        [SettingPropertyBool("Write hev.log", RequireRestart = false, Order = 0,
+            HintText = "Logs what the mod does, in the Bannerlord logs folder. The census below needs it on.")]
+        [SettingPropertyGroup("Diagnostics", GroupOrder = 1)]
+        public bool EnableLogging { get; set; } = true;
 
         /// <summary>
         /// The census, without the developer console.
@@ -190,6 +202,7 @@ namespace HeroesEvolve
         [SettingPropertyButton("Write a census to hev.log",
             Content = "Run",
             RequireRestart = false,
+            Order = 1,
             HintText = "Surveys every lord -- tiers, gear, skills, traits -- into hev.log. Reads only and changes nothing. About half a second. Needs logging on.")]
         [SettingPropertyGroup("Diagnostics", GroupOrder = 1)]
         public Action RunCensus { get; set; } = Census;
