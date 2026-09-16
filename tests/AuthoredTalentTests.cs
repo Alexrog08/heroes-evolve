@@ -20,6 +20,21 @@ namespace HeroesEvolve.Tests
                         "a skill another mod adds counts as civil, as growth already treats it");
             Check.True(AuthoredTalent.DomainOf(null) == null, "no id, no domain");
 
+            // Only a sheet written for a station speaks for the man on it.
+            Check.True(AuthoredTalent.IsLeaderTemplate("spc_swordsman_skills_ruler"), "Caladog's ruler sheet does");
+            Check.True(AuthoredTalent.IsLeaderTemplate("spc_tactician_skills_ruler"),
+                       "so does a ruler sheet three kings share: it was written for the crown");
+            Check.True(AuthoredTalent.IsLeaderTemplate("spc_quartermaster_skills_clanleader"), "and Hurunag's clan-leader sheet");
+            Check.True(!AuthoredTalent.IsLeaderTemplate("spc_knight_skills"), "an archetype twenty-two knights share does not");
+            Check.True(!AuthoredTalent.IsLeaderTemplate("spc_archer_skills_rookie"),
+                       "nor a rookie sheet, whose youth the curve already counts");
+            Check.True(!AuthoredTalent.IsLeaderTemplate("spc_sailor_skills_viking"), "nor a War Sails archetype");
+            Check.True(!AuthoredTalent.IsLeaderTemplate("lord_forest_bandits_1"), "nor a bandit chief's own sheet");
+            Check.True(!AuthoredTalent.IsLeaderTemplate("spc_ruler_guard_skills"), "naming rulers somewhere is not being one");
+            Check.True(AuthoredTalent.IsLeaderTemplate("MOD_WARLORD_SKILLS_RULER"), "a mod's sheet counts whatever its case");
+            Check.True(!AuthoredTalent.IsLeaderTemplate(null), "no template, no author");
+            Check.True(!AuthoredTalent.IsLeaderTemplate(""), "nor an empty one");
+
             // Intent on the scale the curve peaks on, where the norm is 150.
             Check.True(Near(AuthoredTalent.From(150), 1.00f), "a template best of 150 is an ordinary talent");
             Check.True(Near(AuthoredTalent.From(300), 2.00f), "Caladog's 300 is a prodigy's");

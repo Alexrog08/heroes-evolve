@@ -15,9 +15,38 @@ namespace HeroesEvolve.Core
     /// The scale is the curve's own. A template best of 150, the peak norm, is
     /// an ordinary talent; Caladog's 300 is a prodigy's. A domain the template
     /// leaves empty carries no intent at all, and the hash decides it instead.
+    ///
+    /// Only a template written for a station counts; see IsLeaderTemplate.
     /// </summary>
     public static class AuthoredTalent
     {
+        /// <summary>
+        /// Whether a skill template was written for a ruler or a clan leader,
+        /// the only kind that says how formidable one particular man was meant
+        /// to be.
+        ///
+        /// Nearly every lord TaleWorlds wrote carries a template, but 428 lords
+        /// share 74 of them, and most are archetypes: twenty-two knights on one
+        /// sheet, eighteen chatelaines on another. Read as talent, an archetype
+        /// deals every lord on it the same gift, and its rookie variant is worse:
+        /// it writes a young lord's youth into his sheet, and the curve then
+        /// takes his age off a second time. What is left once archetypes are set
+        /// aside is the rulers' sheets and Hurunag's -- ten characters written
+        /// for what they are, which is where TaleWorlds' intent actually lives.
+        ///
+        /// A ruler template several kings share still counts: it was written for
+        /// the crown, not for a kind of soldier. Matched on the id's ending,
+        /// whatever its case, so a mod that follows TaleWorlds' naming is read
+        /// the same way; one that does not simply leaves its lords on the hash.
+        /// </summary>
+        public static bool IsLeaderTemplate(string templateId)
+        {
+            if (string.IsNullOrEmpty(templateId)) return false;
+
+            return templateId.EndsWith("_ruler", System.StringComparison.OrdinalIgnoreCase)
+                || templateId.EndsWith("_clanleader", System.StringComparison.OrdinalIgnoreCase);
+        }
+
         /// <summary>
         /// Which talent a template skill speaks for: Talent.Combat for the six
         /// weapons, Talent.Naval for the War Sails skills, and Talent.Civil for

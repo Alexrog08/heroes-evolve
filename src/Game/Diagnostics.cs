@@ -1872,26 +1872,43 @@ namespace HeroesEvolve
         }
 
         /// <summary>
-        /// Where the rulers' talent comes from, and what it came to.
+        /// Who takes his talent from what TaleWorlds wrote, from which sheet,
+        /// and what it came to -- with every reigning ruler alongside.
         ///
         /// Written to check the reading of TaleWorlds' templates against figures
         /// worked out from the game's own files before any of it shipped. On the
-        /// vanilla roster the kings should read, in combat: Caladog 2.00,
-        /// Halthdar 1.73, Derthert, Monchug and Raganvad 1.67, Unqid 1.53,
-        /// Garios 1.47, Lucon and Rhagaea 1.40 -- every one of them authored. A
-        /// vanilla king reported as hash means the template was not where it was
-        /// expected, and the whole reading needs looking at again.
+        /// vanilla roster ten characters should read as authored and no more:
+        /// the kings, in combat Caladog 2.00, Halthdar 1.73, Derthert, Monchug
+        /// and Raganvad 1.67, Unqid 1.53, Garios 1.47, Lucon and Rhagaea 1.40,
+        /// and Hurunag at 1.47 on his clan-leader sheet. A vanilla king reported
+        /// as hash means the template was not where it was expected.
+        ///
+        /// The archetype count is the other half. The first campaign on authored
+        /// talent read 406 of 441 lords from their templates, because nearly all
+        /// of them carry one; those lords are counted here as keeping the hash,
+        /// so a count that climbs back toward the hundreds means archetypes are
+        /// being read as talent again.
         /// </summary>
         private static void ReportAuthoredTalent()
         {
-            int growing = 0, authored = 0;
+            int growing = 0, authored = 0, archetype = 0;
+            List<Hero> shown = new List<Hero>();
             foreach (Hero hero in Hero.AllAliveHeroes)
             {
                 try
                 {
                     if (!HeroFilter.IsEligibleToGrow(hero)) continue;
                     growing++;
-                    if (HeroTalent.IsAuthored(hero)) authored++;
+
+                    if (HeroTalent.IsAuthored(hero))
+                    {
+                        authored++;
+                        shown.Add(hero);
+                    }
+                    else if (HeroTalent.TemplateOf(hero) != null)
+                    {
+                        archetype++;
+                    }
                 }
                 catch
                 {
@@ -1900,20 +1917,38 @@ namespace HeroesEvolve
             }
 
             ModLog.Info("TALENT authored " + authored + " of " + growing
-                        + " growing heroes take their talent from what TaleWorlds wrote");
+                        + " growing heroes take their talent from a ruler or clan-leader template;"
+                        + " archetype=" + archetype + " carry a shared template and keep the hash");
 
             foreach (Kingdom kingdom in Kingdom.All)
             {
                 try
                 {
                     Hero ruler = kingdom.Leader;
-                    if (ruler == null) continue;
+                    if (ruler != null && !shown.Contains(ruler)) shown.Add(ruler);
+                }
+                catch
+                {
+                    // Same reason as above.
+                }
+            }
 
-                    ModLog.Info("TALENT ruler " + ruler.Name + " (" + kingdom.Name + ", " + (int)ruler.Age + ")"
-                                + " combat=" + TwoPlaces(HeroTalent.For(ruler, Talent.Combat))
-                                + " civil=" + TwoPlaces(HeroTalent.For(ruler, Talent.Civil))
-                                + " naval=" + TwoPlaces(HeroTalent.For(ruler, Talent.Naval))
-                                + " source=" + HeroTalent.SourceOf(ruler));
+            for (int i = 0; i < shown.Count; i++)
+            {
+                try
+                {
+                    Hero hero = shown[i];
+                    string template = HeroTalent.TemplateOf(hero);
+                    string station = hero.IsKingdomLeader && hero.Clan != null && hero.Clan.Kingdom != null
+                                   ? "ruler " + hero.Name + " (" + hero.Clan.Kingdom.Name
+                                   : "lord " + hero.Name + " (" + (hero.Clan != null ? hero.Clan.Name.ToString() : "no clan");
+
+                    ModLog.Info("TALENT " + station + ", " + (int)hero.Age + ")"
+                                + " template=" + (template ?? "none")
+                                + " combat=" + TwoPlaces(HeroTalent.For(hero, Talent.Combat))
+                                + " civil=" + TwoPlaces(HeroTalent.For(hero, Talent.Civil))
+                                + " naval=" + TwoPlaces(HeroTalent.For(hero, Talent.Naval))
+                                + " source=" + HeroTalent.SourceOf(hero));
                 }
                 catch
                 {
