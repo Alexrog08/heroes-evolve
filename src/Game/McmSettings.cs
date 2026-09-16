@@ -70,7 +70,7 @@ namespace HeroesEvolve
         public bool EnableSkillGrowth { get; set; } = true;
 
         [SettingPropertyBool("Start lords on their curve", RequireRestart = false,
-            HintText = "New campaigns only. Every lord starts where his age and talent put him, then grows. Saves already under way are left alone.")]
+            HintText = "New campaigns only, and only with skill growth on. Every lord starts where his age and talent put him, then grows. Saves already under way are left alone.")]
         [SettingPropertyGroup("What runs", GroupOrder = 6)]
         public bool StartLordsOnCurve { get; set; } = true;
 

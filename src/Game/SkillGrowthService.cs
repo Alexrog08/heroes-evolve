@@ -296,6 +296,11 @@ namespace HeroesEvolve
                 ItemObject item = hero.BattleEquipment[SlotMapping.WeaponSlot(i)].Item;
                 if (item == null) continue;
 
+                // The placeholder the game hands a hero who comes of age is the
+                // bug's marker, not his weapon: training One Handed for it would
+                // teach him the sword the repair is about to take away.
+                if (HeroAdapter.IsVanillaDummySword(item)) continue;
+
                 WeaponCategory category = ItemClassifier.Classify(item);
                 SkillObject skill = SkillFor(category);
                 if (skill == null) continue;

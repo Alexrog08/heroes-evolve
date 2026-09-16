@@ -17,9 +17,13 @@ namespace HeroesEvolve
     ///      lower a skill. ChangeSkillLevel cannot: it turns the change into
     ///      experience, and AddSkillXp ignores anything that is not positive.
     ///   2. Perks he no longer meets the requirement for. There is no public way
-    ///      to drop a single perk, so all are cleared and the ones he still
-    ///      earns are given back; the game's own daily selection fills in the
-    ///      rest as he grows.
+    ///      to drop a single perk, so the skills that lost one are cleared with
+    ///      the game's own PerkHelper.ClearPerksForSkill and the perks he still
+    ///      earns there are given back; the game's daily selection fills in the
+    ///      rest as he grows. Only those skills: giving a perk back re-runs its
+    ///      opening, and AgingCampaignBehavior grants an extra life each time Cheat
+    ///      Death or Health Advise opens without ever taking one away, so clearing
+    ///      every skill handed duplicate lives to lords who lost a perk anywhere.
     ///   3. Level and points, through InitializeHeroDeveloper, again the game's
     ///      own routine. It recomputes his total experience from the new skills
     ///      -- the one step with no public setter -- climbs his level from zero,
@@ -42,6 +46,8 @@ namespace HeroesEvolve
             public int Raised;
             public int Lowered;
             public int PerksDropped;
+            public int PerksRestored;
+            public int Unarmed;
             public int Failed;
             public readonly List<int> LevelBefore = new List<int>();
             public readonly List<int> LevelAfter = new List<int>();
@@ -59,6 +65,16 @@ namespace HeroesEvolve
                 {
                     if (!HeroFilter.IsEligibleToGrow(hero)) continue;
                     if (hero.HeroDeveloper == null || hero.BattleEquipment == null) continue;
+
+                    // Without a real weapon the curve cannot tell what he fights
+                    // with, and would cap every weapon skill he has at half his
+                    // target -- his real one included. He keeps the sheet he was
+                    // generated with; the repair arms him and growth takes over.
+                    if (SkillGrowthService.RankedWeaponSkills(hero).Count == 0)
+                    {
+                        tally.Unarmed++;
+                        continue;
+                    }
 
                     int levelBefore = hero.Level;
                     int bestBefore = HeroAdapter.ReadSkills(hero).MaxCombatSkill;
@@ -88,6 +104,8 @@ namespace HeroesEvolve
                         + " skillsRaised=" + tally.Raised
                         + " skillsLowered=" + tally.Lowered
                         + " perksDropped=" + tally.PerksDropped
+                        + " perksRestored=" + tally.PerksRestored
+                        + " skippedUnarmed=" + tally.Unarmed
                         + " failed=" + tally.Failed);
             ModLog.Info("STARTCURVE level before " + Diagnostics.Percentiles(tally.LevelBefore));
             ModLog.Info("STARTCURVE level after  " + Diagnostics.Percentiles(tally.LevelAfter));
@@ -130,7 +148,7 @@ namespace HeroesEvolve
                 else tally.Lowered++;
             }
 
-            tally.PerksDropped += DropUnearnedPerks(hero);
+            DropUnearnedPerks(hero, tally);
 
             // Level to zero first: CheckLevel only ever climbs, and the routine
             // starts from wherever the level already stands.
@@ -145,24 +163,36 @@ namespace HeroesEvolve
             if (developer.UnspentAttributePoints < 0) developer.UnspentAttributePoints = 0;
         }
 
-        private static int DropUnearnedPerks(Hero hero)
+        private static void DropUnearnedPerks(Hero hero, Tally tally)
         {
-            List<PerkObject> kept = new List<PerkObject>();
-            int dropped = 0;
-
+            HashSet<SkillObject> losing = new HashSet<SkillObject>();
             foreach (PerkObject perk in PerkObject.All)
             {
-                if (perk == null || !hero.GetPerkValue(perk)) continue;
+                if (perk == null || perk.Skill == null || !hero.GetPerkValue(perk)) continue;
+                if (hero.GetSkillValue(perk.Skill) >= perk.RequiredSkillValue) continue;
 
-                if (perk.Skill != null && hero.GetSkillValue(perk.Skill) < perk.RequiredSkillValue) dropped++;
-                else kept.Add(perk);
+                losing.Add(perk.Skill);
+                tally.PerksDropped++;
+            }
+            if (losing.Count == 0) return;
+
+            List<PerkObject> kept = new List<PerkObject>();
+            foreach (PerkObject perk in PerkObject.All)
+            {
+                if (perk == null || perk.Skill == null || !losing.Contains(perk.Skill)) continue;
+                if (!hero.GetPerkValue(perk)) continue;
+                if (hero.GetSkillValue(perk.Skill) >= perk.RequiredSkillValue) kept.Add(perk);
             }
 
-            if (dropped == 0) return 0;
-
-            hero.ClearPerks();
-            for (int i = 0; i < kept.Count; i++) hero.HeroDeveloper.AddPerk(kept[i]);
-            return dropped;
+            foreach (SkillObject skill in losing)
+            {
+                Helpers.PerkHelper.ClearPerksForSkill(hero, skill);
+            }
+            for (int i = 0; i < kept.Count; i++)
+            {
+                hero.HeroDeveloper.AddPerk(kept[i]);
+            }
+            tally.PerksRestored += kept.Count;
         }
     }
 }

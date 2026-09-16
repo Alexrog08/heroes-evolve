@@ -169,6 +169,15 @@ namespace HeroesEvolve
 
             if (!Settings.StartLordsOnCurve) return;
 
+            // The curve sets lords where growth will carry them from. With growth
+            // off nothing would ever carry them anywhere, and every lord on the map
+            // would stay where the curve left him for the rest of the campaign.
+            if (!Settings.EnableSkillGrowth)
+            {
+                ModLog.Info("STARTCURVE skipped: skill growth is off, so lords set on the curve would never grow");
+                return;
+            }
+
             try
             {
                 StartingCurvePass.Apply();
@@ -299,6 +308,13 @@ namespace HeroesEvolve
         {
             try
             {
+                // A new campaign raises this for every party placed in a town
+                // before the session has launched, and so before the starting
+                // curve has run: a lord shopping then is judged on the sheet the
+                // generator wrote, and keeps what it lets him buy. Nothing here
+                // waits on the first day.
+                if (_newCampaign) return;
+
                 if (settlement == null) return;
                 if (party != null && party == MobileParty.MainParty) return;
 
