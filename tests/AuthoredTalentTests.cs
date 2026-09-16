@@ -35,24 +35,50 @@ namespace HeroesEvolve.Tests
             Check.True(!AuthoredTalent.IsLeaderTemplate(null), "no template, no author");
             Check.True(!AuthoredTalent.IsLeaderTemplate(""), "nor an empty one");
 
-            // Intent on the scale the curve peaks on, where the norm is 150.
-            Check.True(Near(AuthoredTalent.From(150), 1.00f), "a template best of 150 is an ordinary talent");
-            Check.True(Near(AuthoredTalent.From(300), 2.00f), "Caladog's 300 is a prodigy's");
-            Check.True(Near(AuthoredTalent.From(210), 1.40f), "Lucon's 210 is well above the norm");
-            Check.True(AuthoredTalent.From(250) > AuthoredTalent.From(230), "TaleWorlds' order is kept");
+            // Intent measured against TaleWorlds' own lords, one field at a time:
+            // a sheet as strong as the typical grown lord's is the typical talent
+            // the hash deals, and a king stands above the map about as far as he
+            // stood above the lords TaleWorlds wrote.
+            Check.True(Near(AuthoredTalent.From(AuthoredTalent.TypicalCombat, Talent.Combat), Talent.Median),
+                       "a sword arm like the typical grown lord's is the typical talent");
+            Check.True(Near(AuthoredTalent.From(AuthoredTalent.TypicalCivil, Talent.Civil), Talent.Median),
+                       "so is a head for business like his");
+            Check.True(Near(AuthoredTalent.From(AuthoredTalent.TypicalNaval, Talent.Naval), Talent.Median),
+                       "and seamanship like the typical War Sails lord's");
+            Check.True(Reads(AuthoredTalent.From(210, Talent.Combat), 1.53f), "Lucon's 210 stands well above the map");
+            Check.True(Reads(AuthoredTalent.From(220, Talent.Combat), 1.60f), "Garios's 220 higher still");
+            Check.True(Reads(AuthoredTalent.From(250, Talent.Combat), 1.82f), "Derthert's 250 among its best");
+            Check.True(Near(AuthoredTalent.From(300, Talent.Combat), Talent.Maximum), "Caladog's 300 is as gifted as a lord can be");
+            Check.True(AuthoredTalent.From(260, Talent.Combat) > AuthoredTalent.From(250, Talent.Combat), "TaleWorlds' order is kept");
+
+            // Each field against its own. A civil best is the best of a dozen
+            // skills and runs higher than any one weapon, so the same number
+            // says less there.
+            Check.True(AuthoredTalent.From(230, Talent.Civil) < AuthoredTalent.From(230, Talent.Combat),
+                       "230 in stewardship is less remarkable than 230 with a sword");
+            Check.True(Reads(AuthoredTalent.From(250, Talent.Civil), 1.49f), "Unqid's 250 in trade is above the typical grown lord");
+            Check.True(Reads(AuthoredTalent.From(280, Talent.Naval), 1.67f), "Halthdar's 280 at sea is well above it");
+            Check.True(Near(AuthoredTalent.From(180, null), Talent.Median),
+                       "a field nobody named is measured as combat, as HeroTalent looks it up");
 
             // Inside the talent bounds, whatever a template says.
-            Check.True(Near(AuthoredTalent.From(80), Talent.Minimum), "a weak template is held at the least talent");
-            Check.True(Near(AuthoredTalent.From(400), Talent.Maximum), "a template past the curve is held at the most");
+            Check.True(Near(AuthoredTalent.From(60, Talent.Combat), Talent.Minimum), "a weak template is held at the least talent");
+            Check.True(Near(AuthoredTalent.From(400, Talent.Civil), Talent.Maximum), "a template past the curve is held at the most");
 
             // Nothing written means no intent, and the caller keeps the hash.
-            Check.True(AuthoredTalent.From(0) == 0f, "a domain the template leaves empty carries no intent");
-            Check.True(AuthoredTalent.From(-5) == 0f, "nor does a nonsense value");
+            Check.True(AuthoredTalent.From(0, Talent.Combat) == 0f, "a domain the template leaves empty carries no intent");
+            Check.True(AuthoredTalent.From(-5, Talent.Naval) == 0f, "nor does a nonsense value");
         }
 
         private static bool Near(float a, float b)
         {
             return Math.Abs(a - b) < 0.001f;
+        }
+
+        /// <summary>Whether a talent reads as this figure to two places, the way the census prints it.</summary>
+        private static bool Reads(float value, float twoPlaces)
+        {
+            return Math.Abs(value - twoPlaces) < 0.005f;
         }
     }
 }

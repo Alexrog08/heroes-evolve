@@ -160,9 +160,9 @@ namespace HeroesEvolve
                     }
                 }
 
-                values[CombatIndex] = AuthoredTalent.From(combat);
-                values[CivilIndex] = AuthoredTalent.From(civil);
-                values[NavalIndex] = AuthoredTalent.From(naval);
+                values[CombatIndex] = AuthoredTalent.From(combat, Talent.Combat);
+                values[CivilIndex] = AuthoredTalent.From(civil, Talent.Civil);
+                values[NavalIndex] = AuthoredTalent.From(naval, Talent.Naval);
             }
             catch
             {

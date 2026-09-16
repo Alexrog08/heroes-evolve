@@ -12,9 +12,15 @@ namespace HeroesEvolve.Core
     /// talent and his own focus allow, rather than being pinned to the number
     /// he was written with.
     ///
-    /// The scale is the curve's own. A template best of 150, the peak norm, is
-    /// an ordinary talent; Caladog's 300 is a prodigy's. A domain the template
-    /// leaves empty carries no intent at all, and the hash decides it instead.
+    /// The scale is TaleWorlds' own nobility. A sheet as strong as the typical
+    /// grown lord's is the typical talent the hash deals, and a stronger one
+    /// lifts its man above the map about as far as TaleWorlds lifted him above
+    /// the lords it wrote. The first version read 150, the peak norm, as
+    /// ordinary; but the hash deals its middle hero 1.31, not 1.0, so every
+    /// king landed a step below where he was written -- Garios ahead of 83% of
+    /// TaleWorlds' grown lords, yet of only 68% of the map. A domain the
+    /// template leaves empty carries no intent at all, and the hash decides it
+    /// instead.
     ///
     /// Only a template written for a station counts; see IsLeaderTemplate.
     /// </summary>
@@ -83,18 +89,44 @@ namespace HeroesEvolve.Core
         }
 
         /// <summary>
-        /// The talent a template's best skill in one domain implies, on the
-        /// curve's own scale and inside the talent bounds. Zero when the template
-        /// writes nothing there, so the caller falls back to the hash.
+        /// What TaleWorlds' typical grown lord was written with, field by field:
+        /// the median best skill among the 139 lords aged thirty-five or more
+        /// that the base game and War Sails ship, read from their templates.
+        ///
+        /// Each field against its own, because they do not run alike. A civil
+        /// best is the best of a dozen skills and sits higher than any single
+        /// weapon, so 230 in stewardship is ordinary where 230 with a sword is
+        /// not. Naval is measured on the eight grown War Sails lords who carry it.
+        ///
+        /// Grown lords only: a young lord's sheet has his youth written into it,
+        /// and the curve accounts for youth on its own.
         /// </summary>
-        public static float From(int bestAuthoredSkill)
+        public const int TypicalCombat = 180;
+        public const int TypicalCivil = 220;
+        public const int TypicalNaval = 220;
+
+        /// <summary>
+        /// The talent a template's best skill in one field implies, measured
+        /// against the typical grown lord in that field and kept inside the
+        /// talent bounds. Zero when the template writes nothing there, so the
+        /// caller falls back to the hash. A field it does not recognise is
+        /// measured as combat, as HeroTalent looks it up.
+        /// </summary>
+        public static float From(int bestAuthoredSkill, string domain)
         {
             if (bestAuthoredSkill <= 0) return 0f;
 
-            float talent = bestAuthoredSkill / (float)SkillGrowth.PeakNorm;
+            float talent = bestAuthoredSkill / (float)TypicalFor(domain) * Talent.Median;
             if (talent < Talent.Minimum) return Talent.Minimum;
             if (talent > Talent.Maximum) return Talent.Maximum;
             return talent;
+        }
+
+        private static int TypicalFor(string domain)
+        {
+            if (domain == Talent.Civil) return TypicalCivil;
+            if (domain == Talent.Naval) return TypicalNaval;
+            return TypicalCombat;
         }
     }
 }

@@ -49,6 +49,16 @@ namespace HeroesEvolve.Tests
             }
 
             Check.True(middle > sample.Count / 2, "most heroes sit near the norm");
+
+            // Half the map either side of the median. AuthoredTalent anchors
+            // TaleWorlds' typical lord there, so the claim is measured, not assumed.
+            int below = 0;
+            for (int i = 0; i < sample.Count; i++)
+            {
+                if (sample[i] < Talent.Median) below++;
+            }
+            Check.True(below * 100 > sample.Count * 45 && below * 100 < sample.Count * 55,
+                       "half of all heroes are dealt less than the median talent");
             Check.True(extremes * 10 < sample.Count, "fewer than one in ten is extreme");
 
             // The three domains are independent: a lord's sword arm says nothing

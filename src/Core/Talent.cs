@@ -48,6 +48,15 @@ namespace HeroesEvolve.Core
         public const float Maximum = 2.07f;
 
         /// <summary>
+        /// The talent the middle hero is dealt. The two draws For averages are
+        /// symmetric about the centre of the bounds, so half of all heroes fall
+        /// either side of the midpoint -- 1.31, not the 1.0 a multiplier
+        /// suggests, and a lord of median talent peaks near 197 rather than on
+        /// the peak norm. AuthoredTalent anchors TaleWorlds' typical lord here.
+        /// </summary>
+        public const float Median = (Minimum + Maximum) / 2f;
+
+        /// <summary>
         /// The three separate aptitudes a hero has. A man good with a lance is
         /// not thereby good with a ledger, and a single talent figure would have
         /// made every prodigy a prodigy at everything.

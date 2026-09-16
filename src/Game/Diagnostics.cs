@@ -1878,10 +1878,12 @@ namespace HeroesEvolve
         /// Written to check the reading of TaleWorlds' templates against figures
         /// worked out from the game's own files before any of it shipped. On the
         /// vanilla roster ten characters should read as authored and no more:
-        /// the kings, in combat Caladog 2.00, Halthdar 1.73, Derthert, Monchug
-        /// and Raganvad 1.67, Unqid 1.53, Garios 1.47, Lucon and Rhagaea 1.40,
-        /// and Hurunag at 1.47 on his clan-leader sheet. A vanilla king reported
-        /// as hash means the template was not where it was expected.
+        /// the kings, in combat Caladog 2.07, Halthdar 1.89, Derthert, Monchug
+        /// and Raganvad 1.82, Unqid 1.67, Garios 1.60, Lucon and Rhagaea 1.53,
+        /// and Hurunag at 1.60 on his clan-leader sheet. In civil, Unqid 1.49,
+        /// Caladog, Garios, Lucon and Rhagaea 1.43, the other kings 1.37 and
+        /// Hurunag 1.31; at sea, Halthdar 1.67. A vanilla king reported as hash
+        /// means the template was not where it was expected.
         ///
         /// The archetype count is the other half. The first campaign on authored
         /// talent read 406 of 441 lords from their templates, because nearly all
@@ -1919,6 +1921,10 @@ namespace HeroesEvolve
             ModLog.Info("TALENT authored " + authored + " of " + growing
                         + " growing heroes take their talent from a ruler or clan-leader template;"
                         + " archetype=" + archetype + " carry a shared template and keep the hash");
+            ModLog.Info("TALENT anchor the typical grown lord TaleWorlds wrote, combat=" + AuthoredTalent.TypicalCombat
+                        + " civil=" + AuthoredTalent.TypicalCivil
+                        + " naval=" + AuthoredTalent.TypicalNaval
+                        + ", reads as the median talent " + TwoPlaces(Talent.Median));
 
             foreach (Kingdom kingdom in Kingdom.All)
             {
