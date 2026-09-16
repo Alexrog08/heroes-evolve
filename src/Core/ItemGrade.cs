@@ -30,7 +30,9 @@ namespace HeroesEvolve.Core
         /// <summary>
         /// Rusty, bent, worn, cracked: a piece made worse than the item it is.
         ///
-        /// Never bought, and never taken off a prisoner as an upgrade. The market
+        /// Never bought, and never put on by a captor out of what he stripped
+        /// from a prisoner. The robbery itself still takes every piece, damaged
+        /// or not; a damaged one simply stays in his baggage to be sold. The market
         /// rules measure an item by the tier of the item, not of the piece, so a
         /// rusty sword and a sound one tied on every term but price -- and the
         /// cheaper won. A lord in a town that stocked both walked out with the
