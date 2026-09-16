@@ -56,6 +56,10 @@ namespace HeroesEvolve
         private static readonly int[] _lootKinds = new int[SwapRules.KindCount];
         private static readonly int[] _boughtByGrade = new int[ItemGrade.Count];
         private static readonly int[] _lootByGrade = new int[ItemGrade.Count];
+        private static int _boughtForQuality;
+        private static int _boughtOverDamaged;
+        private static int _lootForQuality;
+        private static int _lootOverDamaged;
         private static readonly Dictionary<string, int> _classChanges = new Dictionary<string, int>();
         private static readonly Dictionary<string, int> _typeChanges = new Dictionary<string, int>();
 
@@ -82,6 +86,10 @@ namespace HeroesEvolve
             System.Array.Clear(_lootKinds, 0, _lootKinds.Length);
             System.Array.Clear(_boughtByGrade, 0, _boughtByGrade.Length);
             System.Array.Clear(_lootByGrade, 0, _lootByGrade.Length);
+            _boughtForQuality = 0;
+            _boughtOverDamaged = 0;
+            _lootForQuality = 0;
+            _lootOverDamaged = 0;
             _classChanges.Clear();
             _typeChanges.Clear();
             _lastBoughtDay.Clear();
@@ -158,16 +166,21 @@ namespace HeroesEvolve
             }
         }
 
-        /// <summary>One piece bought, what it replaced, and how sound the piece was.</summary>
-        public static void RecordPurchase(Hero hero, EquipmentIndex slot, ItemObject sold, ItemObject bought,
-                                          int boughtGrade)
+        /// <summary>
+        /// One piece bought and what it replaced, both as pieces: how sound each
+        /// was, and whether quality is what made the purchase an upgrade at all.
+        /// </summary>
+        public static void RecordPurchase(Hero hero, EquipmentIndex slot, EquipmentElement sold,
+                                          EquipmentElement bought, bool forQuality)
         {
             try
             {
                 Stamp();
                 _pieces++;
                 Bump(_bySlot, SlotMapping.NameOf(slot));
-                _boughtByGrade[ItemGrade.Index(boughtGrade)]++;
+                _boughtByGrade[ItemGrade.Index(MarketScanner.GradeOf(bought))]++;
+                if (forQuality) _boughtForQuality++;
+                if (sold.Item != null && ItemGrade.IsDamaged(MarketScanner.GradeOf(sold))) _boughtOverDamaged++;
 
                 // Same hero, same slot, same day. A lord gets one trip a day, so
                 // this is a trip that paid twice for one slot -- which the trip
@@ -181,7 +194,7 @@ namespace HeroesEvolve
                     _lastBoughtDay[key] = today;
                 }
 
-                Classify(_weaponKinds, true, hero, slot, sold, bought);
+                Classify(_weaponKinds, true, hero, slot, sold.Item, bought.Item);
             }
             catch
             {
@@ -195,18 +208,45 @@ namespace HeroesEvolve
         /// crossed here either -- and a regression in the rules would show up
         /// here with nobody looking at the market.
         /// </summary>
-        public static void RecordLootSwap(Hero hero, EquipmentIndex slot, ItemObject gaveUp, ItemObject took,
-                                          int tookGrade)
+        public static void RecordLootSwap(Hero hero, EquipmentIndex slot, EquipmentElement gaveUp,
+                                          EquipmentElement took, bool forQuality)
         {
             try
             {
                 Stamp();
-                _lootByGrade[ItemGrade.Index(tookGrade)]++;
-                Classify(_lootKinds, false, hero, slot, gaveUp, took);
+                _lootByGrade[ItemGrade.Index(MarketScanner.GradeOf(took))]++;
+                if (forQuality) _lootForQuality++;
+                if (gaveUp.Item != null && ItemGrade.IsDamaged(MarketScanner.GradeOf(gaveUp))) _lootOverDamaged++;
+                Classify(_lootKinds, false, hero, slot, gaveUp.Item, took.Item);
             }
             catch
             {
                 // Same reason as above.
+            }
+        }
+
+        /// <summary>
+        /// Whether a swap is an upgrade only because of quality: measured by the
+        /// items alone, with the same culture preference, it would not have been.
+        /// The count of these is what the quality valuation actually changed.
+        /// </summary>
+        internal static bool ForQuality(Hero hero, EquipmentElement worn, MarketOffer offer)
+        {
+            try
+            {
+                if (hero == null || worn.Item == null || offer.Item == null) return false;
+
+                CultureObject culture = hero.Culture;
+                if (culture == null && hero.Clan != null) culture = hero.Clan.Culture;
+
+                return !MarketRules.IsUpgrade(MarketScanner.FineTierOf(worn.Item),
+                                              ItemCatalog.IsOwnCulture(worn.Item, culture),
+                                              MarketScanner.FineTierOf(offer.Item), offer.OwnCulture,
+                                              offer.Tier, int.MaxValue);
+            }
+            catch
+            {
+                return false;
             }
         }
 
@@ -262,7 +302,11 @@ namespace HeroesEvolve
                 ModLog.Info("PURCHASE slotBoughtTwiceSameDay=" + _slotTwiceSameDay + " (expect 0)");
                 ModLog.Info("LOOTFIT weapons " + Kinds(_lootKinds));
                 ModLog.Info("QUALITY bought " + ItemGrade.Describe(_boughtByGrade) + " (expect poor=0 inferior=0)");
+                ModLog.Info("QUALITY boughtBecauseOfQuality=" + _boughtForQuality
+                            + " boughtOverDamaged=" + _boughtOverDamaged);
                 ModLog.Info("QUALITY lootTaken " + ItemGrade.Describe(_lootByGrade) + " (expect poor=0 inferior=0)");
+                ModLog.Info("QUALITY lootTakenBecauseOfQuality=" + _lootForQuality
+                            + " lootTakenOverDamaged=" + _lootOverDamaged);
 
                 ModLog.Info("ARMOURORDER tripsWithArmourOnOffer=" + _tripsArmorOnOffer
                             + " boughtArmour=" + _tripsBoughtArmor

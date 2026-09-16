@@ -3023,6 +3023,9 @@ namespace HeroesEvolve
         private static void ReportQuality()
         {
             int[] shelves = new int[ItemGrade.Count];
+            List<int>[] armourValue = new List<int>[ItemGrade.Count];
+            for (int g = 0; g < ItemGrade.Count; g++) armourValue[g] = new List<int>();
+
             foreach (Settlement settlement in Settlement.All)
             {
                 try
@@ -3039,7 +3042,12 @@ namespace HeroesEvolve
                         if (item == null) continue;
                         if (!item.HasArmorComponent && item.WeaponComponent == null && !item.HasHorseComponent) continue;
 
-                        shelves[ItemGrade.Index(MarketScanner.GradeOf(element.EquipmentElement))] += element.Amount;
+                        int grade = ItemGrade.Index(MarketScanner.GradeOf(element.EquipmentElement));
+                        shelves[grade] += element.Amount;
+                        if (item.HasArmorComponent && grade != ItemGrade.Common)
+                        {
+                            armourValue[grade].Add(MarketScanner.QualityValueOf(element.EquipmentElement));
+                        }
                     }
                 }
                 catch
@@ -3048,6 +3056,15 @@ namespace HeroesEvolve
                 }
             }
             ModLog.Info("QUALITY shelves " + ItemGrade.Describe(shelves) + " (units of gear across every town)");
+
+            // What each grade of armour on sale is worth, in hundredths of a tier,
+            // by the game's own armour formula and never a whole tier either way.
+            // Everything else is worth a flat 30 a grade and needs no line.
+            for (int g = 0; g < ItemGrade.Count; g++)
+            {
+                if (armourValue[g].Count == 0) continue;
+                ModLog.Info("QUALITY armourValue " + ItemGrade.NameOf(g) + " " + Percentiles(armourValue[g]));
+            }
 
             int[] yourParty = new int[ItemGrade.Count];
             int[] yourClan = new int[ItemGrade.Count];
@@ -3081,7 +3098,8 @@ namespace HeroesEvolve
 
                         if (pieces == null) pieces = new StringBuilder();
                         else pieces.Append(", ");
-                        pieces.Append(element.GetModifiedItemName());
+                        pieces.Append(element.GetModifiedItemName())
+                              .Append(" (").Append(MarketScanner.QualityValueOf(element)).Append(')');
                     }
 
                     if (pieces == null) continue;
@@ -3262,7 +3280,7 @@ namespace HeroesEvolve
             }
 
             int wornTier = MarketScanner.TierOf(worn);
-            int wornFine = MarketScanner.FineTierOf(worn);
+            int wornFine = MarketScanner.FineTierOf(hero.BattleEquipment[slot]);
             if (wornTier >= ceiling)
             {
                 // Above is not the same as at, and reading "t6 at ceiling" on a
@@ -3386,8 +3404,8 @@ namespace HeroesEvolve
 
                 bool own = ItemCatalog.IsOwnCulture(item, culture);
                 if (!MarketRules.IsUpgrade(wornFine, wornOwn,
-                                           MarketScanner.FineTierOf(item), own,
-                                           MarketScanner.TierOf(item), ceiling)) continue;
+                                           stock[i].FineTier, own,
+                                           stock[i].Tier, ceiling)) continue;
                 rightTier++;
 
                 // Counted, not blamed. Culture stopped refusing anything when it
@@ -3539,7 +3557,7 @@ namespace HeroesEvolve
             if (wornTier >= ceiling) return false;
 
             int sameKind, rightTier, foreign;
-            string reason = Blocker(stock, worn, culture, ceiling, MarketScanner.FineTierOf(worn),
+            string reason = Blocker(stock, worn, culture, ceiling, MarketScanner.FineTierOf(hero.BattleEquipment[slot]),
                                     out sameKind, out rightTier, out foreign);
 
             // Armour has no skill or usage to fail, so a piece that passed the

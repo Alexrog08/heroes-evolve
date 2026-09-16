@@ -34,7 +34,10 @@ namespace HeroesEvolve
         /// <summary>1-based, the vocabulary the ceiling speaks.</summary>
         public int Tier;
 
-        /// <summary>The game's fractional tier in hundredths, same 1-based scale.</summary>
+        /// <summary>
+        /// The piece's fractional tier in hundredths, same 1-based scale, with its
+        /// quality counted in -- see QualityValue.
+        /// </summary>
         public int FineTier;
     }
 }

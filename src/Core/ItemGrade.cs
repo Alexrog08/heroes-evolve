@@ -51,6 +51,12 @@ namespace HeroesEvolve.Core
             return grade;
         }
 
+        /// <summary>A grade's name as the census prints it.</summary>
+        public static string NameOf(int grade)
+        {
+            return Names[Index(grade)];
+        }
+
         /// <summary>A tally by grade the way the census prints it, every grade named.</summary>
         public static string Describe(int[] counts)
         {

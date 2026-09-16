@@ -74,7 +74,7 @@ namespace HeroesEvolve
                 entry.Item = item;
                 entry.Type = item.ItemType;
                 entry.Tier = TierOf(item);
-                entry.FineTier = FineTierOf(item);
+                entry.FineTier = FineTierOf(element.EquipmentElement);
                 stock.Add(entry);
             }
 
@@ -281,6 +281,40 @@ namespace HeroesEvolve
         {
             ItemModifier modifier = element.ItemModifier;
             return modifier != null ? (int)modifier.ItemQuality : ItemGrade.Common;
+        }
+
+        /// <summary>
+        /// A piece's fine tier as the market rules weigh it: the item's own, with
+        /// what its quality is worth counted in. The worn piece and the offered
+        /// one are both measured this way, so a lord in a rusty coat sees a sound
+        /// one of the same make as the upgrade it is.
+        /// </summary>
+        internal static int FineTierOf(EquipmentElement element)
+        {
+            ItemObject item = element.Item;
+            if (item == null) return 0;
+            return QualityValue.Apply(FineTierOf(item), QualityValueOf(element));
+        }
+
+        /// <summary>
+        /// What a piece's quality is worth, in hundredths of a tier: armour by the
+        /// game's own tier formula over the parts it covers, everything else by
+        /// grade. Zero for a piece with no modifier.
+        /// </summary>
+        internal static int QualityValueOf(EquipmentElement element)
+        {
+            ItemModifier modifier = element.ItemModifier;
+            ItemObject item = element.Item;
+            if (modifier == null || item == null) return 0;
+
+            if (item.HasArmorComponent)
+            {
+                ArmorComponent armor = item.ArmorComponent;
+                return QualityValue.ForArmor((int)item.ItemType, armor.HeadArmor, armor.BodyArmor,
+                                             armor.LegArmor, armor.ArmArmor, modifier.Armor);
+            }
+
+            return QualityValue.ForGrade((int)modifier.ItemQuality);
         }
 
         internal static int FineTierOf(ItemObject item)

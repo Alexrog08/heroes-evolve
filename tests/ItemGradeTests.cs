@@ -31,6 +31,8 @@ namespace HeroesEvolve.Tests
                         ItemGrade.Describe(new int[] { 1, 0, 7, 0, 2, 0 }),
                         "the census names every grade, zeros included");
             Check.Equal("none", ItemGrade.Describe(null), "and says so when there is nothing to name");
+            Check.Equal("masterwork", ItemGrade.NameOf(ItemGrade.Masterwork), "a grade is named on its own too");
+            Check.Equal("poor", ItemGrade.NameOf(-2), "a grade below the game's is named as poor");
         }
     }
 }

@@ -4,6 +4,7 @@ using TaleWorlds.CampaignSystem.Party;
 using TaleWorlds.CampaignSystem.Roster;
 using TaleWorlds.CampaignSystem.Settlements;
 using TaleWorlds.Core;
+using HeroesEvolve.Core;
 
 namespace HeroesEvolve
 {
@@ -106,9 +107,12 @@ namespace HeroesEvolve
                         + " tier=" + offer.Tier
                         + " price=" + offer.Price
                         + " hero=" + heroPart + " clan=" + clanPart
-                        + " sold=" + (displaced.Item != null ? displaced.Item.StringId : "<nothing>"));
+                        + " sold=" + (displaced.Item != null ? displaced.Item.StringId : "<nothing>")
+                        + " grade=" + ItemGrade.NameOf(MarketScanner.GradeOf(offer.Element))
+                        + " soldGrade=" + ItemGrade.NameOf(MarketScanner.GradeOf(displaced)));
 
-            PurchaseWatch.RecordPurchase(hero, slot, displaced.Item, offer.Item, MarketScanner.GradeOf(offer.Element));
+            PurchaseWatch.RecordPurchase(hero, slot, displaced, offer.Element,
+                                         PurchaseWatch.ForQuality(hero, displaced, offer));
 
             return true;
         }

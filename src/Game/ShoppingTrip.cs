@@ -154,12 +154,13 @@ namespace HeroesEvolve
                 // what he fights with: he chose it, the sword was handed to him.
                 bool prefersBlunt = WeaponPerks.FavoursAxeOrMace(hero, category);
 
+                int wornFine = FineOf(hero.BattleEquipment[slot]);
                 List<MarketOffer> offers = MarketScanner.Weapons(stock, settlement, hero, category, culture,
-                                                                 ceiling, FineOf(worn),
+                                                                 ceiling, wornFine,
                                                                  ItemCatalog.IsOwnCulture(worn, culture),
                                                                  skills, mounted, partner,
                                                                  prefersBlunt);
-                Add(found, slot, offers, worn, culture, limit);
+                Add(found, slot, offers, worn, wornFine, culture, limit);
             }
 
             foreach (EquipmentIndex slot in SlotMapping.ArmorSlots)
@@ -168,10 +169,11 @@ namespace HeroesEvolve
                 if (worn == null) continue;
                 if (ItemCatalog.IsIrreplaceable(worn)) continue;
 
+                int wornFine = FineOf(hero.BattleEquipment[slot]);
                 List<MarketOffer> offers = MarketScanner.Armor(stock, settlement, hero, worn.ItemType,
-                                                               culture, ceiling, FineOf(worn),
+                                                               culture, ceiling, wornFine,
                                                                ItemCatalog.IsOwnCulture(worn, culture));
-                Add(found, slot, offers, worn, culture, limit);
+                Add(found, slot, offers, worn, wornFine, culture, limit);
             }
 
             ItemObject mount = hero.BattleEquipment[EquipmentIndex.Horse].Item;
@@ -179,11 +181,12 @@ namespace HeroesEvolve
             {
                 if (!ItemCatalog.IsIrreplaceable(mount))
                 {
+                    int mountFine = FineOf(hero.BattleEquipment[EquipmentIndex.Horse]);
                     List<MarketOffer> mounts = MarketScanner.Mounts(stock, settlement, hero, culture,
-                                                                    ceiling, FineOf(mount),
+                                                                    ceiling, mountFine,
                                                                     ItemCatalog.IsOwnCulture(mount, culture),
                                                                     skills);
-                    Add(found, EquipmentIndex.Horse, mounts, mount, culture, limit);
+                    Add(found, EquipmentIndex.Horse, mounts, mount, mountFine, culture, limit);
                 }
 
                 // The harness hangs off the mount only for the family match -- a
@@ -195,10 +198,11 @@ namespace HeroesEvolve
                 ItemObject harness = hero.BattleEquipment[EquipmentIndex.HorseHarness].Item;
                 if (harness != null && !ItemCatalog.IsIrreplaceable(harness))
                 {
+                    int harnessFine = FineOf(hero.BattleEquipment[EquipmentIndex.HorseHarness]);
                     List<MarketOffer> harnesses = MarketScanner.Harnesses(stock, settlement, hero, mount,
-                                                                          culture, ceiling, FineOf(harness),
+                                                                          culture, ceiling, harnessFine,
                                                                           ItemCatalog.IsOwnCulture(harness, culture));
-                    Add(found, EquipmentIndex.HorseHarness, harnesses, harness, culture, limit);
+                    Add(found, EquipmentIndex.HorseHarness, harnesses, harness, harnessFine, culture, limit);
                 }
             }
 
@@ -596,7 +600,7 @@ namespace HeroesEvolve
         /// perfectly good cheaper upgrade sat on the same shelf.
         /// </summary>
         private static void Add(List<Candidate> found, EquipmentIndex slot,
-                                List<MarketOffer> offers, ItemObject worn,
+                                List<MarketOffer> offers, ItemObject worn, int wornFine,
                                 CultureObject culture, int limit)
         {
             if (offers == null || offers.Count == 0) return;
@@ -613,7 +617,6 @@ namespace HeroesEvolve
             if (chosen < 0) return;
 
             int wornTier = TierOf(worn);
-            int wornFine = FineOf(worn);
             bool wornOwn = ItemCatalog.IsOwnCulture(worn, culture);
 
             MarketOffer offer = offers[chosen];
@@ -638,10 +641,14 @@ namespace HeroesEvolve
             return MarketScanner.TierOf(item);
         }
 
-        /// <summary>The same tier in hundredths, as the upgrade rule speaks it.</summary>
-        private static int FineOf(ItemObject item)
+        /// <summary>
+        /// The worn piece's tier in hundredths, as the upgrade rule speaks it:
+        /// the piece rather than the item, so its quality counts exactly as the
+        /// offer's does.
+        /// </summary>
+        private static int FineOf(EquipmentElement piece)
         {
-            return MarketScanner.FineTierOf(item);
+            return MarketScanner.FineTierOf(piece);
         }
     }
 }
