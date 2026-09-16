@@ -1878,7 +1878,7 @@ namespace HeroesEvolve
         /// Written to check the reading of TaleWorlds' templates against figures
         /// worked out from the game's own files before any of it shipped. On the
         /// vanilla roster ten characters should read as authored and no more:
-        /// the kings, in combat Caladog 2.07, Halthdar 1.89, Derthert, Monchug
+        /// the kings, in combat Caladog 1.95, Halthdar 1.89, Derthert, Monchug
         /// and Raganvad 1.82, Unqid 1.67, Garios 1.60, Lucon and Rhagaea 1.53,
         /// and Hurunag at 1.60 on his clan-leader sheet. In civil, Unqid 1.49,
         /// Caladog, Garios, Lucon and Rhagaea 1.43, the other kings 1.37 and
@@ -1893,8 +1893,9 @@ namespace HeroesEvolve
         /// </summary>
         private static void ReportAuthoredTalent()
         {
-            int growing = 0, authored = 0, archetype = 0;
-            List<Hero> shown = new List<Hero>();
+            int growing = 0, archetype = 0;
+            List<Hero> authored = new List<Hero>();
+            List<Hero> hashed = new List<Hero>();
             foreach (Hero hero in Hero.AllAliveHeroes)
             {
                 try
@@ -1904,13 +1905,12 @@ namespace HeroesEvolve
 
                     if (HeroTalent.IsAuthored(hero))
                     {
-                        authored++;
-                        shown.Add(hero);
+                        authored.Add(hero);
+                        continue;
                     }
-                    else if (HeroTalent.TemplateOf(hero) != null)
-                    {
-                        archetype++;
-                    }
+
+                    hashed.Add(hero);
+                    if (HeroTalent.TemplateOf(hero) != null) archetype++;
                 }
                 catch
                 {
@@ -1918,14 +1918,18 @@ namespace HeroesEvolve
                 }
             }
 
-            ModLog.Info("TALENT authored " + authored + " of " + growing
+            ModLog.Info("TALENT authored " + authored.Count + " of " + growing
                         + " growing heroes take their talent from a ruler or clan-leader template;"
                         + " archetype=" + archetype + " carry a shared template and keep the hash");
             ModLog.Info("TALENT anchor the typical grown lord TaleWorlds wrote, combat=" + AuthoredTalent.TypicalCombat
                         + " civil=" + AuthoredTalent.TypicalCivil
                         + " naval=" + AuthoredTalent.TypicalNaval
-                        + ", reads as the median talent " + TwoPlaces(Talent.Median));
+                        + ", reads as the median talent " + TwoPlaces(Talent.Median)
+                        + "; no sheet gives more than " + TwoPlaces(AuthoredTalent.Ceiling));
 
+            ReportAboveAuthored(authored, hashed);
+
+            List<Hero> shown = new List<Hero>(authored);
             foreach (Kingdom kingdom in Kingdom.All)
             {
                 try
@@ -1961,6 +1965,76 @@ namespace HeroesEvolve
                     // Same reason as above.
                 }
             }
+        }
+
+        /// <summary>
+        /// How many heroes on the hash were dealt more talent than every authored
+        /// hero, field by field and in several fields at once.
+        ///
+        /// The check on AuthoredTalent.Ceiling. Kings are meant to be formidable,
+        /// not the best the world can hold: a lord the dice favoured should be
+        /// able to stand above all of them, in any field or in several. Combat is
+        /// where that is tight: on the vanilla roster seven lords were dealt more
+        /// than Caladog's 1.95, the same seven every campaign since the dice are
+        /// their ids, and wanderers and the heroes born later add to them. Civil
+        /// runs far looser, because no king was written much above the typical
+        /// lord there. The best of the ten in each field counts whatever the
+        /// hash dealt them too, so at sea the bar is Monchug's lucky 1.86 rather
+        /// than Halthdar's written 1.67. Worked out from the game files over every
+        /// lord TaleWorlds wrote: combat 7, civil 120, naval 17, and none above
+        /// the ten in two fields at once. The census counts only heroes old
+        /// enough to grow and adds the wanderers, so it lands near those rather
+        /// than on them.
+        /// </summary>
+        private static void ReportAboveAuthored(List<Hero> authored, List<Hero> hashed)
+        {
+            if (authored.Count == 0) return;
+
+            string[] fields = { Talent.Combat, Talent.Civil, Talent.Naval };
+            float[] best = new float[fields.Length];
+            for (int a = 0; a < authored.Count; a++)
+            {
+                try
+                {
+                    for (int f = 0; f < fields.Length; f++)
+                    {
+                        float talent = HeroTalent.For(authored[a], fields[f]);
+                        if (talent > best[f]) best[f] = talent;
+                    }
+                }
+                catch
+                {
+                    // One unreadable hero must not cost the comparison.
+                }
+            }
+
+            int[] above = new int[fields.Length];
+            int inTwoOrMore = 0, inAllThree = 0;
+            for (int h = 0; h < hashed.Count; h++)
+            {
+                try
+                {
+                    int count = 0;
+                    for (int f = 0; f < fields.Length; f++)
+                    {
+                        if (HeroTalent.For(hashed[h], fields[f]) <= best[f]) continue;
+                        above[f]++;
+                        count++;
+                    }
+                    if (count >= 2) inTwoOrMore++;
+                    if (count == fields.Length) inAllThree++;
+                }
+                catch
+                {
+                    // Same reason as above.
+                }
+            }
+
+            ModLog.Info("TALENT above every authored hero (best combat=" + TwoPlaces(best[0])
+                        + " civil=" + TwoPlaces(best[1]) + " naval=" + TwoPlaces(best[2]) + "):"
+                        + " combat=" + above[0] + " civil=" + above[1] + " naval=" + above[2]
+                        + " inTwoOrMore=" + inTwoOrMore + " inAllThree=" + inAllThree
+                        + " of " + hashed.Count + " on the hash");
         }
 
         private static string TwoPlaces(float value)

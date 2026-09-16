@@ -48,7 +48,8 @@ namespace HeroesEvolve.Tests
             Check.True(Reads(AuthoredTalent.From(210, Talent.Combat), 1.53f), "Lucon's 210 stands well above the map");
             Check.True(Reads(AuthoredTalent.From(220, Talent.Combat), 1.60f), "Garios's 220 higher still");
             Check.True(Reads(AuthoredTalent.From(250, Talent.Combat), 1.82f), "Derthert's 250 among its best");
-            Check.True(Near(AuthoredTalent.From(300, Talent.Combat), Talent.Maximum), "Caladog's 300 is as gifted as a lord can be");
+            Check.True(Near(AuthoredTalent.From(300, Talent.Combat), AuthoredTalent.Ceiling), "Caladog's 300 reaches the most a sheet can give");
+            Check.True(AuthoredTalent.From(300, Talent.Combat) > AuthoredTalent.From(260, Talent.Combat), "and he still stands above Halthdar");
             Check.True(AuthoredTalent.From(260, Talent.Combat) > AuthoredTalent.From(250, Talent.Combat), "TaleWorlds' order is kept");
 
             // Each field against its own. A civil best is the best of a dozen
@@ -61,9 +62,20 @@ namespace HeroesEvolve.Tests
             Check.True(Near(AuthoredTalent.From(180, null), Talent.Median),
                        "a field nobody named is measured as combat, as HeroTalent looks it up");
 
-            // Inside the talent bounds, whatever a template says.
+            // Inside the talent bounds, whatever a template says -- and never at
+            // the top of them. The last stretch belongs to the hash, so the
+            // rarest prodigies a campaign deals can outgrow every king.
             Check.True(Near(AuthoredTalent.From(60, Talent.Combat), Talent.Minimum), "a weak template is held at the least talent");
-            Check.True(Near(AuthoredTalent.From(400, Talent.Civil), Talent.Maximum), "a template past the curve is held at the most");
+            Check.True(Near(AuthoredTalent.From(400, Talent.Civil), AuthoredTalent.Ceiling), "a sheet past the ceiling is held there, in any field");
+            Check.True(AuthoredTalent.Ceiling < Talent.Maximum, "no sheet reaches the top of the hash");
+
+            int beyondSheets = 0;
+            for (int i = 0; i < 4000; i++)
+            {
+                if (Talent.For("CharacterObject_" + i, Talent.Combat) > AuthoredTalent.Ceiling) beyondSheets++;
+            }
+            Check.True(beyondSheets > 0 && beyondSheets * 50 < 4000,
+                       "the hash deals a rare few more than any sheet can give, fewer than one in fifty");
 
             // Nothing written means no intent, and the caller keeps the hash.
             Check.True(AuthoredTalent.From(0, Talent.Combat) == 0f, "a domain the template leaves empty carries no intent");

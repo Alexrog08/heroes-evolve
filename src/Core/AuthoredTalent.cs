@@ -15,7 +15,8 @@ namespace HeroesEvolve.Core
     /// The scale is TaleWorlds' own nobility. A sheet as strong as the typical
     /// grown lord's is the typical talent the hash deals, and a stronger one
     /// lifts its man above the map about as far as TaleWorlds lifted him above
-    /// the lords it wrote. The first version read 150, the peak norm, as
+    /// the lords it wrote -- short of the very top, which is left to the hash
+    /// (see Ceiling). The first version read 150, the peak norm, as
     /// ordinary; but the hash deals its middle hero 1.31, not 1.0, so every
     /// king landed a step below where he was written -- Garios ahead of 83% of
     /// TaleWorlds' grown lords, yet of only 68% of the map. A domain the
@@ -106,11 +107,31 @@ namespace HeroesEvolve.Core
         public const int TypicalNaval = 220;
 
         /// <summary>
+        /// The most talent a sheet can give, in any field.
+        ///
+        /// Below Talent.Maximum on purpose. Measured against TaleWorlds' own
+        /// nobility, Caladog's 300 would read as the most talent there is, and
+        /// no lord could ever outgrow him. Kings are meant to be formidable, not
+        /// the best the world can hold: only the hash goes past this, so the
+        /// lords the dice favoured most stand above every king, in whichever
+        /// field they were favoured.
+        ///
+        /// Set where the hash's rarest one hero in eighty begins. At 2.00, which
+        /// would have let Caladog peak on his written 300, the vanilla roster
+        /// holds three lords above him, and those by a hundredth: a tie in all
+        /// but name. At 1.95 it holds seven -- the same seven every campaign,
+        /// since their ids are the dice -- and heroes born or hired later can be
+        /// dealt up to the maximum. Caladog finishes near 292 and stays one of
+        /// the strongest men alive.
+        /// </summary>
+        public const float Ceiling = 1.95f;
+
+        /// <summary>
         /// The talent a template's best skill in one field implies, measured
-        /// against the typical grown lord in that field and kept inside the
-        /// talent bounds. Zero when the template writes nothing there, so the
-        /// caller falls back to the hash. A field it does not recognise is
-        /// measured as combat, as HeroTalent looks it up.
+        /// against the typical grown lord in that field, never below the least
+        /// talent and never above the ceiling. Zero when the template writes
+        /// nothing there, so the caller falls back to the hash. A field it does
+        /// not recognise is measured as combat, as HeroTalent looks it up.
         /// </summary>
         public static float From(int bestAuthoredSkill, string domain)
         {
@@ -118,7 +139,7 @@ namespace HeroesEvolve.Core
 
             float talent = bestAuthoredSkill / (float)TypicalFor(domain) * Talent.Median;
             if (talent < Talent.Minimum) return Talent.Minimum;
-            if (talent > Talent.Maximum) return Talent.Maximum;
+            if (talent > Ceiling) return Ceiling;
             return talent;
         }
 
