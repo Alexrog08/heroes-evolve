@@ -251,7 +251,7 @@ namespace HeroesEvolve
                 if (price <= 0) return;
             }
 
-            offers.Add(new MarketOffer(entry.Element, price, entry.Tier, entry.FineTier, ownClass));
+            offers.Add(new MarketOffer(entry.Element, price, entry.Tier, entry.FineTier, ownClass, ownCulture));
         }
 
         /// <summary>

@@ -46,13 +46,23 @@ namespace HeroesEvolve
         /// </summary>
         public bool OwnCulture;
 
-        public MarketOffer(EquipmentElement element, int price, int tier, int fineTier, bool ownClass)
+        /// <summary>
+        /// Every field, culture included. OwnCulture was once left to be set after
+        /// construction, and nothing ever set it: the scanners worked out the
+        /// culture, used it for the upgrade gate, and dropped it, so every offer
+        /// reached the cross-slot ranking as foreign. A lord short of money then
+        /// spent first on a foreign piece over a same-tier one in his own colours.
+        /// Required here so it cannot be forgotten again.
+        /// </summary>
+        public MarketOffer(EquipmentElement element, int price, int tier, int fineTier,
+                           bool ownClass, bool ownCulture)
         {
             Element = element;
             Price = price;
             Tier = tier;
             FineTier = fineTier;
             OwnClass = ownClass;
+            OwnCulture = ownCulture;
         }
 
         public ItemObject Item
