@@ -169,6 +169,12 @@ namespace HeroesEvolve
             List<MarketOffer> offers = new List<MarketOffer>();
             if (stock == null) return offers;
 
+            // Only beasts his people or his house ride, worked out once for the
+            // whole shelf. See MountFamilyRules.
+            int riding = RidingFamily(hero);
+            ICollection<int> people = PeopleOf(hero);
+            ICollection<int> house = HouseOf(hero);
+
             for (int i = 0; i < stock.Count; i++)
             {
                 StockEntry entry = stock[i];
@@ -179,6 +185,7 @@ namespace HeroesEvolve
 
                 ItemObject item = entry.Item;
                 if (!ItemCatalog.IsWarMount(item)) continue;
+                if (!MountFamilyRules.MayRide(FamilyOf(item), riding, people, house)) continue;
                 if (!ItemCatalog.PassesMarketFilters(item, culture, ceiling)) continue;
                 if (!ItemClassifier.MeetsDifficulty(item, skills)) continue;
 
@@ -187,6 +194,45 @@ namespace HeroesEvolve
 
             offers.Sort(MarketOfferOrder.Instance);
             return offers;
+        }
+
+        /// <summary>
+        /// The family a mount belongs to -- horse, camel, whatever a mod adds --
+        /// as its monster declares it, or MountFamilyRules.NoFamily for nothing
+        /// or for a mount the game gives no monster.
+        /// </summary>
+        internal static int FamilyOf(ItemObject mount)
+        {
+            if (mount == null || !mount.HasHorseComponent) return MountFamilyRules.NoFamily;
+
+            HorseComponent horse = mount.HorseComponent;
+            return horse != null && horse.Monster != null ? horse.Monster.FamilyType : MountFamilyRules.NoFamily;
+        }
+
+        /// <summary>
+        /// Whether this lord may take up a mount of this one's family. The census
+        /// asks it one mount at a time; Mounts works the same answer out once for
+        /// a whole shelf.
+        /// </summary>
+        internal static bool MayRide(Hero hero, ItemObject mount)
+        {
+            return MountFamilyRules.MayRide(FamilyOf(mount), RidingFamily(hero), PeopleOf(hero), HouseOf(hero));
+        }
+
+        private static int RidingFamily(Hero hero)
+        {
+            if (hero == null || hero.BattleEquipment == null) return MountFamilyRules.NoFamily;
+            return FamilyOf(hero.BattleEquipment[EquipmentIndex.Horse].Item);
+        }
+
+        private static ICollection<int> PeopleOf(Hero hero)
+        {
+            return CultureProfile.MountFamilies(hero != null ? hero.Culture : null);
+        }
+
+        private static ICollection<int> HouseOf(Hero hero)
+        {
+            return CultureProfile.MountFamilies(hero != null && hero.Clan != null ? hero.Clan.Culture : null);
         }
 
         /// <summary>

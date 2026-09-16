@@ -62,6 +62,7 @@ namespace HeroesEvolve.Tests
             ItemGradeTests.RunAll();
             QualityValueTests.RunAll();
             CultureChoiceTests.RunAll();
+            MountFamilyRulesTests.RunAll();
             GearBalanceTests.RunAll();
             SwapRulesTests.RunAll();
             PlunderRulesTests.RunAll();

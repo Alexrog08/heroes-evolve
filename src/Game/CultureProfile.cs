@@ -57,12 +57,108 @@ namespace HeroesEvolve
 
         private static Dictionary<string, float> _shares;
         private static Dictionary<string, int> _counts;
+        private static Dictionary<string, HashSet<int>> _mountFamilies;
+        private static Dictionary<int, string> _familyNames;
+
+        /// <summary>Handed out for a culture nothing is known about. Callers only read it.</summary>
+        private static readonly HashSet<int> NoFamilies = new HashSet<int>();
 
         /// <summary>Forces a recompute; call when a campaign is loaded.</summary>
         public static void Reset()
         {
             _shares = null;
             _counts = null;
+            _mountFamilies = null;
+            _familyNames = null;
+        }
+
+        /// <summary>
+        /// The mount families -- horse, camel, whatever a mod adds -- a culture's
+        /// own soldiers ride to war, read from every character of that culture
+        /// that is not a hero.
+        ///
+        /// Soldiers and not lords, which is the other way round from
+        /// MountsItsLords, and for a reason: which beast a people rides is not a
+        /// question the troop tree gets wrong. It is whether its nobles ride at
+        /// all that the troops do not predict. Heroes are left out because a
+        /// hero's equipment is whatever he last bought, and reading it would let
+        /// one Vlandian on a camel teach all Vlandia to ride them. Pack animals
+        /// are left out too: a caravan's pack camel is not a people's cavalry.
+        ///
+        /// In the base game every culture fields horses and only the Aserai (and
+        /// the Darshi) field camels. Empty for a culture with no mounted
+        /// soldiers, which MountFamilyRules reads as unknown, never as "rides
+        /// nothing".
+        /// </summary>
+        public static ICollection<int> MountFamilies(CultureObject culture)
+        {
+            if (culture == null || culture.StringId == null) return NoFamilies;
+
+            BuildMounts();
+
+            HashSet<int> families;
+            return _mountFamilies.TryGetValue(culture.StringId, out families) ? families : NoFamilies;
+        }
+
+        /// <summary>A family's name for the census: the first monster seen of it, horse or camel.</summary>
+        public static string FamilyName(int family)
+        {
+            if (family == Core.MountFamilyRules.NoFamily) return "none";
+
+            BuildMounts();
+
+            string name;
+            return _familyNames.TryGetValue(family, out name) ? name : "family" + family;
+        }
+
+        private static void BuildMounts()
+        {
+            if (_mountFamilies != null) return;
+
+            Dictionary<string, HashSet<int>> families = new Dictionary<string, HashSet<int>>();
+            Dictionary<int, string> names = new Dictionary<int, string>();
+
+            foreach (CharacterObject character in CharacterObject.All)
+            {
+                try
+                {
+                    if (character == null || character.IsHero) continue;
+
+                    CultureObject culture = character.Culture;
+                    if (culture == null || culture.StringId == null) continue;
+
+                    IEnumerable<Equipment> sets = character.BattleEquipments;
+                    if (sets == null) continue;
+
+                    foreach (Equipment set in sets)
+                    {
+                        if (set == null) continue;
+
+                        ItemObject mount = set[EquipmentIndex.Horse].Item;
+                        if (mount == null || !ItemCatalog.IsWarMount(mount)) continue;
+
+                        int family = MarketScanner.FamilyOf(mount);
+                        if (family == Core.MountFamilyRules.NoFamily) continue;
+
+                        HashSet<int> known;
+                        if (!families.TryGetValue(culture.StringId, out known))
+                        {
+                            known = new HashSet<int>();
+                            families[culture.StringId] = known;
+                        }
+                        known.Add(family);
+
+                        if (!names.ContainsKey(family)) names[family] = mount.HorseComponent.Monster.StringId;
+                    }
+                }
+                catch
+                {
+                    // One unreadable character must not cost the profile.
+                }
+            }
+
+            _familyNames = names;
+            _mountFamilies = families;
         }
 
         /// <summary>
@@ -165,7 +261,65 @@ namespace HeroesEvolve
                 ModLog.Info(line.ToString());
             }
 
+            ReportMountFamilies();
             ReportCorrections();
+        }
+
+        /// <summary>
+        /// Which beasts each people rides, as the mount rule reads it, and every
+        /// shopper riding one his people and his house do not -- a Vlandian on a
+        /// camel. Expect none in a new campaign; in an older one the count falls
+        /// as those lords trade their mounts for their own people's.
+        /// </summary>
+        private static void ReportMountFamilies()
+        {
+            BuildMounts();
+
+            foreach (KeyValuePair<string, HashSet<int>> pair in _mountFamilies)
+            {
+                StringBuilder line = new StringBuilder("MOUNTFAMILY ");
+                line.Append(pair.Key).Append(" rides=");
+                bool first = true;
+                foreach (int family in pair.Value)
+                {
+                    if (!first) line.Append(',');
+                    line.Append(FamilyName(family));
+                    first = false;
+                }
+                ModLog.Info(line.ToString());
+            }
+
+            int riders = 0, outside = 0;
+            List<string> named = new List<string>();
+            foreach (Hero hero in Hero.AllAliveHeroes)
+            {
+                try
+                {
+                    if (!HeroFilter.IsEligibleToShop(hero) || hero.BattleEquipment == null) continue;
+
+                    ItemObject mount = hero.BattleEquipment[EquipmentIndex.Horse].Item;
+                    if (mount == null) continue;
+                    riders++;
+
+                    if (MarketScanner.MayRide(hero, mount)) continue;
+                    outside++;
+
+                    if (named.Count < 10)
+                    {
+                        named.Add(hero.Name + " (" + (hero.Culture != null ? hero.Culture.StringId : "?")
+                                  + ", clan " + (hero.Clan != null && hero.Clan.Culture != null ? hero.Clan.Culture.StringId : "?")
+                                  + ") on " + mount.StringId);
+                    }
+                }
+                catch
+                {
+                    // One unreadable hero must not cost the count.
+                }
+            }
+
+            ModLog.Info("MOUNT ridingWhatTheirPeopleDoNot=" + outside + " of " + riders
+                        + " mounted shoppers (expect 0 in a new campaign)");
+            for (int i = 0; i < named.Count; i++) ModLog.Info("MOUNT outside " + named[i]);
         }
 
         /// <summary>

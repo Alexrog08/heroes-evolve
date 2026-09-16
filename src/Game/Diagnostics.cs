@@ -3331,7 +3331,7 @@ namespace HeroesEvolve
             {
                 report.AppendLine("  " + name + ": " + worn.StringId + " t" + wornTier
                                   + " room to t" + ceiling + ", nothing in stock -- "
-                                  + WhyNothing(stock, worn, culture, ceiling, wornFine));
+                                  + WhyNothing(hero, stock, worn, culture, ceiling, wornFine));
                 return;
             }
 
@@ -3363,15 +3363,16 @@ namespace HeroesEvolve
         /// The predicates are the scanner's own, called in the scanner's order,
         /// so this attributes the real refusal rather than a second opinion.
         /// </summary>
-        private static string WhyNothing(List<StockEntry> stock, ItemObject worn,
+        private static string WhyNothing(Hero hero, List<StockEntry> stock, ItemObject worn,
                                          CultureObject culture, int ceiling, int wornFine)
         {
             int sameKind, rightTier, foreign;
-            string reason = Blocker(stock, worn, culture, ceiling, wornFine,
+            string reason = Blocker(hero, stock, worn, culture, ceiling, wornFine,
                                     out sameKind, out rightTier, out foreign);
 
             if (reason == "emptyShelf") return "the town stocks none of that kind at all";
             if (reason == "wrongTier") return sameKind + " of that kind, none in the tier band";
+            if (reason == "mountFamily") return rightTier + " at the right tier, every one a beast his people do not ride";
             if (foreign > 0)
             {
                 return rightTier + " at the right tier (" + foreign
@@ -3385,13 +3386,14 @@ namespace HeroesEvolve
         /// it. Named keys rather than an enum because they are printed straight
         /// into the tally and read back out of the log.
         /// </summary>
-        private static string Blocker(List<StockEntry> stock, ItemObject worn, CultureObject culture,
+        private static string Blocker(Hero hero, List<StockEntry> stock, ItemObject worn, CultureObject culture,
                                       int ceiling, int wornFine,
                                       out int sameKind, out int rightTier, out int foreign)
         {
             sameKind = 0;
             rightTier = 0;
             foreign = 0;
+            int outsideFamily = 0;
 
             bool wornOwn = ItemCatalog.IsOwnCulture(worn, culture);
 
@@ -3414,10 +3416,16 @@ namespace HeroesEvolve
                 // longer a blocker this can return, and the census will stop
                 // reporting it.
                 if (!own) foreign++;
+
+                // A mount of a family his people do not ride is refused by rule,
+                // not by skill, and blaming skill would send someone hunting the
+                // wrong policy. See MountFamilyRules.
+                if (item.ItemType == ItemObject.ItemTypeEnum.Horse && !MarketScanner.MayRide(hero, item)) outsideFamily++;
             }
 
             if (sameKind == 0) return "emptyShelf";
             if (rightTier == 0) return "wrongTier";
+            if (outsideFamily == rightTier) return "mountFamily";
             return "skillOrUsage";
         }
 
@@ -3555,7 +3563,7 @@ namespace HeroesEvolve
             if (wornTier >= ceiling) return false;
 
             int sameKind, rightTier, foreign;
-            string reason = Blocker(stock, worn, culture, ceiling, MarketScanner.FineTierOf(hero.BattleEquipment[slot]),
+            string reason = Blocker(hero, stock, worn, culture, ceiling, MarketScanner.FineTierOf(hero.BattleEquipment[slot]),
                                     out sameKind, out rightTier, out foreign);
 
             // Armour has no skill or usage to fail, so a piece that passed the

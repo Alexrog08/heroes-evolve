@@ -64,6 +64,7 @@ namespace HeroesEvolve
         private static int _boughtOfNoCulture;
         private static int _boughtForeign;
         private static int _boughtWithNoPreference;
+        private static readonly Dictionary<string, int> _mountFamilyChanges = new Dictionary<string, int>();
         private static readonly Dictionary<string, int> _classChanges = new Dictionary<string, int>();
         private static readonly Dictionary<string, int> _typeChanges = new Dictionary<string, int>();
 
@@ -98,6 +99,7 @@ namespace HeroesEvolve
             _boughtOfNoCulture = 0;
             _boughtForeign = 0;
             _boughtWithNoPreference = 0;
+            _mountFamilyChanges.Clear();
             _classChanges.Clear();
             _typeChanges.Clear();
             _lastBoughtDay.Clear();
@@ -190,6 +192,13 @@ namespace HeroesEvolve
                 if (forQuality) _boughtForQuality++;
                 if (sold.Item != null && ItemGrade.IsDamaged(MarketScanner.GradeOf(sold))) _boughtOverDamaged++;
                 RecordCulture(hero, bought.Item);
+
+                if (slot == EquipmentIndex.Horse)
+                {
+                    int from = MarketScanner.FamilyOf(sold.Item);
+                    int to = MarketScanner.FamilyOf(bought.Item);
+                    if (from != to) Bump(_mountFamilyChanges, CultureProfile.FamilyName(from) + ">" + CultureProfile.FamilyName(to));
+                }
 
                 // Same hero, same slot, same day. A lord gets one trip a day, so
                 // this is a trip that paid twice for one slot -- which the trip
@@ -366,6 +375,8 @@ namespace HeroesEvolve
                             + " foreign=" + _boughtForeign
                             + " withNoPreference=" + _boughtWithNoPreference);
                 ReportCultureSplit();
+                ModLog.Info("MOUNT familyChanges " + Top(_mountFamilyChanges, 6)
+                            + " (only ever to a beast the buyer's people or house ride)");
 
                 ModLog.Info("ARMOURORDER tripsWithArmourOnOffer=" + _tripsArmorOnOffer
                             + " boughtArmour=" + _tripsBoughtArmor
