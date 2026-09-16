@@ -73,8 +73,12 @@ namespace HeroesEvolve
                 entry.Element = element.EquipmentElement;
                 entry.Item = item;
                 entry.Type = item.ItemType;
-                entry.Tier = TierOf(item);
-                entry.FineTier = FineTierOf(element.EquipmentElement);
+                // One tier read for both numbers: Tierf is not cached, and
+                // asking the item twice ran the game's tier model twice per line.
+                int tier = TierOf(item);
+                entry.Tier = tier;
+                entry.FineTier = QualityValue.Apply(FineTierOf(item, tier),
+                                                    QualityValueOf(element.EquipmentElement));
                 stock.Add(entry);
             }
 
@@ -265,15 +269,6 @@ namespace HeroesEvolve
         }
 
         /// <summary>
-        /// The game's fractional tier in hundredths, on the same 1-based scale:
-        /// disassembled, Tier is Clamp(Round(Tierf), 0, 6) - 1, so the 1-based
-        /// whole tier is exactly round(Tierf).
-        ///
-        /// Zero for anything the game scores below tier 1 -- consumables like
-        /// naphtha pots -- so the callers' "below the scale" guard keeps working
-        /// off a single number.
-        /// </summary>
-        /// <summary>
         /// How sound one piece is: its modifier's quality, or Common when it has
         /// none. See ItemGrade for the numbering.
         /// </summary>
@@ -317,9 +312,24 @@ namespace HeroesEvolve
             return QualityValue.ForGrade((int)modifier.ItemQuality);
         }
 
+        /// <summary>
+        /// The game's fractional tier in hundredths, on the same 1-based scale:
+        /// disassembled, Tier is Clamp(Round(Tierf), 0, 6) - 1, so the 1-based
+        /// whole tier is exactly round(Tierf).
+        ///
+        /// Zero for anything the game scores below tier 1 -- consumables like
+        /// naphtha pots -- so the callers' "below the scale" guard keeps working
+        /// off a single number.
+        /// </summary>
         internal static int FineTierOf(ItemObject item)
         {
-            if (TierOf(item) < 1) return 0;
+            return FineTierOf(item, TierOf(item));
+        }
+
+        /// <summary>The same, with the whole tier already in hand.</summary>
+        private static int FineTierOf(ItemObject item, int tier)
+        {
+            if (tier < 1) return 0;
 
             int fine = (int)(item.Tierf * 100f + 0.5f);
             return fine < 1 ? 1 : fine;
