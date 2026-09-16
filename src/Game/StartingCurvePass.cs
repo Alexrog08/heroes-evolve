@@ -20,10 +20,13 @@ namespace HeroesEvolve
     ///      to drop a single perk, so the skills that lost one are cleared with
     ///      the game's own PerkHelper.ClearPerksForSkill and the perks he still
     ///      earns there are given back; the game's daily selection fills in the
-    ///      rest as he grows. Only those skills: giving a perk back re-runs its
-    ///      opening, and AgingCampaignBehavior grants an extra life each time Cheat
-    ///      Death or Health Advise opens without ever taking one away, so clearing
-    ///      every skill handed duplicate lives to lords who lost a perk anywhere.
+    ///      rest as he grows. Giving a perk back re-runs its opening. Almost
+    ///      everything that does is undone by the clearing first, but
+    ///      AgingCampaignBehavior grants an extra life each time Cheat Death or
+    ///      Health Advise opens and never takes one away, so a skill that would
+    ///      have to give either back is left whole, unearned perks and all:
+    ///      a lord keeping a Medicine perk he no longer quite earns costs far
+    ///      less than him, or his whole clan, living an extra life.
     ///   3. Level and points, through InitializeHeroDeveloper, again the game's
     ///      own routine. It recomputes his total experience from the new skills
     ///      -- the one step with no public setter -- climbs his level from zero,
@@ -47,6 +50,7 @@ namespace HeroesEvolve
             public int Lowered;
             public int PerksDropped;
             public int PerksRestored;
+            public int SkillsLeftWhole;
             public int Unarmed;
             public int Failed;
             public readonly List<int> LevelBefore = new List<int>();
@@ -105,6 +109,7 @@ namespace HeroesEvolve
                         + " skillsLowered=" + tally.Lowered
                         + " perksDropped=" + tally.PerksDropped
                         + " perksRestored=" + tally.PerksRestored
+                        + " skillsLeftWhole=" + tally.SkillsLeftWhole
                         + " skippedUnarmed=" + tally.Unarmed
                         + " failed=" + tally.Failed);
             ModLog.Info("STARTCURVE level before " + Diagnostics.Percentiles(tally.LevelBefore));
@@ -166,13 +171,19 @@ namespace HeroesEvolve
         private static void DropUnearnedPerks(Hero hero, Tally tally)
         {
             HashSet<SkillObject> losing = new HashSet<SkillObject>();
+            HashSet<SkillObject> keepsALife = new HashSet<SkillObject>();
+
             foreach (PerkObject perk in PerkObject.All)
             {
                 if (perk == null || perk.Skill == null || !hero.GetPerkValue(perk)) continue;
-                if (hero.GetSkillValue(perk.Skill) >= perk.RequiredSkillValue) continue;
 
-                losing.Add(perk.Skill);
-                tally.PerksDropped++;
+                if (hero.GetSkillValue(perk.Skill) < perk.RequiredSkillValue) losing.Add(perk.Skill);
+                else if (GrantsALifeOnOpening(perk)) keepsALife.Add(perk.Skill);
+            }
+
+            foreach (SkillObject skill in keepsALife)
+            {
+                if (losing.Remove(skill)) tally.SkillsLeftWhole++;
             }
             if (losing.Count == 0) return;
 
@@ -181,7 +192,9 @@ namespace HeroesEvolve
             {
                 if (perk == null || perk.Skill == null || !losing.Contains(perk.Skill)) continue;
                 if (!hero.GetPerkValue(perk)) continue;
-                if (hero.GetSkillValue(perk.Skill) >= perk.RequiredSkillValue) kept.Add(perk);
+
+                if (hero.GetSkillValue(perk.Skill) < perk.RequiredSkillValue) tally.PerksDropped++;
+                else kept.Add(perk);
             }
 
             foreach (SkillObject skill in losing)
@@ -193,6 +206,15 @@ namespace HeroesEvolve
                 hero.HeroDeveloper.AddPerk(kept[i]);
             }
             tally.PerksRestored += kept.Count;
+        }
+
+        /// <summary>
+        /// The perks whose opening AgingCampaignBehavior.OnPerkOpened answers with
+        /// an extra life, which no reset ever takes back.
+        /// </summary>
+        private static bool GrantsALifeOnOpening(PerkObject perk)
+        {
+            return perk == DefaultPerks.Medicine.CheatDeath || perk == DefaultPerks.Medicine.HealthAdvise;
         }
     }
 }
