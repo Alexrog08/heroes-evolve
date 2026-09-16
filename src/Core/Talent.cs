@@ -107,7 +107,7 @@ namespace HeroesEvolve.Core
 
             // Bannerlord's own skills run to 330; nothing here should invent a
             // number the game would never show.
-            if (target > 330f) target = 330f;
+            if (target > SkillGrowth.GameSkillMaximum) target = SkillGrowth.GameSkillMaximum;
 
             return (int)target;
         }

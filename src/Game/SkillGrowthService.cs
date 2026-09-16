@@ -56,55 +56,72 @@ namespace HeroesEvolve
             if (!HeroFilter.IsEligibleToGrow(hero)) return false;
             if (hero.HeroDeveloper == null || hero.BattleEquipment == null) return false;
 
+            List<SkillTarget> targets = Targets(hero);
+            if (targets.Count == 0) return false;
+
+            for (int i = 0; i < targets.Count; i++)
+            {
+                Grant(hero, targets[i].Skill, targets[i].Target, targets[i].Talent);
+            }
+            return true;
+        }
+
+        /// <summary>One skill this mod develops in a hero: where it is headed, and the talent driving it.</summary>
+        internal struct SkillTarget
+        {
+            public SkillObject Skill;
+            public int Target;
+            public float Talent;
+        }
+
+        /// <summary>
+        /// Every skill this mod develops in this hero, with where it is headed.
+        /// Empty when his years and talent give him no target at all.
+        ///
+        /// Shared by the weekly growth and the campaign-start curve, so the two
+        /// can never aim the same hero at different places.
+        ///
+        /// Weapons first, ranked by slot, not by current value. The game itself
+        /// reads the lowest-numbered weapon slot to decide which skill a hero
+        /// trains in simulated combat (Helpers.CharacterHelper.GetDefaultWeapon
+        /// walks slots 0 to 4 and takes the first real weapon), so slot order is
+        /// already the game's own statement of what this lord fights with.
+        /// Ranking by current value instead would entrench whatever the generator
+        /// happened to give him and never let a repaired hero grow into the
+        /// loadout he was actually handed.
+        ///
+        /// Then everything that is not a weapon -- stewardship, medicine,
+        /// seamanship and the rest -- by where the game has already spent this
+        /// lord's focus. Focus is the selector because it is the game's own
+        /// statement of what a lord is for, and the campaign shows the statement
+        /// is real: all 507 lords hold between 26 and 40 points and spread them
+        /// differently, 81% into Scouting, 28% into Smithing, 6% into Shipmaster.
+        /// A skill with no focus gets no target and stays where it is, which is
+        /// how 72% of lords remain quite properly unable to forge anything. Civil
+        /// and naval aptitude are drawn separately from combat, so a lord may be a
+        /// prodigy with a lance and an indifferent quartermaster.
+        /// </summary>
+        internal static List<SkillTarget> Targets(Hero hero)
+        {
+            List<SkillTarget> targets = new List<SkillTarget>();
+
             float talent = HeroTalent.For(hero);
             int primaryTarget = SkillGrowth.PrimaryTarget(hero.Age, talent);
-            if (primaryTarget <= 0) return false;
+            if (primaryTarget <= 0) return targets;
 
-            // Ranked by slot, not by current value. The game itself reads the
-            // lowest-numbered weapon slot to decide which skill a hero trains in
-            // simulated combat (Helpers.CharacterHelper.GetDefaultWeapon walks
-            // slots 0 to 4 and takes the first real weapon), so slot order is
-            // already the game's own statement of what this lord fights with.
-            // Ranking by current value instead would entrench whatever the
-            // generator happened to give him and never let a repaired hero grow
-            // into the loadout he was actually handed.
             List<SkillObject> ranked = RankedWeaponSkills(hero);
-
             for (int rank = 0; rank < ranked.Count; rank++)
             {
-                Grant(hero, ranked[rank], SkillGrowth.TargetForRank(primaryTarget, rank), talent);
+                Add(targets, ranked[rank], SkillGrowth.TargetForRank(primaryTarget, rank), talent);
             }
 
             bool mounted = hero.BattleEquipment[EquipmentIndex.Horse].Item != null;
             SkillObject movement = mounted ? DefaultSkills.Riding : DefaultSkills.Athletics;
-            Grant(hero, movement, SkillGrowth.TargetForRank(primaryTarget, MovementRank), talent);
+            Add(targets, movement, SkillGrowth.TargetForRank(primaryTarget, MovementRank), talent);
 
-            GrowByFocus(hero);
-            return true;
-        }
-
-        /// <summary>
-        /// Everything that is not a weapon: stewardship, medicine, seamanship
-        /// and the rest, grown according to where the game has already spent
-        /// this lord's focus.
-        ///
-        /// Focus is the selector because it is the game's own statement of what
-        /// a lord is for, and the campaign shows the statement is real -- all
-        /// 507 lords hold between 26 and 40 points and spread them differently,
-        /// 81% into Scouting, 28% into Smithing, 6% into Shipmaster. A skill
-        /// with no focus gets no target and stays where it is, which is how 72%
-        /// of lords remain quite properly unable to forge anything.
-        ///
-        /// Civil and naval aptitude are drawn separately from combat, so a lord
-        /// may be a prodigy with a lance and an indifferent quartermaster.
-        /// </summary>
-        private static void GrowByFocus(Hero hero)
-        {
-            // Two values for the whole loop, not one per skill. Talent.For
-            // concatenates the domain onto the hero id and hashes it, so asking
-            // inside the loop allocated a string and hashed it once per skill
-            // per hero per week -- some twelve thousand times a tick, to arrive
-            // at the same two answers.
+            // Two values for the whole loop, not one per skill: asking inside it
+            // once cost a string and a hash per skill per hero per week, some
+            // twelve thousand times a tick, to arrive at the same two answers.
             float civil = HeroTalent.For(hero, Talent.Civil);
             float naval = HeroTalent.For(hero, Talent.Naval);
             float age = hero.Age;
@@ -117,11 +134,22 @@ namespace HeroesEvolve
                 int focus = hero.HeroDeveloper.GetFocus(skill);
                 if (focus <= 0) continue;
 
-                float talent = IsNavalSkill(skill) ? naval : civil;
-
-                int target = FocusGrowth.TargetFor(age, talent, focus);
-                Grant(hero, skill, target, talent);
+                float aptitude = IsNavalSkill(skill) ? naval : civil;
+                Add(targets, skill, FocusGrowth.TargetFor(age, aptitude, focus), aptitude);
             }
+
+            return targets;
+        }
+
+        private static void Add(List<SkillTarget> targets, SkillObject skill, int target, float talent)
+        {
+            if (skill == null || target <= 0) return;
+
+            SkillTarget entry = new SkillTarget();
+            entry.Skill = skill;
+            entry.Target = target;
+            entry.Talent = talent;
+            targets.Add(entry);
         }
 
         /// <summary>
@@ -129,7 +157,7 @@ namespace HeroesEvolve
         /// Growing them a second time here would double their rate and ignore
         /// what the hero actually carries.
         /// </summary>
-        private static bool IsWeaponSkill(SkillObject skill)
+        internal static bool IsWeaponSkill(SkillObject skill)
         {
             return skill == DefaultSkills.OneHanded
                    || skill == DefaultSkills.TwoHanded
@@ -146,7 +174,7 @@ namespace HeroesEvolve
         /// and runs for anyone without that DLC installed -- referencing
         /// DefaultSkills members that may not exist would not.
         /// </summary>
-        private static bool IsNavalSkill(SkillObject skill)
+        internal static bool IsNavalSkill(SkillObject skill)
         {
             string id = skill.StringId;
             if (id == null) return false;

@@ -134,6 +134,14 @@ namespace HeroesEvolve
             // the baggage afterwards. See StolenGoods.
             CampaignEvents.OnCollectLootsItemsEvent.AddNonSerializedListener(this, OnCollectLootItems);
 
+            // A new campaign's lords, put on the curve once before the first day.
+            // Two events because a loaded save must never be touched: only a new
+            // campaign raises OnNewGameCreated, and by the time the session has
+            // launched the game has finished building every lord it will start
+            // with. See StartingCurvePass.
+            CampaignEvents.OnNewGameCreatedEvent.AddNonSerializedListener(this, OnNewGameCreated);
+            CampaignEvents.OnAfterSessionLaunchedEvent.AddNonSerializedListener(this, OnAfterSessionLaunched);
+
             // The daily tick above carries the ledger reset and nothing else.
             // The census is deliberately NOT run from it.
             // Measured at 480ms on a 600-lord campaign -- two thousand seven
@@ -141,6 +149,35 @@ namespace HeroesEvolve
             // nothing in the game. Half a second of freeze on the first day of
             // every load, to write a log file nobody is reading at the time, is
             // not a trade worth making. "hlf.census" runs it on demand.
+        }
+
+        /// <summary>
+        /// Set when this session began as a new campaign rather than a load, and
+        /// cleared once the starting curve has had its one chance to run.
+        /// </summary>
+        private bool _newCampaign;
+
+        private void OnNewGameCreated(CampaignGameStarter starter)
+        {
+            _newCampaign = true;
+        }
+
+        private void OnAfterSessionLaunched(CampaignGameStarter starter)
+        {
+            if (!_newCampaign) return;
+            _newCampaign = false;
+
+            if (!Settings.StartLordsOnCurve) return;
+
+            try
+            {
+                StartingCurvePass.Apply();
+            }
+            catch (System.Exception error)
+            {
+                // The campaign starts either way, on the sheets the generator wrote.
+                ModLog.Error("STARTCURVE failed: " + error.GetType().Name + " " + error.Message);
+            }
         }
 
         /// <summary>Nothing is stored in the save. Deliberately empty.</summary>

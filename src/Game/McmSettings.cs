@@ -69,6 +69,11 @@ namespace HeroesEvolve
         [SettingPropertyGroup("What runs", GroupOrder = 6)]
         public bool EnableSkillGrowth { get; set; } = true;
 
+        [SettingPropertyBool("Start lords on their curve", RequireRestart = false,
+            HintText = "New campaigns only. Every lord starts where his age and talent put him, then grows. Saves already under way are left alone.")]
+        [SettingPropertyGroup("What runs", GroupOrder = 6)]
+        public bool StartLordsOnCurve { get; set; } = true;
+
         [SettingPropertyBool("Lords buy their own gear", RequireRestart = false,
             HintText = "In a town, a lord buys a better version of what he already carries. Never changes what kind of fighter he is, never fills an empty slot.")]
         [SettingPropertyGroup("What runs", GroupOrder = 6)]

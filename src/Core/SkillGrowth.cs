@@ -39,6 +39,12 @@ namespace HeroesEvolve.Core
         /// </summary>
         public const int PeakNorm = 150;
 
+        /// <summary>
+        /// The highest skill value Bannerlord shows. Nothing here should invent
+        /// a number the game would never display.
+        /// </summary>
+        public const int GameSkillMaximum = 330;
+
         /// <summary>Age at which a hero is considered fully developed.</summary>
         public const int MatureAge = 60;
 

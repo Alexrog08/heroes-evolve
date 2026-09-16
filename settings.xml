@@ -26,6 +26,11 @@
        weaker than the troops he leads. -->
   <EnableSkillGrowth>true</EnableSkillGrowth>
 
+  <!-- New campaigns only. Before the first day, every lord's skills are set
+       where his age and talent put him, so young lords start young and grow
+       into their strength. Saves already under way are never touched. -->
+  <StartLordsOnCurve>true</StartLordsOnCurve>
+
   <!-- Lets lords buy better gear when they visit a town. Never changes what
        kind of fighter a lord is: it replaces what he already carries with
        something better of the same kind, and never touches an empty slot. -->
