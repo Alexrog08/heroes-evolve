@@ -512,10 +512,14 @@ namespace HeroesEvolve
         /// </summary>
         internal static int Shortfall(Hero hero, EquipmentIndex slot, int ceiling)
         {
-            ItemObject worn = hero.BattleEquipment[slot].Item;
+            EquipmentElement piece = hero.BattleEquipment[slot];
+            ItemObject worn = piece.Item;
             if (!IsTradeable(worn)) return 0;
 
-            return GearBalance.Shortfall(TierOf(worn), ceiling, ItemCatalog.BestBuyableTier(worn.ItemType));
+            // Damage counts: a Worn cuirass is further behind than a sound one of
+            // the same make. Quality never lifts a piece. See QualityValue.OrderTier.
+            int tier = QualityValue.OrderTier(TierOf(worn), MarketScanner.FineTierOf(piece));
+            return GearBalance.Shortfall(tier, ceiling, ItemCatalog.BestBuyableTier(worn.ItemType));
         }
 
         /// <summary>
@@ -620,10 +624,6 @@ namespace HeroesEvolve
             bool wornOwn = ItemCatalog.IsOwnCulture(worn, culture);
 
             MarketOffer offer = offers[chosen];
-            int gain = MarketRules.EffectiveTier(offer.Tier, offer.OwnCulture)
-                     - MarketRules.EffectiveTier(wornTier, wornOwn);
-            int fineGain = MarketRules.Effective(offer.FineTier, offer.OwnCulture)
-                         - MarketRules.Effective(wornFine, wornOwn);
 
             Candidate candidate = new Candidate();
             candidate.Slot = slot;

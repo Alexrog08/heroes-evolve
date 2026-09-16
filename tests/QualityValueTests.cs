@@ -67,6 +67,14 @@ namespace HeroesEvolve.Tests
                        "a plain 4.50 is");
             Check.False(MarketRules.IsUpgrade(300, false, QualityValue.Apply(400, 90), false, 4, 3),
                         "a legendary tier 4 is still tier 4 to a lord allowed tier 3");
+
+            // The armour order reads damage, never quality.
+            Check.Equal(4, QualityValue.OrderTier(4, 400), "a sound tier 4 is tier 4 to the armour order");
+            Check.Equal(3, QualityValue.OrderTier(4, 310), "a worn coat of 4.00 is read a tier further behind");
+            Check.Equal(4, QualityValue.OrderTier(4, 490), "a legendary one is never read as tier 5");
+            Check.Equal(4, QualityValue.OrderTier(5, 360), "a damaged 4.50 reads as 3.60, a tier 4");
+            Check.Equal(1, QualityValue.OrderTier(1, 40), "a damaged tier 1 stays on the scale");
+            Check.Equal(0, QualityValue.OrderTier(0, 0), "and a piece below the scale stays below it");
         }
     }
 }

@@ -104,6 +104,26 @@ namespace HeroesEvolve.Core
         }
 
         /// <summary>
+        /// The whole tier the armour order reads a worn piece at: its own tier, or
+        /// lower where damage has taken the piece down -- never higher.
+        ///
+        /// The order decides which slot a lord replaces first, by how far each is
+        /// behind. Read at the item's tier, a Worn cuirass looked as sound as a
+        /// plain one, so its replacement could be held back behind a lesser slot
+        /// while the upgrade gate already saw it as nearly a tier worse. Quality
+        /// never lifts a piece here: a legendary tier 4 is not a tier 5 to anyone,
+        /// and reading it so would hold back every other slot behind it.
+        /// </summary>
+        public static int OrderTier(int itemTier, int valuedFine)
+        {
+            if (itemTier < 1 || valuedFine < 1) return itemTier;
+
+            int valued = (valuedFine + 50) / 100;
+            if (valued < 1) valued = 1;
+            return valued < itemTier ? valued : itemTier;
+        }
+
+        /// <summary>
         /// How one covered part changes: the game adds the modifier's armour and
         /// never takes a covered part below one point, and leaves a part the
         /// piece does not cover alone.
