@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<base xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" type="string">
+  <tags>
+    <tag language="Türkçe" />
+  </tags>
+  <strings>
+    <string id="hev_strip" text="Silahlarını ve zırhını teslim et." />
+    <string id="hev_strip_reply" text="Yenilmiş bir adamın silahlarını mı alacaksın? Bu seni onursuz kılar. Al öyleyse. Klanım bunu duyacak, seninki de." />
+    <string id="hev_strip_reprisal" text="Sende incitebileceğim bir onur yok. Silahlarını ve zırhını teslim et." />
+    <string id="hev_strip_reprisal_reply" text="Beni soymayı bitirdiğinde bana onurdan bahset. Al öyleyse, hepsini al — bir ay geçmeden daha iyisine sahip olacağım ve üstünde gömleğinden başka bir şey bırakmayacağım bir sonraki adam pekâlâ senin soyadını taşıyor olabilir." />
+    <string id="hev_strip_friend" text="Bunu kişisel algılama. Silahlarını ve zırhını teslim et." />
+    <string id="hev_strip_friend_reply" text="Bunu senden başka herkesten beklerdim. Al öyleyse. Sana söyleyecek başka sözüm yok." />
+  </strings>
+</base>
