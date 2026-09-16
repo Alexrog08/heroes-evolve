@@ -35,7 +35,7 @@ namespace HeroesEvolve
         {
             if (hero == null || hero.HeroDeveloper == null || hero.BattleEquipment == null) return 0;
 
-            float talent = Talent.For(hero.StringId);
+            float talent = HeroTalent.For(hero);
             int primaryTarget = SkillGrowth.PrimaryTarget(hero.Age, talent);
             if (primaryTarget <= 0) return 0;
 

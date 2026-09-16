@@ -74,6 +74,7 @@ namespace HeroesEvolve
             ReportMyClan();
             ReportAttributes();
             ReportTalentSpread();
+            ReportAuthoredTalent();
             ReportTraits();
             ReportAllSkills();
             ReportGaps();
@@ -1634,7 +1635,7 @@ namespace HeroesEvolve
                 {
                     if (!HeroFilter.IsEligibleToGrow(hero)) continue;
 
-                    float talent = Talent.For(hero.StringId, Talent.Combat);
+                    float talent = HeroTalent.For(hero, Talent.Combat);
                     int target = SkillGrowth.PrimaryTarget(hero.Age, talent);
                     if (target <= 0) continue;
 
@@ -1837,7 +1838,7 @@ namespace HeroesEvolve
                 {
                     if (!HeroFilter.IsEligible(hero)) continue;
 
-                    float talent = Talent.For(hero.StringId);
+                    float talent = HeroTalent.For(hero);
                     all.Add((int)(talent * 100));
 
                     if (talent < 0.70f) below070++;
@@ -1868,6 +1869,62 @@ namespace HeroesEvolve
             {
                 ModLog.Info("TALENT gifted " + gifted[i]);
             }
+        }
+
+        /// <summary>
+        /// Where the rulers' talent comes from, and what it came to.
+        ///
+        /// Written to check the reading of TaleWorlds' templates against figures
+        /// worked out from the game's own files before any of it shipped. On the
+        /// vanilla roster the kings should read, in combat: Caladog 2.00,
+        /// Halthdar 1.73, Derthert, Monchug and Raganvad 1.67, Unqid 1.53,
+        /// Garios 1.47, Lucon and Rhagaea 1.40 -- every one of them authored. A
+        /// vanilla king reported as hash means the template was not where it was
+        /// expected, and the whole reading needs looking at again.
+        /// </summary>
+        private static void ReportAuthoredTalent()
+        {
+            int growing = 0, authored = 0;
+            foreach (Hero hero in Hero.AllAliveHeroes)
+            {
+                try
+                {
+                    if (!HeroFilter.IsEligibleToGrow(hero)) continue;
+                    growing++;
+                    if (HeroTalent.IsAuthored(hero)) authored++;
+                }
+                catch
+                {
+                    // One unreadable hero must not cost the count.
+                }
+            }
+
+            ModLog.Info("TALENT authored " + authored + " of " + growing
+                        + " growing heroes take their talent from what TaleWorlds wrote");
+
+            foreach (Kingdom kingdom in Kingdom.All)
+            {
+                try
+                {
+                    Hero ruler = kingdom.Leader;
+                    if (ruler == null) continue;
+
+                    ModLog.Info("TALENT ruler " + ruler.Name + " (" + kingdom.Name + ", " + (int)ruler.Age + ")"
+                                + " combat=" + TwoPlaces(HeroTalent.For(ruler, Talent.Combat))
+                                + " civil=" + TwoPlaces(HeroTalent.For(ruler, Talent.Civil))
+                                + " naval=" + TwoPlaces(HeroTalent.For(ruler, Talent.Naval))
+                                + " source=" + HeroTalent.SourceOf(ruler));
+                }
+                catch
+                {
+                    // Same reason as above.
+                }
+            }
+        }
+
+        private static string TwoPlaces(float value)
+        {
+            return value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
         }
 
         /// <summary>
@@ -1977,7 +2034,7 @@ namespace HeroesEvolve
                     if (!HeroFilter.IsEligible(hero)) continue;
                     if (hero.BattleEquipment == null) continue;
 
-                    float talent = Talent.For(hero.StringId, Talent.Combat);
+                    float talent = HeroTalent.For(hero, Talent.Combat);
                     int target = SkillGrowth.PrimaryTarget(hero.Age, talent);
                     if (target <= 0) continue;
 
@@ -2043,7 +2100,7 @@ namespace HeroesEvolve
 
                         string domain = IsNaval(skill) ? Talent.Naval : Talent.Civil;
                         int target = FocusGrowth.TargetFor(hero.Age,
-                                                           Talent.For(hero.StringId, domain), focus);
+                                                           HeroTalent.For(hero, domain), focus);
                         if (target <= 0) continue;
 
                         string name = skill.Name.ToString();
@@ -3565,7 +3622,7 @@ namespace HeroesEvolve
                                             ? hero.CharacterObject.DefaultFormationClass.ToString() : "<none>")
                     + " charId=" + (hero.CharacterObject != null ? hero.CharacterObject.StringId : "<none>")
                     + " heroId=" + hero.StringId
-                    + " talent=" + (int)(Talent.For(hero.StringId) * 100)
+                    + " talent=" + (int)(HeroTalent.For(hero) * 100)
                     + " | skills=" + RenderSkills(HeroAdapter.ReadSkills(hero))
                     + " | current=" + resolved.CurrentWeapons
                     + " | target=" + resolved.TargetWeapons

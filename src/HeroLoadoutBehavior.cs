@@ -75,6 +75,7 @@ namespace HeroesEvolve
             CaravanPurse.ResetSession();
             PurchaseWatch.ResetSession();
             ItemCatalog.ResetSession();
+            HeroTalent.ResetSession();
             CultureProfile.Reset();
             CultureArchetypes.Reset();
             WeaponPerks.Reset();
@@ -436,7 +437,7 @@ namespace HeroesEvolve
                     if (seeded > 0)
                     {
                         ModLog.Info("SEED hero=" + hero.Name + " skills=" + seeded
-                                    + " talent=" + (int)(Core.Talent.For(hero.StringId) * 100));
+                                    + " talent=" + (int)(HeroTalent.For(hero) * 100));
                     }
                 }
 

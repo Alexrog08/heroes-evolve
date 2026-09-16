@@ -56,7 +56,7 @@ namespace HeroesEvolve
             if (!HeroFilter.IsEligibleToGrow(hero)) return false;
             if (hero.HeroDeveloper == null || hero.BattleEquipment == null) return false;
 
-            float talent = Talent.For(hero.StringId);
+            float talent = HeroTalent.For(hero);
             int primaryTarget = SkillGrowth.PrimaryTarget(hero.Age, talent);
             if (primaryTarget <= 0) return false;
 
@@ -105,8 +105,8 @@ namespace HeroesEvolve
             // inside the loop allocated a string and hashed it once per skill
             // per hero per week -- some twelve thousand times a tick, to arrive
             // at the same two answers.
-            float civil = Talent.For(hero.StringId, Talent.Civil);
-            float naval = Talent.For(hero.StringId, Talent.Naval);
+            float civil = HeroTalent.For(hero, Talent.Civil);
+            float naval = HeroTalent.For(hero, Talent.Naval);
             float age = hero.Age;
 
             foreach (SkillObject skill in TaleWorlds.CampaignSystem.Extensions.Skills.All)
