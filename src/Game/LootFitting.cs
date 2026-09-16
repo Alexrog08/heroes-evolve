@@ -89,7 +89,8 @@ namespace HeroesEvolve
             hero.BattleEquipment[fit.Slot] = fit.Offer.Element;
             if (displaced.Item != null) loot.AddToCounts(displaced, 1);
 
-            PurchaseWatch.RecordLootSwap(hero, fit.Slot, displaced.Item, fit.Offer.Item);
+            PurchaseWatch.RecordLootSwap(hero, fit.Slot, displaced.Item, fit.Offer.Item,
+                                         MarketScanner.GradeOf(fit.Offer.Element));
 
             return true;
         }

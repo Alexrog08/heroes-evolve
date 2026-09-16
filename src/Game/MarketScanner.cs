@@ -32,7 +32,7 @@ namespace HeroesEvolve
         /// Read once and passed to each slot's scan rather than re-read per
         /// slot: a hero has eleven slots, and this runs on every lord entering
         /// every town. Empty entries are dropped here so the scans below never
-        /// see them.
+        /// see them, and so are damaged pieces -- see ItemGrade.IsDamaged.
         ///
         /// The tiers are worked out here too, which is what makes the scans
         /// cheap -- see StockEntry for why they are anything but free to ask.
@@ -63,6 +63,11 @@ namespace HeroesEvolve
 
                 ItemObject item = element.EquipmentElement.Item;
                 if (item == null) continue;
+
+                // Rusty, bent, worn: never an upgrade, however well the item
+                // itself scores. Dropped here, so a purchase, a captor's pick from
+                // his loot and every census dry run all see the same shelf.
+                if (ItemGrade.IsDamaged(GradeOf(element.EquipmentElement))) continue;
 
                 StockEntry entry = new StockEntry();
                 entry.Element = element.EquipmentElement;
@@ -268,6 +273,16 @@ namespace HeroesEvolve
         /// naphtha pots -- so the callers' "below the scale" guard keeps working
         /// off a single number.
         /// </summary>
+        /// <summary>
+        /// How sound one piece is: its modifier's quality, or Common when it has
+        /// none. See ItemGrade for the numbering.
+        /// </summary>
+        internal static int GradeOf(EquipmentElement element)
+        {
+            ItemModifier modifier = element.ItemModifier;
+            return modifier != null ? (int)modifier.ItemQuality : ItemGrade.Common;
+        }
+
         internal static int FineTierOf(ItemObject item)
         {
             if (TierOf(item) < 1) return 0;

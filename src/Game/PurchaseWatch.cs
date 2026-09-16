@@ -54,6 +54,8 @@ namespace HeroesEvolve
 
         private static readonly int[] _weaponKinds = new int[SwapRules.KindCount];
         private static readonly int[] _lootKinds = new int[SwapRules.KindCount];
+        private static readonly int[] _boughtByGrade = new int[ItemGrade.Count];
+        private static readonly int[] _lootByGrade = new int[ItemGrade.Count];
         private static readonly Dictionary<string, int> _classChanges = new Dictionary<string, int>();
         private static readonly Dictionary<string, int> _typeChanges = new Dictionary<string, int>();
 
@@ -78,6 +80,8 @@ namespace HeroesEvolve
             _bySlot.Clear();
             System.Array.Clear(_weaponKinds, 0, _weaponKinds.Length);
             System.Array.Clear(_lootKinds, 0, _lootKinds.Length);
+            System.Array.Clear(_boughtByGrade, 0, _boughtByGrade.Length);
+            System.Array.Clear(_lootByGrade, 0, _lootByGrade.Length);
             _classChanges.Clear();
             _typeChanges.Clear();
             _lastBoughtDay.Clear();
@@ -154,14 +158,16 @@ namespace HeroesEvolve
             }
         }
 
-        /// <summary>One piece bought, and what it replaced.</summary>
-        public static void RecordPurchase(Hero hero, EquipmentIndex slot, ItemObject sold, ItemObject bought)
+        /// <summary>One piece bought, what it replaced, and how sound the piece was.</summary>
+        public static void RecordPurchase(Hero hero, EquipmentIndex slot, ItemObject sold, ItemObject bought,
+                                          int boughtGrade)
         {
             try
             {
                 Stamp();
                 _pieces++;
                 Bump(_bySlot, SlotMapping.NameOf(slot));
+                _boughtByGrade[ItemGrade.Index(boughtGrade)]++;
 
                 // Same hero, same slot, same day. A lord gets one trip a day, so
                 // this is a trip that paid twice for one slot -- which the trip
@@ -189,11 +195,13 @@ namespace HeroesEvolve
         /// crossed here either -- and a regression in the rules would show up
         /// here with nobody looking at the market.
         /// </summary>
-        public static void RecordLootSwap(Hero hero, EquipmentIndex slot, ItemObject gaveUp, ItemObject took)
+        public static void RecordLootSwap(Hero hero, EquipmentIndex slot, ItemObject gaveUp, ItemObject took,
+                                          int tookGrade)
         {
             try
             {
                 Stamp();
+                _lootByGrade[ItemGrade.Index(tookGrade)]++;
                 Classify(_lootKinds, false, hero, slot, gaveUp, took);
             }
             catch
@@ -253,6 +261,8 @@ namespace HeroesEvolve
                 ModLog.Info("PURCHASE weaponTypeChanges " + Top(_typeChanges, 12));
                 ModLog.Info("PURCHASE slotBoughtTwiceSameDay=" + _slotTwiceSameDay + " (expect 0)");
                 ModLog.Info("LOOTFIT weapons " + Kinds(_lootKinds));
+                ModLog.Info("QUALITY bought " + ItemGrade.Describe(_boughtByGrade) + " (expect poor=0 inferior=0)");
+                ModLog.Info("QUALITY lootTaken " + ItemGrade.Describe(_lootByGrade) + " (expect poor=0 inferior=0)");
 
                 ModLog.Info("ARMOURORDER tripsWithArmourOnOffer=" + _tripsArmorOnOffer
                             + " boughtArmour=" + _tripsBoughtArmor

@@ -88,6 +88,7 @@ namespace HeroesEvolve
             ReportBanners();
             ReportTierSpread();
             ReportMarkets();
+            ReportQuality();
             ReportHeadroom(clanWeight, skillWeight, minimumTier);
             ReportShopping(clanWeight, skillWeight, minimumTier);
             PurchaseWatch.Report(clanWeight, skillWeight, minimumTier);
@@ -2999,6 +3000,112 @@ namespace HeroesEvolve
             ModLog.Info("CLANGOLD clansAffording n=" + gold.Count
                         + " tier4=" + t4 + " tier5=" + t5 + " tier6=" + t6
                         + " atShare=" + share);
+        }
+
+        /// <summary>
+        /// How sound the gear is: what the towns have on their shelves, grade by
+        /// grade, and what every lord and companion is wearing.
+        ///
+        /// Written when the purchase engine turned out to be buying damaged goods
+        /// (see ItemGrade.IsDamaged). The shelf count is how much of it the engine
+        /// now walks past. The worn count is how much is still on backs -- bought
+        /// before the rule, or handed out by the game itself, which gives every
+        /// companion it spawns a Worn, Rusty and Old kit
+        /// (CompanionsCampaignBehavior.AdjustEquipmentModifiers), as do mods that
+        /// copy that routine for the soldiers they promote.
+        ///
+        /// Counted apart for the player's own party, the rest of his clan and
+        /// everyone else, because the mod never touches the first: a companion
+        /// riding with the player wears what he was given. The heroes wearing
+        /// damaged pieces are named with the pieces, the player's own first, so a
+        /// report of rusty gear can be traced to where it came from.
+        /// </summary>
+        private static void ReportQuality()
+        {
+            int[] shelves = new int[ItemGrade.Count];
+            foreach (Settlement settlement in Settlement.All)
+            {
+                try
+                {
+                    if (settlement == null || !settlement.IsTown || settlement.ItemRoster == null) continue;
+
+                    ItemRoster roster = settlement.ItemRoster;
+                    for (int i = 0; i < roster.Count; i++)
+                    {
+                        ItemRosterElement element = roster.GetElementCopyAtIndex(i);
+                        if (element.Amount <= 0) continue;
+
+                        ItemObject item = element.EquipmentElement.Item;
+                        if (item == null) continue;
+                        if (!item.HasArmorComponent && item.WeaponComponent == null && !item.HasHorseComponent) continue;
+
+                        shelves[ItemGrade.Index(MarketScanner.GradeOf(element.EquipmentElement))] += element.Amount;
+                    }
+                }
+                catch
+                {
+                    // A settlement mid-transition must not cost the survey.
+                }
+            }
+            ModLog.Info("QUALITY shelves " + ItemGrade.Describe(shelves) + " (units of gear across every town)");
+
+            int[] yourParty = new int[ItemGrade.Count];
+            int[] yourClan = new int[ItemGrade.Count];
+            int[] elsewhere = new int[ItemGrade.Count];
+            List<string> mine = new List<string>();
+            List<string> theirs = new List<string>();
+            int wearingDamaged = 0;
+
+            foreach (Hero hero in Hero.AllAliveHeroes)
+            {
+                try
+                {
+                    if (hero == null || hero == Hero.MainHero || hero.IsChild || hero.IsTemplate) continue;
+                    if (!hero.IsLord && hero.CompanionOf == null) continue;
+                    if (hero.BattleEquipment == null) continue;
+
+                    bool inYourParty = hero.PartyBelongedTo != null && hero.PartyBelongedTo == MobileParty.MainParty;
+                    bool inYourClan = hero.Clan != null && hero.Clan == Clan.PlayerClan;
+                    int[] tally = inYourParty ? yourParty : inYourClan ? yourClan : elsewhere;
+
+                    StringBuilder pieces = null;
+                    for (EquipmentIndex slot = EquipmentIndex.WeaponItemBeginSlot;
+                         slot < EquipmentIndex.NumEquipmentSetSlots; slot++)
+                    {
+                        EquipmentElement element = hero.BattleEquipment[slot];
+                        if (element.Item == null) continue;
+
+                        int grade = MarketScanner.GradeOf(element);
+                        tally[ItemGrade.Index(grade)]++;
+                        if (!ItemGrade.IsDamaged(grade)) continue;
+
+                        if (pieces == null) pieces = new StringBuilder();
+                        else pieces.Append(", ");
+                        pieces.Append(element.GetModifiedItemName());
+                    }
+
+                    if (pieces == null) continue;
+                    wearingDamaged++;
+
+                    string line = hero.Name + " (" + (inYourParty ? "yourParty" : inYourClan ? "yourClan" : "elsewhere")
+                                + ", " + (hero.Clan != null ? hero.Clan.Name.ToString() : "no clan") + "): " + pieces;
+                    if (inYourParty || inYourClan) mine.Add(line);
+                    else theirs.Add(line);
+                }
+                catch
+                {
+                    // One unreadable hero must not cost the survey.
+                }
+            }
+
+            ModLog.Info("QUALITY worn yourParty " + ItemGrade.Describe(yourParty));
+            ModLog.Info("QUALITY worn yourClan " + ItemGrade.Describe(yourClan));
+            ModLog.Info("QUALITY worn elsewhere " + ItemGrade.Describe(elsewhere));
+            ModLog.Info("QUALITY heroesWearingDamaged=" + wearingDamaged);
+
+            const int Named = 15;
+            for (int i = 0; i < mine.Count && i < Named; i++) ModLog.Info("QUALITY damaged " + mine[i]);
+            for (int i = 0; i < theirs.Count && mine.Count + i < Named; i++) ModLog.Info("QUALITY damaged " + theirs[i]);
         }
 
         private static void ReportMarkets()
