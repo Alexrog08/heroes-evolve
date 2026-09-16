@@ -130,19 +130,24 @@ namespace HeroesEvolve
         /// The commission a caravan's leader keeps out of what it earns, and
         /// the only money he has to dress himself with.
         ///
-        /// Half leaves the owner the other half. A campaign of 5,968
-        /// caravan-days measured the loss rate at 22% a year and the kit that
-        /// one year of trading pays for at some 290,000 denars; against that a
-        /// leader's savings never come close, which is the point. At 1.00 he
-        /// keeps everything and the caravan stops paying its owner at all -- a
-        /// real choice, and the reason the slider runs that far.
+        /// A fifth by default. Measured against what 1,560 purchases actually
+        /// cost, a caravan earning a thousand a day pays its master about 16,800
+        /// a year at 0.20: a full tier-3 kit in a little over a year, tier 4 in
+        /// about three, tier 5 in about six, if his skills allow those tiers and
+        /// his caravan is not robbed first. It was 0.50 -- half of every
+        /// caravan's income -- when that half was a commission plus a matching
+        /// multiplier; once it became a plain daily commission, half was simply
+        /// too much to take every day. Nothing is taken while he has nothing
+        /// left to improve (see CaravanPurse.CommissionDue).
         ///
+        /// At 1.00 he keeps everything and the caravan stops paying its owner
+        /// at all -- a real choice, and the reason the slider runs that far.
         /// Zero does not hand him back the clan purse. It stops the commission
         /// and leaves him spending down whatever he has until he has nothing,
         /// because the feature is that his patron's treasury is not his to
         /// spend, and that has to hold at every setting rather than most.
         /// </summary>
-        public static float CaravanGearShare = 0.50f;
+        public static float CaravanGearShare = 0.20f;
 
         /// <summary>
         /// Whether this mod dresses the heroes of the player's own clan.

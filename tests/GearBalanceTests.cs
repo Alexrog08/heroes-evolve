@@ -12,6 +12,13 @@ namespace HeroesEvolve.Tests
             Check.Equal(0, GearBalance.Shortfall(4, 6, 4), "boots at the best tier sold are not behind, whatever the ceiling");
             Check.Equal(1, GearBalance.Shortfall(3, 6, 4), "and one short of the best sold is one behind");
 
+            // Whether a caravan master still has anything his commission could buy.
+            Check.False(GearBalance.AnythingBehind(new int[] { 0, 0, 0, 0 }),
+                        "every piece at the best he may wear leaves nothing to improve");
+            Check.True(GearBalance.AnythingBehind(new int[] { 0, 0, 2, 0 }), "one piece behind is enough");
+            Check.False(GearBalance.AnythingBehind(new int[0]), "a man wearing nothing tradeable has nothing to improve");
+            Check.False(GearBalance.AnythingBehind(null), "nor does one nobody could read");
+
             // Never negative, and never driven by what cannot be traded.
             Check.Equal(0, GearBalance.Shortfall(6, 4, 6), "gear above the ceiling is not behind");
             Check.Equal(0, GearBalance.Shortfall(3, 6, 0), "a kind nobody sells cannot be behind");

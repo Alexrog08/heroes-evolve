@@ -67,16 +67,15 @@ namespace HeroesEvolve
         /// who has reached his ceiling in every slot accumulates money he has
         /// no use for.
         ///
-        /// Nothing is done about that yet, deliberately. Every cap anyone can
-        /// name is a number pulled out of the air -- stop at twice the kit he
-        /// wears, stop at some figure in denars -- and the one rule that sounds
-        /// principled, stop once he has saved more than he is wearing, would
-        /// freeze a poorly dressed master below the price of any upgrade he
-        /// might want. The case also needs a hero at his ceiling in all eleven
-        /// slots, which a census of six caravan masters found exactly once. The
-        /// money is not destroyed either: his ceiling rises as his skills do,
-        /// and a companion who is later made a lord takes his savings with him
-        /// as his clan's treasury. Left alone until a campaign says it matters.
+        /// That case turned out to be common rather than rare, because the ceiling
+        /// is set by skill. The player's own caravan in a live campaign was led
+        /// by a man with 68 combat, capped at tier 2, already wearing 8,339 of a
+        /// possible 8,700 -- and at a half share he was drawing 359 a day, some
+        /// 30,000 a year of his patron's money, with nothing left to spend it on.
+        /// So nothing is owed while he has nothing to improve (see
+        /// CommissionDue). That is not a cap pulled out of the air: it is the
+        /// same Shortfall the armour order uses, and it lifts by itself the day
+        /// his skills raise his ceiling.
         /// </summary>
         public static float Commission
         {
@@ -86,6 +85,52 @@ namespace HeroesEvolve
                 if (share < 0f) return 0f;
                 return share > 1f ? 1f : share;
             }
+        }
+
+        /// <summary>
+        /// What a caravan owes its leader today, before his patron's purse is
+        /// consulted. Nothing unless he could spend it -- purchases on, and a
+        /// hero the shopping filter accepts -- and nothing while every piece he
+        /// wears is already as good as his ceiling and the market allow.
+        ///
+        /// The daily tick pays this and the census prints this, so the census
+        /// can never report a commission that was not paid.
+        /// </summary>
+        public static int CommissionDue(MobileParty party, Hero leader)
+        {
+            if (party == null || leader == null) return 0;
+            if (Settings.CaravanGearShare <= 0f) return 0;
+
+            // Paid only to a man who could spend it. Two switches make that
+            // false while leaving him leading a caravan: turning purchases off
+            // stops all shopping, and turning off ManageOwnClan tells the mod to
+            // leave the player's own people alone. Either way he would go on
+            // drawing a commission out of his patron's pocket and never buy a
+            // thing with it. Asked of the shopping filter rather than of the
+            // switches one by one, so a condition added there is honoured here.
+            if (!Settings.EnablePurchases) return 0;
+            if (!HeroFilter.IsEligibleToShop(leader)) return 0;
+
+            int profit = DailyIncome(party.PartyTradeGold);
+            if (profit <= 0) return 0;
+
+            if (!HasUseForCommission(leader)) return 0;
+
+            int cut = (int)(profit * Commission);
+            return cut > 0 ? cut : 0;
+        }
+
+        /// <summary>
+        /// Whether anything he wears could still be improved at market, under the
+        /// ceiling the purchases themselves would give him.
+        /// </summary>
+        public static bool HasUseForCommission(Hero leader)
+        {
+            if (leader == null) return false;
+
+            int ceiling = HeroAdapter.ReadCeiling(leader, HeroAdapter.ReadSkills(leader),
+                                                  Settings.ClanWeight, Settings.SkillWeight, Settings.MinimumTier);
+            return ShoppingTrip.HasRoomToImprove(leader, ceiling);
         }
 
         /// <summary>The threshold and divisor AddIncomeFromParty applies, read from it.</summary>
@@ -222,29 +267,10 @@ namespace HeroesEvolve
                         if (leader == null || leader.IsDead) continue;
 
                         if (leader.StringId != null) _leaders.Add(leader.StringId);
-                        if (Settings.CaravanGearShare <= 0f) continue;
 
-                        // Paid only to a man who could spend it. Two switches make
-                        // that false while leaving him leading a caravan: turning
-                        // purchases off stops all shopping, and turning off
-                        // ManageOwnClan tells the mod to leave the player's own
-                        // people alone. Either way he would go on drawing a
-                        // commission out of his patron's pocket for the rest of the
-                        // campaign and never buy a thing with it -- the player
-                        // switching the system off and still being charged for it.
-                        //
-                        // Asked of the shopping filter rather than of the switches
-                        // one by one, so a condition added there is honoured here
-                        // without anyone remembering to. Only EnablePurchases is
-                        // named, because it gates the behaviour rather than the
-                        // hero and the filter never sees it.
-                        if (!Settings.EnablePurchases) continue;
-                        if (!HeroFilter.IsEligibleToShop(leader)) continue;
-
-                        int profit = DailyIncome(party.PartyTradeGold);
-                        if (profit <= 0) continue;
-
-                        int cut = (int)(profit * Commission);
+                        // Everything about whether he is owed anything, and how
+                        // much, lives in CommissionDue, which the census reads too.
+                        int cut = CommissionDue(party, leader);
                         if (cut <= 0) continue;
 
                         Hero payer = party.Party != null ? party.Party.Owner : null;

@@ -501,6 +501,31 @@ namespace HeroesEvolve
         }
 
         /// <summary>
+        /// Whether anything he wears is behind the best its slot could hold, by
+        /// the same Shortfall the armour order and the census use. A caravan
+        /// master for whom this is false has nothing a commission could buy.
+        /// </summary>
+        internal static bool HasRoomToImprove(Hero hero, int ceiling)
+        {
+            if (hero == null || hero.BattleEquipment == null) return false;
+
+            int[] shortfalls = new int[SlotSnapshot.WeaponSlotCount + SlotMapping.ArmorSlots.Length + 2];
+            int n = 0;
+            for (int i = 0; i < SlotSnapshot.WeaponSlotCount; i++)
+            {
+                shortfalls[n++] = Shortfall(hero, SlotMapping.WeaponSlot(i), ceiling);
+            }
+            for (int i = 0; i < SlotMapping.ArmorSlots.Length; i++)
+            {
+                shortfalls[n++] = Shortfall(hero, SlotMapping.ArmorSlots[i], ceiling);
+            }
+            shortfalls[n++] = Shortfall(hero, EquipmentIndex.Horse, ceiling);
+            shortfalls[n] = Shortfall(hero, EquipmentIndex.HorseHarness, ceiling);
+
+            return GearBalance.AnythingBehind(shortfalls);
+        }
+
+        /// <summary>
         /// Tiers one slot is behind the best it could hold. Zero for an empty
         /// slot, for gear the market never takes off him, and for anything the
         /// game ranks below tier 1: none of those can be bought for, so none

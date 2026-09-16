@@ -155,9 +155,9 @@ namespace HeroesEvolve
 
         [SettingPropertyFloatingInteger("Caravan leader's commission", 0f, 1f, "0.00",
             RequireRestart = false, Order = 0,
-            HintText = "What a caravan's leader keeps of its profit, and the only money he buys gear with. Higher arms him better and pays you less. At 1.00 the caravan pays you nothing.")]
+            HintText = "What a caravan's leader keeps of its profit to buy his own gear. Higher arms him better and pays you less. Nothing is taken while he has nothing to improve.")]
         [SettingPropertyGroup("Caravans", GroupOrder = 4)]
-        public float CaravanGearShare { get; set; } = 0.50f;
+        public float CaravanGearShare { get; set; } = 0.20f;
 
         // ---- Robbery ---------------------------------------------------------------
 

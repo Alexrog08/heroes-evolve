@@ -102,28 +102,30 @@
        tenth per piece was. -->
   <SpendingShare>0.30</SpendingShare>
 
-  <!-- The commission a caravan's leader keeps out of what it earns.
+  <!-- The commission a caravan's leader keeps out of what it earns, and the only
+       money he buys his own gear with.
 
        A caravan master is the one hero who is not a clan leader and still has
-       an income anyone can measure, so he buys his own gear out of a cut of it
+       an income anyone can measure, so he buys his gear out of a cut of it
        rather than out of his patron's treasury. A caravan that trades well arms
        the man running it; a poor one leaves him plain; and he can never outspend
        what he has produced.
 
-       At 0.50 the owner keeps the other half. A campaign of 5,968 caravan-days
-       measured the loss rate at 22 per cent a year and the kit that one year of
-       trading pays for at some 290,000 denars — and a leader's savings never
-       come near that, which is the whole point of paying him in a share rather
-       than out of a purse with no bottom.
+       At 0.20 a caravan earning a thousand a day pays its master about 16,800 a
+       year. Against what 1,560 purchases actually cost, that buys a full tier-3
+       kit in a little over a year, tier 4 in about three and tier 5 in about six
+       — if his skills allow those tiers at all, and if his caravan is not
+       robbed first, which early in a campaign happens about once a year.
+
+       Nothing is taken while he has nothing left to improve: once every piece he
+       wears is as good as his skills and the markets allow, the commission stops,
+       and it starts again the day his skills raise his ceiling. A weak leader
+       capped at tier 2 used to bank half his caravan's income for nothing.
 
        At 1.00 he keeps everything the caravan makes and it stops paying its
-       owner at all. That is a real choice rather than a misconfiguration, which
-       is why the slider goes there.
-
-       At 0.00 he is paid nothing, spends down what he already has, and then
-       buys no more. It does NOT hand him back the clan purse: the point of the
-       feature is that his patron's treasury is not his to spend, and that holds
-       at every setting rather than at most of them.
+       owner at all. At 0.00 he is paid nothing, spends down what he already has,
+       and then buys no more. It does NOT hand him back the clan purse: his
+       patron's treasury is not his to spend at any setting.
 
        Bear in mind that he is stripped of what he wears when his caravan is
        beaten, so arming him well is also what makes losing him expensive.
@@ -131,7 +133,7 @@
        Leaders of war parties are deliberately untouched by this. A war party
        does not exist to make money, so rationing its leader by what he earns
        would measure him against a target he was never given. -->
-  <CaravanGearShare>0.50</CaravanGearShare>
+  <CaravanGearShare>0.20</CaravanGearShare>
 
   <!-- Scales the gold held back so buying gear can never stop a clan paying
        its troops. 1.0 keeps exactly the game's own threshold per war party.

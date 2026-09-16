@@ -37,6 +37,22 @@ namespace HeroesEvolve.Core
         public const int Tolerance = 1;
 
         /// <summary>
+        /// Whether any piece is behind the best its slot could hold. False for no
+        /// pieces at all: a man with nothing the market could replace has
+        /// nothing to improve, not everything.
+        /// </summary>
+        public static bool AnythingBehind(int[] shortfalls)
+        {
+            if (shortfalls == null) return false;
+
+            for (int i = 0; i < shortfalls.Length; i++)
+            {
+                if (shortfalls[i] > 0) return true;
+            }
+            return false;
+        }
+
+        /// <summary>
         /// Whole tiers between what is worn and the best the slot could hold:
         /// the lower of the hero's ceiling and the best tier sold of that kind.
         ///

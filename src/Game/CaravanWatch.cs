@@ -211,6 +211,7 @@ namespace HeroesEvolve
 
             int alive = 0;
             int withHero = 0;
+            int paused = 0;
             long tradeGold = 0;
             long income = 0;
 
@@ -228,6 +229,9 @@ namespace HeroesEvolve
                     Hero leader = party.LeaderHero;
                     if (leader == null) continue;
                     withHero++;
+
+                    bool hasUse = CaravanPurse.HasUseForCommission(leader);
+                    if (!hasUse && HeroFilter.IsEligibleToShop(leader)) paused++;
 
                     // Named in full, because there are only ever a few and they
                     // are the ones the decision is about.
@@ -250,7 +254,8 @@ namespace HeroesEvolve
                                 // could afford today: bought under an older
                                 // rule, or handed to him.
                                 + " purse=" + leader.Gold
-                                + " commission=" + (int)(DailyIncome(gold) * CaravanPurse.Commission)
+                                + " commission=" + CaravanPurse.CommissionDue(party, leader)
+                                + " hasUseForIt=" + hasUse
                                 + " bestCombat=" + combat
                                 + " ceiling=" + TierCeiling.Compute(
                                       leader.Clan != null ? leader.Clan.Tier : 0, combat,
@@ -268,7 +273,9 @@ namespace HeroesEvolve
                         + " withHero=" + withHero
                         + " tradeGold=" + tradeGold
                         + " dailyIncome=" + income
-                        + " meanIncomePerCaravan=" + (alive > 0 ? income / alive : 0));
+                        + " meanIncomePerCaravan=" + (alive > 0 ? income / alive : 0)
+                        + " commissionPaused=" + paused
+                        + " (leaders with nothing left to improve pay no commission)");
 
             ReportMortality(alive, alive > 0 ? income / alive : 0);
         }
