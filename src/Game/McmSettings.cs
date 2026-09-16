@@ -2,6 +2,7 @@ using System;
 using MCM.Abstractions.Attributes;
 using MCM.Abstractions.Attributes.v2;
 using MCM.Abstractions.Base.Global;
+using MCM.Common;
 using TaleWorlds.CampaignSystem;
 
 namespace HeroesEvolve
@@ -125,6 +126,13 @@ namespace HeroesEvolve
             HintText = "How often a lord bothers with the market. One trip a day at most. At 1.00 he stops at every town he enters.")]
         [SettingPropertyGroup("Money", GroupOrder = 4)]
         public float ShopChancePerVisit { get; set; } = 0.25f;
+
+        // Listed in CultureChoice's own order, so the selected index is the value.
+        [SettingPropertyDropdown("Culture favoured when buying", RequireRestart = false,
+            HintText = "Whose colours a lord prefers at market: his clan's, his own, or none. Worth one tier. Repair still dresses him as his own people.")]
+        [SettingPropertyGroup("Money", GroupOrder = 4)]
+        public Dropdown<string> ShoppingCulture { get; set; } =
+            new Dropdown<string>(new string[] { "His clan's culture", "His own culture", "No preference" }, 1);
 
         [SettingPropertyFloatingInteger("Share of the purse per shopping trip", 0f, 1f, "0.00",
             RequireRestart = false,

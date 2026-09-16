@@ -60,6 +60,10 @@ namespace HeroesEvolve
         private static int _boughtOverDamaged;
         private static int _lootForQuality;
         private static int _lootOverDamaged;
+        private static int _boughtFavoured;
+        private static int _boughtOfNoCulture;
+        private static int _boughtForeign;
+        private static int _boughtWithNoPreference;
         private static readonly Dictionary<string, int> _classChanges = new Dictionary<string, int>();
         private static readonly Dictionary<string, int> _typeChanges = new Dictionary<string, int>();
 
@@ -90,6 +94,10 @@ namespace HeroesEvolve
             _boughtOverDamaged = 0;
             _lootForQuality = 0;
             _lootOverDamaged = 0;
+            _boughtFavoured = 0;
+            _boughtOfNoCulture = 0;
+            _boughtForeign = 0;
+            _boughtWithNoPreference = 0;
             _classChanges.Clear();
             _typeChanges.Clear();
             _lastBoughtDay.Clear();
@@ -181,6 +189,7 @@ namespace HeroesEvolve
                 _boughtByGrade[ItemGrade.Index(MarketScanner.GradeOf(bought))]++;
                 if (forQuality) _boughtForQuality++;
                 if (sold.Item != null && ItemGrade.IsDamaged(MarketScanner.GradeOf(sold))) _boughtOverDamaged++;
+                RecordCulture(hero, bought.Item);
 
                 // Same hero, same slot, same day. A lord gets one trip a day, so
                 // this is a trip that paid twice for one slot -- which the trip
@@ -236,8 +245,7 @@ namespace HeroesEvolve
             {
                 if (hero == null || worn.Item == null || offer.Item == null) return false;
 
-                CultureObject culture = hero.Culture;
-                if (culture == null && hero.Clan != null) culture = hero.Clan.Culture;
+                CultureObject culture = ShoppingTrip.PreferredCulture(hero);
 
                 return !MarketRules.IsUpgrade(MarketScanner.FineTierOf(worn.Item),
                                               ItemCatalog.IsOwnCulture(worn.Item, culture),
@@ -248,6 +256,23 @@ namespace HeroesEvolve
             {
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Whether a piece bought was in the colours the lord favours, of no
+        /// culture at all, or foreign -- against the preference in force when he
+        /// bought it. With no preference nothing is favoured, and the piece is
+        /// counted apart rather than called foreign.
+        /// </summary>
+        private static void RecordCulture(Hero hero, ItemObject bought)
+        {
+            if (bought == null) return;
+
+            CultureObject favoured = ShoppingTrip.PreferredCulture(hero);
+            if (favoured == null) _boughtWithNoPreference++;
+            else if (bought.Culture == null) _boughtOfNoCulture++;
+            else if (ItemCatalog.IsOwnCulture(bought, favoured)) _boughtFavoured++;
+            else _boughtForeign++;
         }
 
         private static void Classify(int[] kinds, bool purchase, Hero hero, EquipmentIndex slot,
@@ -283,6 +308,34 @@ namespace HeroesEvolve
             }
         }
 
+        /// <summary>
+        /// How many shoppers the choice can matter to at all: those whose own
+        /// culture is not their clan's. For everyone else clan and hero name the
+        /// same colours.
+        /// </summary>
+        private static void ReportCultureSplit()
+        {
+            int shoppers = 0, differ = 0;
+            foreach (Hero hero in Hero.AllAliveHeroes)
+            {
+                try
+                {
+                    if (!HeroFilter.IsEligibleToShop(hero)) continue;
+                    shoppers++;
+
+                    CultureObject own = hero.Culture;
+                    CultureObject clan = hero.Clan != null ? hero.Clan.Culture : null;
+                    if (own != null && clan != null && own.StringId != clan.StringId) differ++;
+                }
+                catch
+                {
+                    // One unreadable hero must not cost the count.
+                }
+            }
+
+            ModLog.Info("CULTURE shoppersWhoseCultureIsNotTheirClans=" + differ + " of " + shoppers);
+        }
+
         /// <summary>The census section.</summary>
         public static void Report(float clanWeight, float skillWeight, int minimumTier)
         {
@@ -307,6 +360,12 @@ namespace HeroesEvolve
                 ModLog.Info("QUALITY lootTaken " + ItemGrade.Describe(_lootByGrade) + " (expect poor=0 inferior=0)");
                 ModLog.Info("QUALITY lootTakenBecauseOfQuality=" + _lootForQuality
                             + " lootTakenOverDamaged=" + _lootOverDamaged);
+                ModLog.Info("CULTURE favouring=" + CultureChoices.NameOf(Settings.ShoppingCulture)
+                            + " bought favoured=" + _boughtFavoured
+                            + " ofNoCulture=" + _boughtOfNoCulture
+                            + " foreign=" + _boughtForeign
+                            + " withNoPreference=" + _boughtWithNoPreference);
+                ReportCultureSplit();
 
                 ModLog.Info("ARMOURORDER tripsWithArmourOnOffer=" + _tripsArmorOnOffer
                             + " boughtArmour=" + _tripsBoughtArmor

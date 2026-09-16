@@ -36,6 +36,12 @@ namespace HeroesEvolve
         /// <summary>Let lords buy better gear when they visit a town.</summary>
         public static bool EnablePurchases = true;
 
+        /// <summary>
+        /// Whose colours a lord favours when he buys: his clan's, his own, or no
+        /// one's. His own by default, which is what the market always did.
+        /// </summary>
+        public static Core.CultureChoice ShoppingCulture = Core.CultureChoice.Hero;
+
         /// <summary>Write hev.log. Off costs nothing and writes nothing.</summary>
         public static bool EnableLogging = true;
 
@@ -255,6 +261,7 @@ namespace HeroesEvolve
                 SpendingShare = Number(root, "SpendingShare", SpendingShare, 0f, 1f);
                 ReserveMultiplier = Number(root, "ReserveMultiplier", ReserveMultiplier, 0f, 10f);
                 ShopChancePerVisit = Number(root, "ShopChancePerVisit", ShopChancePerVisit, 0f, 1f);
+                ShoppingCulture = Core.CultureChoices.Parse(Text(root, "ShoppingCulture"), ShoppingCulture);
                 PlunderChance = Number(root, "PlunderChance", PlunderChance, 0f, 5f);
                 CaravanGearShare = Number(root, "CaravanGearShare", CaravanGearShare, 0f, 1f);
 
@@ -289,6 +296,7 @@ namespace HeroesEvolve
                    + " spendingShare=" + SpendingShare
                    + " reserveMultiplier=" + ReserveMultiplier
                    + " shopChance=" + ShopChancePerVisit
+                   + " shoppingCulture=" + Core.CultureChoices.NameOf(ShoppingCulture)
                    + " captureLoss=" + EnableCaptureLoss
                    + " plunderChance=" + PlunderChance
                    + " caravanGearShare=" + CaravanGearShare

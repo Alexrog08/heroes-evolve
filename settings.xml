@@ -144,6 +144,13 @@
        much he leaves with. At 1.0 he stops at every town he enters. -->
   <ShopChancePerVisit>0.25</ShopChancePerVisit>
 
+  <!-- Whose colours a lord favours when he buys: clan (his clan's culture),
+       hero (his own culture) or none (no preference: the best piece wins,
+       whoever made it). A piece in the favoured culture counts one tier
+       better, so a lord abroad still buys foreign gear when it is clearly the
+       better piece. Repair always dresses a lord as his own people. -->
+  <ShoppingCulture>hero</ShoppingCulture>
+
 
   <!-- ============ Losing gear ============ -->
 

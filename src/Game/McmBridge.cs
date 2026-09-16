@@ -116,6 +116,9 @@ namespace HeroesEvolve
             Settings.DominanceMargin = settings.DominanceMargin;
 
             Settings.ShopChancePerVisit = settings.ShopChancePerVisit;
+            Settings.ShoppingCulture = Core.CultureChoices.FromIndex(
+                settings.ShoppingCulture != null ? settings.ShoppingCulture.SelectedIndex : -1,
+                Settings.ShoppingCulture);
             Settings.SpendingShare = settings.SpendingShare;
             Settings.ReserveMultiplier = settings.ReserveMultiplier;
 

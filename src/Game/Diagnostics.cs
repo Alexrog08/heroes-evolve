@@ -3292,8 +3292,7 @@ namespace HeroesEvolve
                 return;
             }
 
-            CultureObject culture = hero.Culture;
-            if (culture == null && hero.Clan != null) culture = hero.Clan.Culture;
+            CultureObject culture = ShoppingTrip.PreferredCulture(hero);
             bool mounted = hero.BattleEquipment[EquipmentIndex.Horse].Item != null;
 
             List<MarketOffer> offers;
@@ -3500,8 +3499,7 @@ namespace HeroesEvolve
 
                     // Nothing on offer: say what stopped every slot that had
                     // room, so a quiet engine can be read.
-                    CultureObject culture = hero.Culture;
-                    if (culture == null && hero.Clan != null) culture = hero.Clan.Culture;
+                    CultureObject culture = ShoppingTrip.PreferredCulture(hero);
 
                     List<StockEntry> stock;
                     if (!stockByTown.TryGetValue(settlement.StringId, out stock))

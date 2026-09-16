@@ -120,8 +120,7 @@ namespace HeroesEvolve
             if (hero == null || hero.BattleEquipment == null) return new List<Candidate>();
             if (stock == null || stock.Count == 0) return new List<Candidate>();
 
-            CultureObject culture = hero.Culture;
-            if (culture == null && hero.Clan != null) culture = hero.Clan.Culture;
+            CultureObject culture = PreferredCulture(hero);
 
             SkillProfile skills = HeroAdapter.ReadSkills(hero);
             SlotSnapshot current = HeroAdapter.ReadEquipment(hero.BattleEquipment);
@@ -633,6 +632,34 @@ namespace HeroesEvolve
             candidate.WornOwnCulture = wornOwn;
             candidate.Offers = offers;
             found.Add(candidate);
+        }
+
+        /// <summary>
+        /// The culture a lord favours at market, as Settings.ShoppingCulture
+        /// chooses: his clan's or his own, each falling back to the other where
+        /// it is missing, or null for no preference -- which ItemCatalog.IsOwnCulture
+        /// reads as "nothing is his own", so culture drops out of every
+        /// comparison. Asked in one place so the purchase, the census counter and
+        /// the dry runs cannot favour different colours for the same man.
+        /// </summary>
+        internal static CultureObject PreferredCulture(Hero hero)
+        {
+            if (hero == null) return null;
+
+            Clan clan = hero.Clan;
+            switch (Settings.ShoppingCulture)
+            {
+                case CultureChoice.None:
+                    return null;
+
+                case CultureChoice.Clan:
+                    if (clan != null && clan.Culture != null) return clan.Culture;
+                    return hero.Culture;
+
+                default:
+                    if (hero.Culture != null) return hero.Culture;
+                    return clan != null ? clan.Culture : null;
+            }
         }
 
         /// <summary>1-based tier, as the ceiling speaks it.</summary>
