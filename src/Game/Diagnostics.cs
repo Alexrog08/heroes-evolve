@@ -1935,6 +1935,7 @@ namespace HeroesEvolve
                         + ", which is all the game can show");
 
             ReportAboveAuthored(growing);
+            ReportSheetPromise(growing);
 
             List<Hero> shown = new List<Hero>(authored);
             foreach (Kingdom kingdom in Kingdom.All)
@@ -1974,6 +1975,69 @@ namespace HeroesEvolve
                 {
                     // Same reason as above.
                 }
+            }
+        }
+
+        /// <summary>
+        /// Whether the promise actually holds in this campaign: every lord
+        /// TaleWorlds wrote reaches the best skill his sheet gives him, in every
+        /// field, and passes it by AuthoredTalent.Surplus once he is grown.
+        ///
+        /// The arithmetic says it must, since the floor is derived from exactly
+        /// that -- but the arithmetic runs on the sheets this installation
+        /// actually has. A mod may write one above what the game can show, and
+        /// such a sheet is held at the ceiling and falls short of itself. So
+        /// short=0 is the expected answer and anything else names the men it
+        /// failed, which is the whole reason to count it rather than assert it.
+        ///
+        /// The ratio is the other half of the picture. The median lord peaks far
+        /// above his sheet because his dice were kinder than it -- 143% of his
+        /// written best in combat on the vanilla roster, 109% in civil -- so this
+        /// measures how much of the roster the floor is actually carrying, not
+        /// how generous it is. The tenth percentile is the figure that moved:
+        /// 82% before the sheets became a floor, 105% after.
+        ///
+        /// Measured at the peak rather than at his age, because the promise is
+        /// about where he ends, and most of the roster is nowhere near sixty.
+        /// </summary>
+        private static void ReportSheetPromise(List<Hero> growing)
+        {
+            string[] fields = { Talent.Combat, Talent.Civil, Talent.Naval };
+            for (int f = 0; f < fields.Length; f++)
+            {
+                List<int> ratios = new List<int>();
+                List<string> named = new List<string>();
+                int onSheet = 0, fellShort = 0;
+
+                for (int i = 0; i < growing.Count; i++)
+                {
+                    try
+                    {
+                        Hero hero = growing[i];
+                        int written = HeroTalent.BestWritten(hero, fields[f]);
+                        if (written <= 0) continue;
+
+                        int peak = Talent.TargetFor(SkillGrowth.PeakNorm, HeroTalent.For(hero, fields[f]));
+                        ratios.Add(peak * 100 / written);
+                        if (HeroTalent.StandsOnSheet(hero, fields[f])) onSheet++;
+                        if (peak >= written) continue;
+
+                        // Counted apart from the sample: three names are enough
+                        // to chase a modded sheet down, and the count is the
+                        // number that says whether the promise held at all.
+                        fellShort++;
+                        if (named.Count < 3) named.Add(hero.Name + " " + peak + " of " + written);
+                    }
+                    catch
+                    {
+                        // One unreadable hero must not cost the count.
+                    }
+                }
+
+                ModLog.Info("TALENT promise " + fields[f] + " peak as a share of what he was written"
+                            + " (standing on the sheet " + onSheet + "): " + Percentiles(ratios)
+                            + " | short=" + fellShort
+                            + (named.Count > 0 ? " " + string.Join("; ", named.ToArray()) : ""));
             }
         }
 
