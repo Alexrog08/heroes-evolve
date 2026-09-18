@@ -344,12 +344,32 @@ namespace HeroesEvolve
         {
             if (item == null) return false;
 
+            // Clothing is not kit, whoever is selling it. See KitTier: the rack
+            // below tier 2 is where every dress in the game lives, and a lord
+            // has no business in one whether he was handed it, bought it or
+            // stripped it off a prisoner.
+            if (IsArmorSlot(item.ItemType) && KitTier.IsClothing((int)item.Tier + 1)) return false;
+
             // TierCeiling speaks 1-based tiers (1..6); ItemObject.Tier is the 0-based
             // ItemTiers enum (Tier1 = 0 .. Tier6 = 5). Convert rather than letting the
             // two vocabularies meet raw.
             if ((int)item.Tier + 1 > maxTier) return false;
             if (IsRefused(item)) return false;
             return true;
+        }
+
+        /// <summary>
+        /// Whether an item goes in one of the hero's armour slots. Mounts and
+        /// harnesses are deliberately not here: the game scores a riding horse
+        /// below tier 2 as readily as a tunic, and a poor horse is still a horse.
+        /// </summary>
+        public static bool IsArmorSlot(ItemObject.ItemTypeEnum type)
+        {
+            return type == ItemObject.ItemTypeEnum.HeadArmor
+                || type == ItemObject.ItemTypeEnum.BodyArmor
+                || type == ItemObject.ItemTypeEnum.LegArmor
+                || type == ItemObject.ItemTypeEnum.HandArmor
+                || type == ItemObject.ItemTypeEnum.Cape;
         }
 
         /// <summary>

@@ -25,12 +25,6 @@ namespace HeroesEvolve
         /// <summary>A lord fielding fewer than this many weapons cannot fight.</summary>
         private const int MinimumWeapons = 2;
 
-        /// <summary>
-        /// Armour at or below this tier is civilian clothing, not kit. The tier
-        /// census named what lives down there: aserai_civil_d, cloth_tunic,
-        /// vlandian_woman_dress, nord_casual_tunic, layered_robe.
-        /// </summary>
-        private const int CivilianArmorTier = 1;
 
         /// <summary>
         /// True when the hero's battle equipment shows the come-of-age failure.
@@ -81,7 +75,7 @@ namespace HeroesEvolve
         /// </summary>
         private static bool IsCivilian(ItemObject item)
         {
-            return item != null && (int)item.Tier + 1 <= CivilianArmorTier;
+            return item != null && KitTier.IsClothing((int)item.Tier + 1);
         }
 
         /// <summary>
@@ -305,12 +299,12 @@ namespace HeroesEvolve
                 ItemObject worn = hero.BattleEquipment[slot].Item;
 
                 // Civilian clothing is the defect, not a choice the hero made,
-                // so it is the one case where equipped gear is replaced. Only
-                // when the ceiling can actually do better -- swapping one tier-1
-                // robe for another would be churn, and a hero capped at tier 1
-                // has nothing better available to him anyway.
-                bool civilian = worn != null && (int)worn.Tier + 1 <= CivilianArmorTier
-                                && ceiling > CivilianArmorTier
+                // so it is the one case where equipped gear is replaced. It used
+                // to need a ceiling above tier 1 as well, because a hero capped
+                // there had nothing better to be given; the grant band no longer
+                // drops to the wardrobe for anybody, so there is always kit to
+                // put him in.
+                bool civilian = worn != null && KitTier.IsClothing((int)worn.Tier + 1)
                                 && !ItemCatalog.IsIrreplaceable(worn);
 
                 if (worn != null && !civilian)

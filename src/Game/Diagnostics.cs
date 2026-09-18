@@ -320,6 +320,7 @@ namespace HeroesEvolve
             int[] bySupport = new int[highest + 1];
             int mounts = 0, harnesses = 0, notMerchandise = 0;
             int head = 0, body = 0, leg = 0, hand = 0, cape = 0;
+            int clothing = 0, kit = 0;
 
             for (int i = 0; i < all.Count; i++)
             {
@@ -336,6 +337,12 @@ namespace HeroesEvolve
                     case ItemObject.ItemTypeEnum.LegArmor: leg++; break;
                     case ItemObject.ItemTypeEnum.HandArmor: hand++; break;
                     case ItemObject.ItemTypeEnum.Cape: cape++; break;
+                }
+
+                if (ItemCatalog.IsArmorSlot(item.ItemType))
+                {
+                    if (KitTier.IsClothing((int)item.Tier + 1)) clothing++;
+                    else kit++;
                 }
 
                 WeaponCategory category = ItemClassifier.Classify(item);
@@ -375,6 +382,8 @@ namespace HeroesEvolve
             ModLog.Info("CATALOG armor head=" + head + " body=" + body + " leg=" + leg
                         + " hand=" + hand + " cape=" + cape
                         + " mounts=" + mounts + " harnesses=" + harnesses);
+            ModLog.Info("CATALOG armor kit=" + kit + " clothing=" + clothing
+                        + " (below tier " + KitTier.Lowest + ", refused for a battle outfit)");
         }
 
         /// <summary>

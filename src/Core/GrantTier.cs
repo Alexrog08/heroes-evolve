@@ -20,8 +20,13 @@ namespace HeroesEvolve.Core
     /// </summary>
     public static class GrantTier
     {
-        /// <summary>Never grant tier 1: that is the bug's own uniform.</summary>
-        public const int Minimum = 2;
+        /// <summary>
+        /// Never grant tier 1: that is the bug's own uniform, and KitTier says
+        /// why it is everybody's. One constant for both, so the rule that keeps
+        /// clothing off a shelf and the rule that keeps it out of a repair
+        /// cannot drift apart.
+        /// </summary>
+        public const int Minimum = KitTier.Lowest;
 
         /// <summary>
         /// Above this a granted kit starts competing with what the hero should
@@ -30,20 +35,22 @@ namespace HeroesEvolve.Core
         public const int Maximum = 3;
 
         /// <summary>
-        /// The band to grant at, narrowed by the hero's own ceiling.
+        /// The band to grant at, narrowed by the hero's own ceiling but never
+        /// below Minimum.
         ///
-        /// A hero whose merit does not reach tier 2 gets whatever his ceiling
-        /// allows rather than nothing: the repair exists to clothe him, and
-        /// refusing on grounds of merit would leave him in the rags the bug gave
-        /// him.
+        /// A hero whose merit does not reach tier 2 is granted tier 2 anyway.
+        /// The band used to fall to his ceiling instead, so that a hero the
+        /// merit model scored at tier 1 was dressed from the tier-1 rack -- and
+        /// that rack is the wardrobe, which is how a lord ends up in a dress.
+        /// The ceiling is a purchase cap and this is a repair: it exists to make
+        /// a naked noble presentable, and tier 2 is the cheapest way to be
+        /// dressed rather than clothed.
         /// </summary>
         public static void Band(int ceiling, out int lowest, out int highest)
         {
             highest = ceiling < Maximum ? ceiling : Maximum;
-            lowest = highest < Minimum ? highest : Minimum;
-
-            if (highest < 1) highest = 1;
-            if (lowest < 1) lowest = 1;
+            if (highest < Minimum) highest = Minimum;
+            lowest = Minimum;
         }
 
         /// <summary>

@@ -24,17 +24,25 @@ namespace HeroesEvolve.Tests
             Check.Equal(2, lowest, "a tier-2 lord gets tier 2");
             Check.Equal(2, highest, "and no more");
 
+            // And below the band nothing falls to tier 1, because tier 1 is the
+            // wardrobe -- see KitTier. A repair dresses a man; it does not clothe
+            // him in what the bug left him wearing.
             GrantTier.Band(1, out lowest, out highest);
-            Check.Equal(1, lowest, "a tier-1 lord is still clothed");
-            Check.Equal(1, highest, "at the only tier he can reach");
+            Check.Equal(KitTier.Lowest, lowest, "a tier-1 lord is dressed at the lowest tier that is kit");
+            Check.Equal(KitTier.Lowest, highest, "and no further");
 
             GrantTier.Band(0, out lowest, out highest);
-            Check.True(lowest >= 1 && highest >= 1, "a nonsensical ceiling still yields a real tier");
+            Check.True(lowest >= KitTier.Lowest && highest >= KitTier.Lowest,
+                       "a nonsensical ceiling still yields kit rather than clothing");
+
+            Check.True(KitTier.IsClothing(1), "tier 1 is clothing");
+            Check.True(!KitTier.IsClothing(KitTier.Lowest), "tier 2 is kit");
+            Check.True(!KitTier.IsClothing(0), "an item the value model had no opinion about is left alone");
 
             // Never tier 1 when anything better is allowed: tier 1 is the
             // civilian clothing the bug leaves behind, so granting it would hand
             // the hero back his own symptom.
-            for (int ceiling = 2; ceiling <= 6; ceiling++)
+            for (int ceiling = 1; ceiling <= 6; ceiling++)
             {
                 GrantTier.Band(ceiling, out lowest, out highest);
                 Check.True(lowest >= GrantTier.Minimum, "the grant never drops to civilian clothing");
