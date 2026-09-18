@@ -1844,7 +1844,14 @@ namespace HeroesEvolve
         {
             List<int> all = new List<int>();
             List<string> gifted = new List<string>();
-            int above190 = 0, above195 = 0, below070 = 0;
+            int above190 = 0, above195 = 0, below070 = 0, atLevel = 0, pastTheBest = 0;
+
+            // The two figures that mean something on this scale, rather than the
+            // two that used to: 1.90 and 1.95 were exceptional when the dice
+            // stopped at 2.07 and are merely above the middle now that they reach
+            // 2.25. Level is standing with the best lord TaleWorlds ever wrote;
+            // past it is the prodigy the dice are widened for.
+            float best = AuthoredTalent.Floor(300, SkillGrowth.PeakNorm);
 
             foreach (Hero hero in Hero.AllAliveHeroes)
             {
@@ -1866,6 +1873,8 @@ namespace HeroesEvolve
                         }
                     }
                     if (talent > 1.95f) above195++;
+                    if (talent >= Talent.Level) atLevel++;
+                    if (talent > best) pastTheBest++;
                 }
                 catch
                 {
@@ -1878,6 +1887,11 @@ namespace HeroesEvolve
                         + " above195=" + above195
                         + " poor below070=" + below070
                         + " of " + all.Count);
+            ModLog.Info("TALENT standing atLevelWithCaladog=" + atLevel
+                        + " pastHim=" + pastTheBest
+                        + " of " + all.Count
+                        + " (level " + TwoPlaces(Talent.Level)
+                        + ", his sheet asks " + TwoPlaces(best) + ")");
 
             for (int i = 0; i < gifted.Count; i++)
             {
