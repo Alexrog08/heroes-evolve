@@ -19,47 +19,54 @@ namespace HeroesEvolve.Core
         public const float Minimum = 0.55f;
 
         /// <summary>
-        /// The most talented hero learns at this multiple of the norm.
+        /// The talent that stands exactly level with the best lord TaleWorlds
+        /// ever wrote in a field.
         ///
-        /// Calibrated against a real campaign rather than chosen. With a peak
-        /// norm of 150 the most gifted lord in the world finishes on 310.
-        ///
-        /// The reference is the roster TaleWorlds authored, whose strongest lord
-        /// carries 309: the rarest prodigy a campaign can produce should be able
-        /// to stand level with the best the game ever wrote, and no higher. Two
-        /// or three heroes in a campaign reach that far -- with a triangular
-        /// distribution the share above 2.0 is under half a percent, which over
-        /// four hundred lords is a pair of them.
-        ///
-        /// Not the founder of the lab save, who reached 288.
-        /// She was played under FastMode, where a year is twenty-eight campaign
-        /// days rather than eighty-four, so she lived a third of the days an
-        /// equally old character would have lived in stock -- fewer days, fewer
-        /// battles, less experience. Whether that made her weaker or stronger
-        /// than she would otherwise have been cannot be told from here, and the
-        /// authored maximum settles the question without needing to: it depends
-        /// on neither the calendar nor anyone's play.
-        ///
-        /// So an exceptional lord can stand nearly level with a played hero,
-        /// which is the point, while the triangular distribution keeps him rare:
-        /// reaching this multiplier at all takes both halves of the hash landing
-        /// at their extreme.
-        ///
-        /// A ceiling on the dice, not on the world. A lord TaleWorlds wrote keeps
-        /// his sheet as a floor under his talent (AuthoredTalent), and Caladog's
-        /// 300 with a sword asks for 2.10, so he matures past anything the dice
-        /// can deal. He is the only one: no other sheet in the game reaches this
-        /// far, so every other written lord can still be outgrown.
+        /// What each field's norm is measured against -- see
+        /// SkillGrowth.PeakNormFor -- so a hero dealt this much finishes on that
+        /// field's ceiling: 300 with a sword, 250 in a ledger, 279 at sea. It is
+        /// the anchor of the whole scale, and Maximum sits a little above it on
+        /// purpose.
         /// </summary>
-        public const float Maximum = 2.07f;
+        public const float Level = 2.07f;
+
+        /// <summary>
+        /// The most talent the dice ever deal.
+        ///
+        /// A little past Level, and that gap is the whole point. A sheet is
+        /// honoured in full, surplus included, so the best-written lord of a
+        /// field finishes five percent above its ceiling -- Caladog at 315 --
+        /// and with the dice stopping at Level nobody could ever pass him, nor
+        /// Phenoria in the ledger, nor Halthdar at sea. Three men no campaign
+        /// could ever produce the equal of is not a world with luck in it.
+        ///
+        /// At 2.25 the rarest hero finishes 326 with a sword, 272 in a ledger,
+        /// 303 at sea: past the best written man in his field by three or four
+        /// percent, and short of the 330 the game can display, which only a
+        /// played hero approaches. That last margin is deliberate. A prodigy
+        /// should be remarkable and still leave the player the longest road.
+        ///
+        /// Rare by construction rather than by a rule: the two draws For
+        /// averages make a triangular distribution, so about one hero in two
+        /// hundred passes the best sheet in a given field -- three of the 484
+        /// lords TaleWorlds wrote, and as many again among the wanderers a
+        /// campaign hires and the heroes it bears. The luckiest man alive may
+        /// perfectly well be a companion nobody expected.
+        ///
+        /// Higher was tried on paper: at 2.30 seven of the written lords are
+        /// passed, but the dice reach 333 and the game can only show 330, so
+        /// the top of the world would be a wall rather than a rarity.
+        /// </summary>
+        public const float Maximum = 2.25f;
 
         /// <summary>
         /// The talent the middle hero is dealt. The two draws For averages are
         /// symmetric about the centre of the bounds, so half of all heroes fall
-        /// either side of the midpoint -- 1.31, not the 1.0 a multiplier
-        /// suggests, and a lord of median talent peaks near 197 rather than on
-        /// the peak norm. Which is why a sheet written at the peak norm asks for
-        /// only 1.05 (AuthoredTalent.Floor) and the dice usually answer first.
+        /// either side of the midpoint -- 1.40, not the 1.0 a multiplier
+        /// suggests, and a lord of median talent peaks near 203 with a sword
+        /// rather than on the norm. Which is why a sheet written at its field's
+        /// norm asks for only 1.05 (AuthoredTalent.Floor) and the dice usually
+        /// answer first.
         /// </summary>
         public const float Median = (Minimum + Maximum) / 2f;
 

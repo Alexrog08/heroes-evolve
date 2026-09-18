@@ -37,11 +37,11 @@ namespace HeroesEvolve.Tests
             // number the game would never show, and the scale sees to it without
             // anything holding him down: the most gifted hero the dice can deal
             // lands exactly on the most TaleWorlds ever wrote in that field.
-            int hoarded = FocusGrowth.TargetFor(60f, Talent.Maximum, 100, SkillGrowth.CivilPeakNorm);
+            int hoarded = FocusGrowth.TargetFor(60f, Talent.Level, 100, SkillGrowth.CivilPeakNorm);
             Check.Equal(250, hoarded, "which in the ledger is Pharon's 250 in trade");
-            Check.Equal(300, FocusGrowth.TargetFor(60f, Talent.Maximum, 100, SkillGrowth.PeakNorm),
+            Check.Equal(300, FocusGrowth.TargetFor(60f, Talent.Level, 100, SkillGrowth.PeakNorm),
                         "and with a weapon, Caladog's 300");
-            Check.Equal(279, FocusGrowth.TargetFor(60f, Talent.Maximum, 100, SkillGrowth.NavalPeakNorm),
+            Check.Equal(279, FocusGrowth.TargetFor(60f, Talent.Level, 100, SkillGrowth.NavalPeakNorm),
                         "and at sea, Halthdar's 280");
             Check.True(hoarded < SkillGrowth.GameSkillMaximum,
                        "so nothing has to be clamped at what the game can show");

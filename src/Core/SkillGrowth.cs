@@ -34,19 +34,18 @@ namespace HeroesEvolve.Core
         /// own lords sit at 175 to 200, which is what the game considers a noble
         /// worth the name.
         ///
-        /// The figure is his own ceiling over Talent.Maximum. The highest anyone
-        /// was ever written with a weapon is Caladog's 300, so the most gifted
-        /// hero the dice can deal finishes exactly level with him and a lord of
-        /// median talent finishes around 190 -- the same 190 the hand-set 150
-        /// was aiming at, with the arithmetic now saying where it comes from.
-        /// Nothing needs to hold the top down: the scale ends where TaleWorlds
-        /// ended.
+        /// The figure is his own ceiling over Talent.Level. The highest anyone
+        /// was ever written with a weapon is Caladog's 300, so a hero dealt that
+        /// much talent finishes exactly level with him, and a lord of median
+        /// talent finishes around 203. Nothing needs to hold the top down: the
+        /// scale is TaleWorlds' own, and the dice reach a little past it so a
+        /// prodigy can pass him (see Talent.Maximum).
         /// </summary>
         public const int PeakNorm = 145;
 
         /// <summary>
         /// The same for everything that is neither a weapon nor a sail: 250 over
-        /// Talent.Maximum.
+        /// Talent.Level.
         ///
         /// Lower than the combat norm because TaleWorlds wrote the fields on
         /// different scales. A sword reaches 300 on his sheets; the eleven civil
@@ -59,7 +58,7 @@ namespace HeroesEvolve.Core
         public const int CivilPeakNorm = 121;
 
         /// <summary>
-        /// And at sea: Halthdar's 280 in Shipmaster over Talent.Maximum. The War
+        /// And at sea: Halthdar's 280 in Shipmaster over Talent.Level. The War
         /// Sails skills are written above the civil ones and below a sword.
         /// </summary>
         public const int NavalPeakNorm = 135;

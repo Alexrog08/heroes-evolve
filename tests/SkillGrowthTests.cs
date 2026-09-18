@@ -41,12 +41,13 @@ namespace HeroesEvolve.Tests
             Check.True(giftedYouth < 190, "a gifted youth is promising, not a veteran");
             Check.True(giftedOld > giftedYouth + 80, "his peak arrives decades later");
 
-            // And that peak stays below a founder played for thirty years (288)
-            // while sitting above what the campaign already grows unaided (230).
-                        // The rarest prodigy stands level with the best lord TaleWorlds
-            // ever wrote -- 309 -- and no higher.
-            Check.True(giftedOld >= 300 && giftedOld <= 315,
-                       "the world's finest matches the strongest authored lord");
+            // And that peak passes the best lord TaleWorlds ever wrote, who
+            // finishes on his own sheet plus the surplus at 315, without
+            // reaching the 330 the game can show -- that last stretch is the
+            // played hero's. See Talent.Maximum.
+            Check.True(giftedOld > 315, "the world's finest passes the strongest authored lord");
+            Check.True(giftedOld < SkillGrowth.GameSkillMaximum,
+                       "and still leaves a played hero the longest road");
             Check.True(giftedOld > 230, "...but above what a campaign grows unaided");
 
             // The average lord ends meaningfully above today's stagnant 134.

@@ -37,10 +37,12 @@ namespace HeroesEvolve.Tests
             }
 
             // Caladog's 300 is the highest sheet in the game and is honoured in
-            // full, which carries him past anything the dice can deal -- the one
-            // man nobody outgrows. See AuthoredTalent.Ceiling for the choice.
-            Check.True(AuthoredTalent.Floor(300, SkillGrowth.PeakNorm) > Talent.Maximum,
-                       "his 300 asks for more talent than the hash can give");
+            // full, so he matures past it -- and the dice still reach past him,
+            // which is what keeps a prodigy possible. See Talent.Maximum.
+            Check.True(AuthoredTalent.Floor(300, SkillGrowth.PeakNorm) > Talent.Level,
+                       "his 300 asks for more than the talent that merely stands level with him");
+            Check.True(AuthoredTalent.Floor(300, SkillGrowth.PeakNorm) < Talent.Maximum,
+                       "and less than the dice can deal, so somebody may yet pass him");
             int caladog = SkillGrowth.PrimaryTarget(SkillGrowth.MatureAge,
                                                     AuthoredTalent.Floor(300, SkillGrowth.PeakNorm));
             Check.True(caladog > 300, "so he matures past what he was written with: " + caladog);
@@ -74,12 +76,28 @@ namespace HeroesEvolve.Tests
             Check.True(AuthoredTalent.Floor(230, SkillGrowth.CivilPeakNorm)
                        > AuthoredTalent.Floor(230, SkillGrowth.PeakNorm),
                        "230 in stewardship is nearer the top of its field than 230 with a sword");
-            Check.Equal(300, Talent.TargetFor(SkillGrowth.PeakNorm, Talent.Maximum),
-                        "the luckiest hero alive finishes level with Caladog");
-            Check.Equal(250, Talent.TargetFor(SkillGrowth.CivilPeakNorm, Talent.Maximum),
+            Check.Equal(300, Talent.TargetFor(SkillGrowth.PeakNorm, Talent.Level),
+                        "the talent that stands level with Caladog finishes on his 300");
+            Check.Equal(250, Talent.TargetFor(SkillGrowth.CivilPeakNorm, Talent.Level),
                         "and with Pharon in the ledger");
-            Check.Equal(279, Talent.TargetFor(SkillGrowth.NavalPeakNorm, Talent.Maximum),
+            Check.Equal(279, Talent.TargetFor(SkillGrowth.NavalPeakNorm, Talent.Level),
                         "and with Halthdar at sea");
+
+            // And the dice reach past it, so a prodigy passes the best written
+            // man of a field rather than tying him -- see Talent.Maximum.
+            Check.True(Talent.Maximum > Talent.Level, "the dice reach past level");
+            for (int f = 0; f < 3; f++)
+            {
+                int norm = f == 0 ? SkillGrowth.PeakNorm
+                         : f == 1 ? SkillGrowth.CivilPeakNorm : SkillGrowth.NavalPeakNorm;
+                int topSheet = f == 0 ? 300 : f == 1 ? 250 : 280;
+                int prodigy = Talent.TargetFor(norm, Talent.Maximum);
+                int bestSheet = Talent.TargetFor(norm, AuthoredTalent.Floor(topSheet, norm));
+                Check.True(prodigy > bestSheet,
+                           "a prodigy passes the best sheet of his field: " + prodigy + " over " + bestSheet);
+                Check.True(prodigy < SkillGrowth.GameSkillMaximum,
+                           "and still leaves the played hero the longest road: " + prodigy);
+            }
 
             // A floor, never a demotion: the dice answer whenever they are kinder.
             Check.True(AuthoredTalent.AtLeastHisSheet(1.80f, 130, SkillGrowth.PeakNorm) == 1.80f,
@@ -123,8 +141,8 @@ namespace HeroesEvolve.Tests
                 if (Talent.For("CharacterObject_" + i, Talent.Combat)
                     > AuthoredTalent.Floor(260, SkillGrowth.PeakNorm)) beyondHalthdar++;
             }
-            Check.True(beyondHalthdar > 0 && beyondHalthdar * 10 < 4000,
-                       "and a rare few of them do, fewer than one in ten");
+            Check.True(beyondHalthdar > 0 && beyondHalthdar * 5 < 4000,
+                       "and a rare few of them do, fewer than one in five");
 
             // Every other line of the sheet is promised the same way, one skill
             // at a time -- and with no age term, because TaleWorlds wrote the

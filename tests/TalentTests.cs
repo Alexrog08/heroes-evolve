@@ -86,10 +86,13 @@ namespace HeroesEvolve.Tests
             Check.True(Talent.For("lord_4_1") == Talent.For("lord_4_1", Talent.Combat),
                        "the bare overload is the combat one");
 
-            // Gifted everywhere must be possible and must be rare. Roughly one
-            // lord in seventy clears a moderate bar in all three at once.
+            // Gifted everywhere must be possible and must be a minority. About
+            // one lord in seventeen clears this bar in all three at once, against
+            // three in four who clear it somewhere -- the bar is a fixed 1.5 and
+            // the dice now run to 2.25, so it reads as "well above the middle"
+            // rather than as "exceptional".
             Check.True(giftedInAll > 10, "a lord favoured in everything does exist");
-            Check.True(giftedInAll * 20 < giftedInOne, "but he is a small fraction of the merely gifted");
+            Check.True(giftedInAll * 10 < giftedInOne, "but he is a small fraction of the merely gifted");
 
             // The target scales with talent and is clamped to what the game can
             // actually show.

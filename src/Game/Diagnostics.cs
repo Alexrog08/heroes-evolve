@@ -1942,11 +1942,17 @@ namespace HeroesEvolve
             ModLog.Info("TALENT norms combat=" + SkillGrowth.PeakNorm
                         + " civil=" + SkillGrowth.CivilPeakNorm
                         + " naval=" + SkillGrowth.NavalPeakNorm
-                        + ", each the most TaleWorlds wrote in that field over the most talent there is,"
-                        + " so the luckiest hero alive finishes level with his best written lord:"
-                        + " combat " + Talent.TargetFor(SkillGrowth.PeakNorm, Talent.Maximum)
+                        + ", each the most TaleWorlds wrote in that field over the talent that stands"
+                        + " level with him (" + TwoPlaces(Talent.Level) + "): combat "
+                        + Talent.TargetFor(SkillGrowth.PeakNorm, Talent.Level)
+                        + " civil " + Talent.TargetFor(SkillGrowth.CivilPeakNorm, Talent.Level)
+                        + " naval " + Talent.TargetFor(SkillGrowth.NavalPeakNorm, Talent.Level));
+            ModLog.Info("TALENT prodigy the dice reach " + TwoPlaces(Talent.Maximum) + ", so the rarest hero"
+                        + " finishes combat " + Talent.TargetFor(SkillGrowth.PeakNorm, Talent.Maximum)
                         + " civil " + Talent.TargetFor(SkillGrowth.CivilPeakNorm, Talent.Maximum)
-                        + " naval " + Talent.TargetFor(SkillGrowth.NavalPeakNorm, Talent.Maximum));
+                        + " naval " + Talent.TargetFor(SkillGrowth.NavalPeakNorm, Talent.Maximum)
+                        + ", past the best written lord of each field and short of the "
+                        + SkillGrowth.GameSkillMaximum + " the game can show");
 
             ReportAboveAuthored(growing);
             ReportSheetPromise(growing);
