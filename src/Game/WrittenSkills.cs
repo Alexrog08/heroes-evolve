@@ -18,16 +18,22 @@ namespace HeroesEvolve
     /// it, and the armies a steward feeds are balanced against his sheet.
     ///
     /// Read from the heroes themselves rather than written down as a constant.
-    /// A mod with a stronger roster raises the envelope with it; a skill another
-    /// mod adds that nobody has been written any of keeps it at zero, and so
-    /// does vanilla Smithing -- not one of the 484 lords TaleWorlds wrote holds a
-    /// point of it, which is its own statement about what a lord is for.
+    /// A mod with a stronger roster raises the envelope with it, and a skill
+    /// another mod adds that nobody has been written any of keeps it at zero,
+    /// which leaves its heroes at their own talent and no further.
+    ///
+    /// Read through the game's own SkillObject rather than by name, which is
+    /// not fussiness: Smithing is called Crafting in the data, and reading the
+    /// sheets by the name on screen answers that no lord in Calradia has ever
+    /// forged anything, when 458 of them were written with it and Peric holds
+    /// 240.
     ///
     /// The vanilla envelope, for reference: One Handed, Two Handed and Polearm
     /// 300 (Caladog in all three), Bow 260, Crossbow and Throwing 200, Riding
-    /// 230, Athletics 240; Trade, Medicine and Engineering 250, Tactics, Roguery,
-    /// Charm, Steward and Leadership 240, Scouting 230; Shipmaster 280, Mariner
-    /// 270, Boatswain 260.
+    /// 230, Athletics 240; Trade, Medicine and Engineering 250, Tactics,
+    /// Roguery, Charm, Steward, Leadership and Crafting 240, Scouting 230;
+    /// Shipmaster 280, Mariner 270, Boatswain 260. Every civil skill lands
+    /// between 230 and 250, which is the envelope this class exists to hold.
     /// </summary>
     public static class WrittenSkills
     {
