@@ -130,6 +130,33 @@ namespace HeroesEvolve.Core
         }
 
         /// <summary>
+        /// What one written skill is worth at a given age: the figure itself,
+        /// carried along the same maturity curve as everything else, with the
+        /// same surplus on top once he is grown.
+        ///
+        /// The talent floor promises a man the best skill of each field. This
+        /// promises him the rest of his sheet, one line at a time, and the two
+        /// agree by construction because both are the written figure times
+        /// Surplus at MatureAge. It exists because the field promise left the
+        /// other lines to the mod's own rules, and those cut them: a lord
+        /// TaleWorlds wrote with 90 in trade and no focus there had it shaved to
+        /// the fifty a single point of focus earns, and a census found the whole
+        /// civil middle sitting ten to thirty-five percent under what he wrote --
+        /// trade 60 against 90, medicine 62 against 90.
+        ///
+        /// A floor and nothing else. It never lifts a skill above the sheet, so
+        /// what a lord grows beyond it is still decided by what he carries and
+        /// where his focus went; it only stops us taking from him what TaleWorlds
+        /// put there.
+        /// </summary>
+        public static int WrittenFloor(int writtenSkill, float age)
+        {
+            if (writtenSkill <= 0) return 0;
+
+            return (int)(writtenSkill * (1f + Surplus) * SkillGrowth.Maturity(age));
+        }
+
+        /// <summary>
         /// A hero's talent in one field: what the dice dealt him, never below
         /// what his sheet insists on. Nothing here ever lowers a hero, which is
         /// what makes a sheet safe to read for every lord TaleWorlds wrote

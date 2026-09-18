@@ -126,6 +126,27 @@ namespace HeroesEvolve.Tests
             Check.True(beyondHalthdar > 0 && beyondHalthdar * 10 < 4000,
                        "and a rare few of them do, fewer than one in ten");
 
+            // Every other line of the sheet is promised the same way, one skill
+            // at a time, and the two floors agree at sixty because both are the
+            // written figure plus the surplus.
+            Check.Equal((int)(90 * (1f + AuthoredTalent.Surplus)),
+                        AuthoredTalent.WrittenFloor(90, SkillGrowth.MatureAge),
+                        "a written skill is worth itself plus the surplus once he is grown");
+            Check.True(AuthoredTalent.WrittenFloor(90, 40f) < 90,
+                       "and less than itself while he is still growing into it");
+            Check.True(AuthoredTalent.WrittenFloor(90, 18f) < AuthoredTalent.WrittenFloor(90, 40f),
+                       "less still as a youth");
+            Check.Equal(AuthoredTalent.WrittenFloor(90, SkillGrowth.MatureAge),
+                        AuthoredTalent.WrittenFloor(90, 90f),
+                        "and nothing further past sixty");
+            Check.Equal(0, AuthoredTalent.WrittenFloor(0, 40f), "a line he was never written asks for nothing");
+            Check.Equal(0, AuthoredTalent.WrittenFloor(-5, 40f), "nor a nonsense one");
+
+            int bestOfTheField = SkillGrowth.PrimaryTarget(SkillGrowth.MatureAge,
+                                                           AuthoredTalent.Floor(220, SkillGrowth.PeakNorm));
+            Check.True(System.Math.Abs(bestOfTheField - AuthoredTalent.WrittenFloor(220, SkillGrowth.MatureAge)) <= 1,
+                       "the field floor and the line floor land on the same figure for the best skill");
+
             // Nothing written there means no floor, and the dice decide that
             // field on their own.
             Check.True(AuthoredTalent.Floor(0, SkillGrowth.PeakNorm) == 0f,

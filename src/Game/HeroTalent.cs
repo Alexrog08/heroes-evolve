@@ -115,6 +115,33 @@ namespace HeroesEvolve
         }
 
         /// <summary>
+        /// What TaleWorlds wrote this hero in one particular skill, or zero when
+        /// he has no sheet or nothing there.
+        ///
+        /// Read straight rather than cached: the sheet is two property lookups
+        /// away and the callers ask once per skill per hero per week, where the
+        /// per-field bests are a walk down every skill in the game and are worth
+        /// keeping.
+        /// </summary>
+        public static int WrittenIn(Hero hero, SkillObject skill)
+        {
+            if (hero == null || skill == null) return 0;
+
+            try
+            {
+                MBCharacterSkills sheet = SheetOf(hero);
+                if (sheet == null || sheet.Skills == null) return 0;
+
+                return sheet.Skills.GetPropertyValue(skill);
+            }
+            catch
+            {
+                // A character the game cannot describe simply has no floor here.
+                return 0;
+            }
+        }
+
+        /// <summary>
         /// The id of the sheet TaleWorlds wrote this character on, or null when
         /// he is a copy and has none. A sheet named after the character himself
         /// is his own rather than a shared one.

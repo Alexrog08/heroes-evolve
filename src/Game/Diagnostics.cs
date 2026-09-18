@@ -2045,6 +2045,66 @@ namespace HeroesEvolve
                             + " | short=" + fellShort
                             + (named.Count > 0 ? " " + string.Join("; ", named.ToArray()) : ""));
             }
+
+            ReportWrittenLines(growing);
+        }
+
+        /// <summary>
+        /// The other half of the promise: every single line of a sheet, not just
+        /// the best of each field.
+        ///
+        /// A lord is never taken below what TaleWorlds wrote him at his age
+        /// (AuthoredTalent.WrittenFloor), so after a campaign has started on the
+        /// curve nothing here should sit below its floor. A count above zero
+        /// means either a save the curve never ran on -- growth lifts a skill
+        /// but never restores one it did not cut -- or a floor that is not being
+        /// read where it is needed.
+        ///
+        /// The share is the interesting figure once the count is nought: how far
+        /// above his sheet the mod has actually carried each line. It was the
+        /// civil middle that prompted this -- a census found trade at 60 against
+        /// the 90 he wrote, medicine 62 against 90 -- so those two skills are
+        /// the ones to watch.
+        /// </summary>
+        private static void ReportWrittenLines(List<Hero> growing)
+        {
+            List<int> ratios = new List<int>();
+            List<string> named = new List<string>();
+            int written = 0, below = 0;
+
+            for (int i = 0; i < growing.Count; i++)
+            {
+                try
+                {
+                    Hero hero = growing[i];
+                    foreach (SkillObject skill in TaleWorlds.CampaignSystem.Extensions.Skills.All)
+                    {
+                        if (skill == null) continue;
+
+                        int floor = AuthoredTalent.WrittenFloor(HeroTalent.WrittenIn(hero, skill), hero.Age);
+                        if (floor <= 0) continue;
+
+                        written++;
+                        int has = hero.GetSkillValue(skill);
+                        ratios.Add(has * 100 / floor);
+                        if (has >= floor) continue;
+
+                        below++;
+                        if (named.Count < 3 && skill.Name != null)
+                        {
+                            named.Add(hero.Name + " " + skill.Name + " " + has + " of " + floor);
+                        }
+                    }
+                }
+                catch
+                {
+                    // One unreadable hero must not cost the count.
+                }
+            }
+
+            ModLog.Info("TALENT written lines " + written + " carry a floor; below it " + below
+                        + (named.Count > 0 ? " (" + string.Join("; ", named.ToArray()) + ")" : "")
+                        + " | value as a share of the floor " + Percentiles(ratios));
         }
 
         /// <summary>

@@ -112,12 +112,12 @@ namespace HeroesEvolve
             List<SkillObject> ranked = RankedWeaponSkills(hero);
             for (int rank = 0; rank < ranked.Count; rank++)
             {
-                Add(targets, ranked[rank], SkillGrowth.TargetForRank(primaryTarget, rank), talent);
+                Add(targets, hero, ranked[rank], SkillGrowth.TargetForRank(primaryTarget, rank), talent);
             }
 
             bool mounted = hero.BattleEquipment[EquipmentIndex.Horse].Item != null;
             SkillObject movement = mounted ? DefaultSkills.Riding : DefaultSkills.Athletics;
-            Add(targets, movement, SkillGrowth.TargetForRank(primaryTarget, MovementRank), talent);
+            Add(targets, hero, movement, SkillGrowth.TargetForRank(primaryTarget, MovementRank), talent);
 
             // Two values for the whole loop, not one per skill: asking inside it
             // once cost a string and a hash per skill per hero per week, some
@@ -137,15 +137,26 @@ namespace HeroesEvolve
                 bool atSea = IsNavalSkill(skill);
                 float aptitude = atSea ? naval : civil;
                 int norm = atSea ? SkillGrowth.NavalPeakNorm : SkillGrowth.CivilPeakNorm;
-                Add(targets, skill, FocusGrowth.TargetFor(age, aptitude, focus, norm), aptitude);
+                Add(targets, hero, skill, FocusGrowth.TargetFor(age, aptitude, focus, norm), aptitude);
             }
 
             return targets;
         }
 
-        private static void Add(List<SkillTarget> targets, SkillObject skill, int target, float talent)
+        /// <summary>
+        /// Adds one skill's target, never below what TaleWorlds wrote the hero
+        /// there at his age -- see AuthoredTalent.WrittenFloor. The rules above
+        /// decide how far a lord grows; the sheet decides how far he may be cut,
+        /// which is nowhere.
+        /// </summary>
+        private static void Add(List<SkillTarget> targets, Hero hero, SkillObject skill, int target, float talent)
         {
-            if (skill == null || target <= 0) return;
+            if (skill == null) return;
+
+            int written = AuthoredTalent.WrittenFloor(HeroTalent.WrittenIn(hero, skill), hero.Age);
+            if (written > target) target = written;
+
+            if (target <= 0) return;
 
             SkillTarget entry = new SkillTarget();
             entry.Skill = skill;
