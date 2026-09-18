@@ -123,12 +123,12 @@ namespace HeroesEvolve
             new Dropdown<string>(new string[] { "His clan's culture", "His own culture", "No preference" }, 1);
 
         [SettingPropertyBool("Armour of his own culture only", RequireRestart = false, Order = 5,
-            HintText = "A wall instead of a preference: no foreign armour or horse harness is ever bought, nor worn out of loot. Aserai, Khuzait and Nord have no leg armour on sale at all, so their lords will keep whatever boots they have.")]
+            HintText = "A wall instead of a preference: no foreign armour or horse harness is ever bought, nor worn out of loot. Pieces belonging to no culture still pass. Every culture can dress every slot, but five of the seven have a single pair of boots, so expect his boots to be decided for him.")]
         [SettingPropertyGroup("Shopping", GroupOrder = 6)]
         public bool OwnCultureArmorOnly { get; set; } = false;
 
         [SettingPropertyBool("Weapons of his own culture only", RequireRestart = false, Order = 6,
-            HintText = "The same wall for weapons, in a market or over a beaten enemy kit. A lord abroad with nothing of his own on the shelf simply buys nothing.")]
+            HintText = "The same wall for weapons, in a market or over a beaten enemy kit. Weapons belonging to no culture still pass, which is what arms a Nord archer. Only Empire and Vlandia make crossbows, so a crossbowman of another culture will not upgrade.")]
         [SettingPropertyGroup("Shopping", GroupOrder = 6)]
         public bool OwnCultureWeaponsOnly { get; set; } = false;
 

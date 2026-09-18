@@ -157,15 +157,20 @@
 
   <!-- A wall instead of a preference: with this on, a lord never buys armour
        (or horse harness) that is not the favoured culture's, and never puts a
-       foreign piece on out of what he took from a beaten enemy. OFF BY DEFAULT,
-       because the catalogue is uneven — aserai, khuzait and nord have no leg
-       armour on sale at all, so their lords would keep whatever boots they
-       arrived in for the rest of the campaign. Unassigned pieces, which belong
-       to no culture, are always allowed. -->
+       foreign piece on out of what he took from a beaten enemy. OFF BY
+       DEFAULT, because a wall cannot be reasoned with. The catalogue carries
+       it, though: every culture can dress every slot, the thinnest being a
+       single pair of boots for five of the seven. Pieces belonging to no
+       culture always pass, and they earn no preference either, so a Battanian
+       buys his own boots over a generic pair while a culture with nothing of
+       its own in a slot simply takes the generic one. -->
   <OwnCultureArmorOnly>false</OwnCultureArmorOnly>
 
-  <!-- The same wall for weapons. A lord abroad with nothing of his own on the
-       shelf simply buys nothing that trip. -->
+  <!-- The same wall for weapons, where the catalogue is kinder: 350 crafted
+       blades carry a culture between them, 32 to 55 each, and 63 belong to
+       nobody. The Nord sells no bows, so his archers take the neutral ones;
+       only Empire and Vlandia make crossbows, so a crossbowman of any other
+       culture will never upgrade his. -->
   <OwnCultureWeaponsOnly>false</OwnCultureWeaponsOnly>
 
 

@@ -44,13 +44,30 @@ namespace HeroesEvolve
 
         /// <summary>
         /// Refuse armour that is not the favoured culture's outright, rather
-        /// than merely preferring it. Off by default: with it on, a culture the
-        /// game gives no leg armour at all -- aserai, khuzait and nord have none
-        /// on sale -- leaves its lords nothing to buy for that slot.
+        /// than merely preferring it.
+        ///
+        /// Off by default because a wall cannot be reasoned with, not because
+        /// the catalogue cannot carry it: counted over what a lord may now buy,
+        /// every culture has armour for every slot -- the thinnest is a single
+        /// pair of boots for five of the seven, against three for Empire and
+        /// Vlandia -- so nothing is left frozen. Expect a lord's boots to be
+        /// decided for him, and his helmet chosen from eleven rather than the
+        /// three hundred on the shelf.
+        ///
+        /// Pieces belonging to no culture pass the wall: they carry nobody's
+        /// colours to clash with, and they are what dresses a Nord's horse,
+        /// since his people sell no harness at all.
         /// </summary>
         public static bool OwnCultureArmorOnly = false;
 
-        /// <summary>The same wall for weapons. Off by default, for the same reason.</summary>
+        /// <summary>
+        /// The same wall for weapons, where the catalogue is kinder: 350 crafted
+        /// blades carry a culture between them, 32 to 55 each, and 63 belong to
+        /// nobody. The thin cases are the Nord bow -- his people sell none, so he
+        /// takes one of the three neutral ones -- and the crossbow, which only
+        /// Empire and Vlandia make, so a Battanian who carries one will never
+        /// upgrade it.
+        /// </summary>
         public static bool OwnCultureWeaponsOnly = false;
 
         /// <summary>Write hev.log. Off costs nothing and writes nothing.</summary>
