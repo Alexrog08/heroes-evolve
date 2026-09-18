@@ -144,16 +144,17 @@ namespace HeroesEvolve
         }
 
         /// <summary>
-        /// Adds one skill's target, never below what TaleWorlds wrote the hero
-        /// there at his age -- see AuthoredTalent.WrittenFloor. The rules above
-        /// decide how far a lord grows; the sheet decides how far he may be cut,
-        /// which is nowhere.
+        /// Adds one skill's target, never below where his own written profile
+        /// puts that line at his age -- see AuthoredTalent.WrittenAt. The rules
+        /// above give a hero the shape of the lords a campaign produces; his
+        /// sheet gives him the shape TaleWorlds drew for him, and he takes
+        /// whichever is kinder to each line.
         /// </summary>
         private static void Add(List<SkillTarget> targets, Hero hero, SkillObject skill, int target, float talent)
         {
             if (skill == null) return;
 
-            int written = AuthoredTalent.WrittenFloor(HeroTalent.WrittenIn(hero, skill));
+            int written = AuthoredTalent.WrittenAt(HeroTalent.WrittenIn(hero, skill), hero.Age);
             if (written > target) target = written;
 
             if (target <= 0) return;

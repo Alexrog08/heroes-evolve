@@ -2082,21 +2082,21 @@ namespace HeroesEvolve
         /// The other half of the promise: every single line of a sheet, not just
         /// the best of each field.
         ///
-        /// A lord is never taken below what TaleWorlds wrote him at his age
-        /// (AuthoredTalent.WrittenFloor), so after a campaign has started on the
-        /// curve nothing here should sit below its floor. A count above zero
-        /// means either a save the curve never ran on -- growth lifts a skill
-        /// but never restores one it did not cut -- or a floor that is not being
-        /// read where it is needed.
+        /// A lord is never taken below where his own written profile puts a line
+        /// at his age (AuthoredTalent.WrittenAt), so after a campaign has started
+        /// on the curve nothing here should sit below it. A count above zero
+        /// means either a save the curve never ran on -- growth lifts a skill but
+        /// never restores one it did not cut -- or a line that is not being read
+        /// where it is needed. Below what he was written is expected and not
+        /// counted here: a young lord is meant to be, and grows into it.
         ///
         /// The share is the interesting figure once the count is nought: how far
         /// above his sheet the mod has actually carried each line. It was the
         /// civil middle that prompted this -- a census found trade at 60 against
         /// the 90 he wrote, medicine 62 against 90 -- so those two skills are
-        /// the ones to watch. A second census, with the floor in but still aged,
-        /// had them at 65 and 73: the floor was being multiplied by a maturity
-        /// the sheet already carried, which is what took the age term out of
-        /// AuthoredTalent.WrittenFloor.
+        /// the ones to watch -- against his profile rather than against his raw
+        /// figures, since a lord below his written trade at twenty-seven is on
+        /// the curve rather than short of it.
         /// </summary>
         private static void ReportWrittenLines(List<Hero> growing)
         {
@@ -2113,7 +2113,7 @@ namespace HeroesEvolve
                     {
                         if (skill == null) continue;
 
-                        int floor = AuthoredTalent.WrittenFloor(HeroTalent.WrittenIn(hero, skill));
+                        int floor = AuthoredTalent.WrittenAt(HeroTalent.WrittenIn(hero, skill), hero.Age);
                         if (floor <= 0) continue;
 
                         written++;

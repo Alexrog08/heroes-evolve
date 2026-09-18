@@ -144,20 +144,26 @@ namespace HeroesEvolve.Tests
             Check.True(beyondHalthdar > 0 && beyondHalthdar * 5 < 4000,
                        "and a rare few of them do, fewer than one in five");
 
-            // Every other line of the sheet is promised the same way, one skill
-            // at a time -- and with no age term, because TaleWorlds wrote the
-            // sheet for the man's years already and carrying it along the
-            // maturity curve ages him twice.
-            Check.Equal(90, AuthoredTalent.WrittenFloor(90), "a written skill is worth itself");
-            Check.Equal(0, AuthoredTalent.WrittenFloor(0), "a line he was never written asks for nothing");
-            Check.Equal(0, AuthoredTalent.WrittenFloor(-5), "nor a nonsense one");
+            // Every other line of the sheet is spread over a life the same way:
+            // his own profile, carried along the maturity curve. Below the
+            // written figure while he is young, on purpose.
+            Check.Equal((int)(90 * (1f + AuthoredTalent.Surplus)),
+                        AuthoredTalent.WrittenAt(90, SkillGrowth.MatureAge),
+                        "a written line ends the surplus above itself");
+            Check.True(AuthoredTalent.WrittenAt(90, 40f) < 90, "and stands below it at forty");
+            Check.True(AuthoredTalent.WrittenAt(90, 18f) < AuthoredTalent.WrittenAt(90, 40f),
+                       "lower still as a youth");
+            Check.Equal(AuthoredTalent.WrittenAt(90, SkillGrowth.MatureAge),
+                        AuthoredTalent.WrittenAt(90, 90f), "and nothing further past sixty");
+            Check.Equal(0, AuthoredTalent.WrittenAt(0, 40f), "a line he was never written asks for nothing");
+            Check.Equal(0, AuthoredTalent.WrittenAt(-5, 40f), "nor a nonsense one");
 
-            // The field promise is the one that carries the surplus, and it is
-            // still there: his best skill in a field ends above his sheet.
-            Check.True(SkillGrowth.PrimaryTarget(SkillGrowth.MatureAge,
-                                                 AuthoredTalent.Floor(220, SkillGrowth.PeakNorm))
-                       > AuthoredTalent.WrittenFloor(220),
-                       "his best skill of a field still ends above the line floor");
+            // The two readings of a sheet agree at sixty for his best skill of a
+            // field, because both are the written figure plus the surplus.
+            int fieldPeak = Talent.TargetFor(SkillGrowth.CivilPeakNorm,
+                                             AuthoredTalent.Floor(220, SkillGrowth.CivilPeakNorm));
+            Check.True(System.Math.Abs(fieldPeak - AuthoredTalent.WrittenAt(220, SkillGrowth.MatureAge)) <= 1,
+                       "the field floor and the line land on the same figure for his best skill");
 
             // Nothing written there means no floor, and the dice decide that
             // field on their own.

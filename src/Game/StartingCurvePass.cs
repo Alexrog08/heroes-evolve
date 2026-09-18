@@ -148,10 +148,11 @@ namespace HeroesEvolve
 
                 // A skill this mod does not develop is still one TaleWorlds may
                 // have written, and the cap is about the generator's figures
-                // rather than his. So the cap never falls below the sheet: the
-                // bow he does not carry keeps what he was written with, and only
-                // what the generator invented on top of it comes off.
-                int written = AuthoredTalent.WrittenFloor(HeroTalent.WrittenIn(hero, skill));
+                // rather than his. So the cap never falls below his own written
+                // profile at his age: the bow he does not carry keeps its share
+                // of what he was written with, and only what the generator
+                // invented on top of that comes off.
+                int written = AuthoredTalent.WrittenAt(HeroTalent.WrittenIn(hero, skill), age);
                 if (written > cap) cap = written;
 
                 int current = hero.GetSkillValue(skill);
