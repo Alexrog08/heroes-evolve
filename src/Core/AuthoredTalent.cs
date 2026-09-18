@@ -33,7 +33,8 @@ namespace HeroesEvolve.Core
     /// tail and nothing else: the median lord still peaks at 143% of his written
     /// best in combat, while the tenth percentile goes from 82% to 105%.
     ///
-    /// Only Ceiling limits it, so the luckiest heroes still outgrow the kings.
+    /// Only Ceiling limits it, and only where a sheet asks for a figure the
+    /// game could never show.
     /// </summary>
     public static class AuthoredTalent
     {
@@ -86,24 +87,25 @@ namespace HeroesEvolve.Core
         }
 
         /// <summary>
-        /// The most talent a sheet can insist on, in any field.
+        /// The most talent a sheet can insist on: what the game itself can show,
+        /// GameSkillMaximum over PeakNorm. A sheet written past that asks for a
+        /// number no hero could display, and the target would clamp to 330
+        /// regardless, so it is held here. Nothing TaleWorlds wrote comes near
+        /// it; the highest is Caladog's 300 with a sword, which asks for 2.10.
         ///
-        /// Below Talent.Maximum on purpose. Caladog's 300 with a sword asks for
-        /// 2.10, more than the hash can ever deal, and no lord could then
-        /// outgrow him at anything. Kings are meant to be formidable, not the
-        /// best the world can hold: only the dice go past this, so the lords
-        /// they favoured most stand above every king, in whichever field they
-        /// were favoured.
-        ///
-        /// Set where the hash's rarest one hero in fifty begins. At 1.95 the
-        /// vanilla roster holds seven lords above Caladog in combat -- the same
-        /// seven every campaign, since their ids are the dice -- and heroes born
-        /// or hired later can be dealt up to the maximum. He is also the one man
-        /// on the roster this holds back: he finishes near 292 against the 300 he
-        /// was written with, three percent short of his own sheet, and remains
-        /// the strongest written lord in the game.
+        /// It was 1.95 until the sheets became a floor, deliberately below
+        /// Talent.Maximum so that no written lord could stand beyond the reach
+        /// of the dice: seven lords were dealt more than Caladog, and he
+        /// finished near 292, three percent short of his own sheet. That was the
+        /// single place where the sheet was not a promise, and the choice was
+        /// made the other way. A sheet is honoured in full, Caladog's included,
+        /// so he matures past his written 300 to 315 and is the one man in the
+        /// world the dice cannot match. Every other written lord is still passed
+        /// by the luckiest heroes -- 46 above the strongest civil sheet on the
+        /// vanilla roster, 8 above Halthdar at sea -- because no other sheet was
+        /// written anywhere near the top.
         /// </summary>
-        public const float Ceiling = 1.95f;
+        public const float Ceiling = SkillGrowth.GameSkillMaximum / (float)SkillGrowth.PeakNorm;
 
         /// <summary>
         /// The talent a sheet's best skill in one field insists on: enough for a

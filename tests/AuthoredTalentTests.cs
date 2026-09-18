@@ -23,7 +23,7 @@ namespace HeroesEvolve.Tests
             // The promise. A lord whose years were taken off the sheet TaleWorlds
             // wrote him grows back onto it, and stands a surplus above it once he
             // is grown.
-            int[] written = { 60, 90, 130, 150, 180, 210, 220, 250, 260 };
+            int[] written = { 60, 90, 130, 150, 180, 210, 220, 250, 260, 300 };
             for (int i = 0; i < written.Length; i++)
             {
                 int best = written[i];
@@ -35,12 +35,13 @@ namespace HeroesEvolve.Tests
                            "and stands the surplus above it at sixty, no more: " + peak + " for " + best);
             }
 
-            // Caladog alone asks for more than a sheet may have, and is held at
-            // the ceiling a little short of his own 300 -- see AuthoredTalent.
-            Check.True(Near(AuthoredTalent.Floor(300), AuthoredTalent.Ceiling), "his 300 is held at the ceiling");
+            // Caladog's 300 is the highest sheet in the game and is honoured in
+            // full, which carries him past anything the dice can deal -- the one
+            // man nobody outgrows. See AuthoredTalent.Ceiling for the choice.
+            Check.True(AuthoredTalent.Floor(300) > Talent.Maximum,
+                       "his 300 asks for more talent than the hash can give");
             int caladog = SkillGrowth.PrimaryTarget(SkillGrowth.MatureAge, AuthoredTalent.Floor(300));
-            Check.True(caladog > 285 && caladog < 300,
-                       "so he finishes just short of what he was written with: " + caladog);
+            Check.True(caladog > 300, "so he matures past what he was written with: " + caladog);
 
             // Before sixty he is still climbing toward it, which is the whole
             // point of taking his years off the sheet in the first place.
@@ -83,19 +84,26 @@ namespace HeroesEvolve.Tests
             Check.True(lifted > 0 && lifted < 4000,
                        "a knight sheet lifts the unlucky and leaves everyone else his dice");
 
-            // Inside the talent bounds, whatever a sheet says -- and never at the
-            // top of them. The last stretch belongs to the hash, so the rarest
-            // prodigies a campaign deals can outgrow every king.
-            Check.True(Near(AuthoredTalent.Floor(400), AuthoredTalent.Ceiling), "a sheet past the ceiling is held there");
-            Check.True(AuthoredTalent.Ceiling < Talent.Maximum, "no sheet reaches the top of the hash");
+            // A sheet is held only where it asks for a figure the game could
+            // never show, whatever a modded roster writes.
+            Check.True(Near(AuthoredTalent.Floor(400), AuthoredTalent.Ceiling),
+                       "a sheet past what the game can show is held there");
+            Check.Equal(SkillGrowth.GameSkillMaximum,
+                        SkillGrowth.PrimaryTarget(SkillGrowth.MatureAge, AuthoredTalent.Floor(400)),
+                        "and peaks on exactly what the game can show");
+            Check.True(AuthoredTalent.Ceiling > Talent.Maximum,
+                       "the dice are no longer the limit on a lord TaleWorlds wrote");
 
-            int beyondSheets = 0;
+            // Every sheet but Caladog's is still within reach of them: Halthdar's
+            // 260 with a blade asks for 1.82, and the rarest prodigies pass it.
+            Check.True(AuthoredTalent.Floor(260) < Talent.Maximum, "a strong sheet is not beyond the dice");
+            int beyondHalthdar = 0;
             for (int i = 0; i < 4000; i++)
             {
-                if (Talent.For("CharacterObject_" + i, Talent.Combat) > AuthoredTalent.Ceiling) beyondSheets++;
+                if (Talent.For("CharacterObject_" + i, Talent.Combat) > AuthoredTalent.Floor(260)) beyondHalthdar++;
             }
-            Check.True(beyondSheets > 0 && beyondSheets * 50 < 4000,
-                       "the hash deals a rare few more than any sheet can give, fewer than one in fifty");
+            Check.True(beyondHalthdar > 0 && beyondHalthdar * 10 < 4000,
+                       "and a rare few of them do, fewer than one in ten");
 
             // Nothing written there means no floor, and the dice decide that
             // field on their own.

@@ -44,6 +44,12 @@ namespace HeroesEvolve.Core
         /// which is the point, while the triangular distribution keeps him rare:
         /// reaching this multiplier at all takes both halves of the hash landing
         /// at their extreme.
+        ///
+        /// A ceiling on the dice, not on the world. A lord TaleWorlds wrote keeps
+        /// his sheet as a floor under his talent (AuthoredTalent), and Caladog's
+        /// 300 with a sword asks for 2.10, so he matures past anything the dice
+        /// can deal. He is the only one: no other sheet in the game reaches this
+        /// far, so every other written lord can still be outgrown.
         /// </summary>
         public const float Maximum = 2.07f;
 

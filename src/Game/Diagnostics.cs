@@ -1890,10 +1890,10 @@ namespace HeroesEvolve
         /// lower and falls as a campaign goes on.
         ///
         /// The ten written for a station are the spot check, their figures being
-        /// known: their sheets ask for Caladog 1.95 in combat, Halthdar 1.82,
+        /// known: their sheets ask for Caladog 2.10 in combat, Halthdar 1.82,
         /// Derthert, Monchug and Raganvad 1.75, Unqid 1.61, Hurunag 1.54; in
         /// civil Unqid 1.75, Caladog, Garios, Lucon and Rhagaea 1.68, the other
-        /// kings 1.61, Hurunag 1.54; at sea Halthdar 1.95. Three are dealt more
+        /// kings 1.61, Hurunag 1.54; at sea Halthdar 1.96. Three are dealt more
         /// than their sheet asks with a blade -- Lucon 1.93, Garios 1.80,
         /// Rhagaea 1.56 -- and keep it, because a sheet is a floor and not a
         /// wage. A king below the figure above means his sheet was not where it
@@ -1931,7 +1931,8 @@ namespace HeroesEvolve
                         + " / " + SkillGrowth.PeakNorm + ", so he is back on his sheet near 55"
                         + " and " + (int)(AuthoredTalent.Surplus * 100f) + "% above it at "
                         + SkillGrowth.MatureAge
-                        + "; no sheet gives more than " + TwoPlaces(AuthoredTalent.Ceiling));
+                        + "; a sheet is held only at " + TwoPlaces(AuthoredTalent.Ceiling)
+                        + ", which is all the game can show");
 
             ReportAboveAuthored(growing);
 
@@ -1980,15 +1981,14 @@ namespace HeroesEvolve
         /// How many heroes the dice favoured stand above every hero whose sheet
         /// decided that same field.
         ///
-        /// The check on AuthoredTalent.Ceiling. Kings are meant to be formidable,
-        /// not the best the world can hold: a lord the dice favoured should be
-        /// able to stand above all of them, in any field. Combat is where that is
-        /// tight, because Caladog's sheet reaches the ceiling itself -- over the
-        /// lords TaleWorlds wrote, seven were dealt more than his 1.95, the same
-        /// seven every campaign since the dice are their ids, and the wanderers
-        /// and the heroes born later add to them. Civil and naval run looser, 46
-        /// and 10 on that roster, because no sheet there asks for as much: 1.75
-        /// in civil, Halthdar's 1.95 at sea.
+        /// What a written sheet does to the top of the world. A lord the dice
+        /// favoured should be able to stand above the written ones, and in civil
+        /// and at sea he does: over the lords TaleWorlds wrote, 46 stand above
+        /// the strongest civil sheet, 1.75, and 8 above Halthdar's 1.96. In
+        /// combat he no longer can. Caladog's 300 asks for 2.10, past anything
+        /// the hash deals, so the count there is 0 -- by choice, taken when the
+        /// sheets became a floor, and not by accident. Anything above 0 in
+        /// combat means a modded roster wrote a lord higher still.
         ///
         /// Counted field by field rather than hero by hero, because a man can
         /// stand on his sheet with a ledger and on his dice with a sword, and the
