@@ -7,8 +7,8 @@ namespace HeroesEvolve.Tests
     {
         public static void RunAll()
         {
-            // A template's skills are read one domain at a time. Movement says
-            // nothing on its own: it follows whatever the hero fights with.
+            // A sheet is read one field at a time. Movement says nothing on its
+            // own: it follows whatever the hero fights with.
             Check.Equal(Talent.Combat, AuthoredTalent.DomainOf("OneHanded"), "a sword skill speaks for combat");
             Check.Equal(Talent.Combat, AuthoredTalent.DomainOf("Throwing"), "so does throwing");
             Check.Equal(Talent.Civil, AuthoredTalent.DomainOf("Charm"), "charm speaks for civil aptitude");
@@ -20,53 +20,73 @@ namespace HeroesEvolve.Tests
                         "a skill another mod adds counts as civil, as growth already treats it");
             Check.True(AuthoredTalent.DomainOf(null) == null, "no id, no domain");
 
-            // Only a sheet written for a station speaks for the man on it.
-            Check.True(AuthoredTalent.IsLeaderTemplate("spc_swordsman_skills_ruler"), "Caladog's ruler sheet does");
-            Check.True(AuthoredTalent.IsLeaderTemplate("spc_tactician_skills_ruler"),
-                       "so does a ruler sheet three kings share: it was written for the crown");
-            Check.True(AuthoredTalent.IsLeaderTemplate("spc_quartermaster_skills_clanleader"), "and Hurunag's clan-leader sheet");
-            Check.True(!AuthoredTalent.IsLeaderTemplate("spc_knight_skills"), "an archetype twenty-two knights share does not");
-            Check.True(!AuthoredTalent.IsLeaderTemplate("spc_archer_skills_rookie"),
-                       "nor a rookie sheet, whose youth the curve already counts");
-            Check.True(!AuthoredTalent.IsLeaderTemplate("spc_sailor_skills_viking"), "nor a War Sails archetype");
-            Check.True(!AuthoredTalent.IsLeaderTemplate("lord_forest_bandits_1"), "nor a bandit chief's own sheet");
-            Check.True(!AuthoredTalent.IsLeaderTemplate("spc_ruler_guard_skills"), "naming rulers somewhere is not being one");
-            Check.True(AuthoredTalent.IsLeaderTemplate("MOD_WARLORD_SKILLS_RULER"), "a mod's sheet counts whatever its case");
-            Check.True(!AuthoredTalent.IsLeaderTemplate(null), "no template, no author");
-            Check.True(!AuthoredTalent.IsLeaderTemplate(""), "nor an empty one");
+            // The promise. A lord whose years were taken off the sheet TaleWorlds
+            // wrote him grows back onto it, and stands a surplus above it once he
+            // is grown.
+            int[] written = { 60, 90, 130, 150, 180, 210, 220, 250, 260 };
+            for (int i = 0; i < written.Length; i++)
+            {
+                int best = written[i];
+                int promised = (int)(best * (1f + AuthoredTalent.Surplus));
+                int peak = SkillGrowth.PrimaryTarget(SkillGrowth.MatureAge, AuthoredTalent.Floor(best));
 
-            // Intent measured against TaleWorlds' own lords, one field at a time:
-            // a sheet as strong as the typical grown lord's is the typical talent
-            // the hash deals, and a king stands above the map about as far as he
-            // stood above the lords TaleWorlds wrote.
-            Check.True(Near(AuthoredTalent.From(AuthoredTalent.TypicalCombat, Talent.Combat), Talent.Median),
-                       "a sword arm like the typical grown lord's is the typical talent");
-            Check.True(Near(AuthoredTalent.From(AuthoredTalent.TypicalCivil, Talent.Civil), Talent.Median),
-                       "so is a head for business like his");
-            Check.True(Near(AuthoredTalent.From(AuthoredTalent.TypicalNaval, Talent.Naval), Talent.Median),
-                       "and seamanship like the typical War Sails lord's");
-            Check.True(Reads(AuthoredTalent.From(210, Talent.Combat), 1.53f), "Lucon's 210 stands well above the map");
-            Check.True(Reads(AuthoredTalent.From(220, Talent.Combat), 1.60f), "Garios's 220 higher still");
-            Check.True(Reads(AuthoredTalent.From(250, Talent.Combat), 1.82f), "Derthert's 250 among its best");
-            Check.True(Near(AuthoredTalent.From(300, Talent.Combat), AuthoredTalent.Ceiling), "Caladog's 300 reaches the most a sheet can give");
-            Check.True(AuthoredTalent.From(300, Talent.Combat) > AuthoredTalent.From(260, Talent.Combat), "and he still stands above Halthdar");
-            Check.True(AuthoredTalent.From(260, Talent.Combat) > AuthoredTalent.From(250, Talent.Combat), "TaleWorlds' order is kept");
+                Check.True(peak >= best, "a lord written with " + best + " gets it back: " + peak);
+                Check.True(peak >= promised - 1 && peak <= promised + 1,
+                           "and stands the surplus above it at sixty, no more: " + peak + " for " + best);
+            }
 
-            // Each field against its own. A civil best is the best of a dozen
-            // skills and runs higher than any one weapon, so the same number
-            // says less there.
-            Check.True(AuthoredTalent.From(230, Talent.Civil) < AuthoredTalent.From(230, Talent.Combat),
-                       "230 in stewardship is less remarkable than 230 with a sword");
-            Check.True(Reads(AuthoredTalent.From(250, Talent.Civil), 1.49f), "Unqid's 250 in trade is above the typical grown lord");
-            Check.True(Reads(AuthoredTalent.From(280, Talent.Naval), 1.67f), "Halthdar's 280 at sea is well above it");
-            Check.True(Near(AuthoredTalent.From(180, null), Talent.Median),
-                       "a field nobody named is measured as combat, as HeroTalent looks it up");
+            // Caladog alone asks for more than a sheet may have, and is held at
+            // the ceiling a little short of his own 300 -- see AuthoredTalent.
+            Check.True(Near(AuthoredTalent.Floor(300), AuthoredTalent.Ceiling), "his 300 is held at the ceiling");
+            int caladog = SkillGrowth.PrimaryTarget(SkillGrowth.MatureAge, AuthoredTalent.Floor(300));
+            Check.True(caladog > 285 && caladog < 300,
+                       "so he finishes just short of what he was written with: " + caladog);
 
-            // Inside the talent bounds, whatever a template says -- and never at
-            // the top of them. The last stretch belongs to the hash, so the
-            // rarest prodigies a campaign deals can outgrow every king.
-            Check.True(Near(AuthoredTalent.From(60, Talent.Combat), Talent.Minimum), "a weak template is held at the least talent");
-            Check.True(Near(AuthoredTalent.From(400, Talent.Civil), AuthoredTalent.Ceiling), "a sheet past the ceiling is held there, in any field");
+            // Before sixty he is still climbing toward it, which is the whole
+            // point of taking his years off the sheet in the first place.
+            float grown = AuthoredTalent.Floor(220);
+            Check.True(SkillGrowth.PrimaryTarget(40f, grown) < 220, "at forty he has not arrived");
+            Check.True(SkillGrowth.PrimaryTarget(18f, grown) < SkillGrowth.PrimaryTarget(40f, grown),
+                       "and a youth stands lower than a man in his prime");
+            Check.Equal(SkillGrowth.PrimaryTarget(SkillGrowth.MatureAge, grown),
+                        SkillGrowth.PrimaryTarget(90f, grown),
+                        "past sixty his sheet asks for nothing further");
+
+            // A sheet written at the peak norm asks for barely more than the norm,
+            // and the middle hero is dealt more than that: a floor speaks for the
+            // unlucky rather than for everyone.
+            Check.True(Near(AuthoredTalent.Floor(SkillGrowth.PeakNorm), 1f + AuthoredTalent.Surplus),
+                       "the peak norm is the anchor, because it is what talent multiplies");
+            Check.True(AuthoredTalent.Floor(SkillGrowth.PeakNorm) < Talent.Median,
+                       "which the dice already beat at the median");
+            Check.True(AuthoredTalent.Floor(90) < Talent.Median,
+                       "a rookie sheet asks for less still, so a young lord is not aged twice");
+            Check.True(AuthoredTalent.Floor(260) > AuthoredTalent.Floor(250), "TaleWorlds order is kept");
+
+            // A floor, never a demotion: the dice answer whenever they are kinder.
+            Check.True(AuthoredTalent.AtLeastHisSheet(1.80f, 130) == 1.80f,
+                       "lucky dice stand above a modest sheet");
+            Check.True(AuthoredTalent.AtLeastHisSheet(0.60f, 250) > 1.70f,
+                       "and a strong sheet lifts unlucky dice");
+            Check.True(AuthoredTalent.AtLeastHisSheet(Talent.Minimum, 0) == Talent.Minimum,
+                       "no sheet, no floor");
+
+            int lowered = 0, lifted = 0;
+            for (int i = 0; i < 4000; i++)
+            {
+                float dealt = Talent.For("CharacterObject_" + i, Talent.Combat);
+                float standing = AuthoredTalent.AtLeastHisSheet(dealt, 180);
+                if (standing < dealt) lowered++;
+                if (standing > dealt) lifted++;
+            }
+            Check.Equal(0, lowered, "no sheet ever lowers the man on it");
+            Check.True(lifted > 0 && lifted < 4000,
+                       "a knight sheet lifts the unlucky and leaves everyone else his dice");
+
+            // Inside the talent bounds, whatever a sheet says -- and never at the
+            // top of them. The last stretch belongs to the hash, so the rarest
+            // prodigies a campaign deals can outgrow every king.
+            Check.True(Near(AuthoredTalent.Floor(400), AuthoredTalent.Ceiling), "a sheet past the ceiling is held there");
             Check.True(AuthoredTalent.Ceiling < Talent.Maximum, "no sheet reaches the top of the hash");
 
             int beyondSheets = 0;
@@ -77,20 +97,15 @@ namespace HeroesEvolve.Tests
             Check.True(beyondSheets > 0 && beyondSheets * 50 < 4000,
                        "the hash deals a rare few more than any sheet can give, fewer than one in fifty");
 
-            // Nothing written means no intent, and the caller keeps the hash.
-            Check.True(AuthoredTalent.From(0, Talent.Combat) == 0f, "a domain the template leaves empty carries no intent");
-            Check.True(AuthoredTalent.From(-5, Talent.Naval) == 0f, "nor does a nonsense value");
+            // Nothing written there means no floor, and the dice decide that
+            // field on their own.
+            Check.True(AuthoredTalent.Floor(0) == 0f, "a field the sheet leaves empty asks for nothing");
+            Check.True(AuthoredTalent.Floor(-5) == 0f, "nor does a nonsense value");
         }
 
         private static bool Near(float a, float b)
         {
             return Math.Abs(a - b) < 0.001f;
-        }
-
-        /// <summary>Whether a talent reads as this figure to two places, the way the census prints it.</summary>
-        private static bool Reads(float value, float twoPlaces)
-        {
-            return Math.Abs(value - twoPlaces) < 0.005f;
         }
     }
 }

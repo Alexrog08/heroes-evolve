@@ -52,7 +52,8 @@ namespace HeroesEvolve.Core
         /// symmetric about the centre of the bounds, so half of all heroes fall
         /// either side of the midpoint -- 1.31, not the 1.0 a multiplier
         /// suggests, and a lord of median talent peaks near 197 rather than on
-        /// the peak norm. AuthoredTalent anchors TaleWorlds' typical lord here.
+        /// the peak norm. Which is why a sheet written at the peak norm asks for
+        /// only 1.05 (AuthoredTalent.Floor) and the dice usually answer first.
         /// </summary>
         public const float Median = (Minimum + Maximum) / 2f;
 

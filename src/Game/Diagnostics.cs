@@ -1823,6 +1823,10 @@ namespace HeroesEvolve
         /// intent, a handful of exceptional lords per campaign arrived at by
         /// probability rather than by a rule that forces them.
         ///
+        /// The bottom of it is no longer triangular. A lord TaleWorlds wrote
+        /// keeps his sheet as a floor, so the poor tail here is made of heroes
+        /// born in play, hired out of taverns, or written weak in the first place.
+        ///
         /// Arithmetic is not evidence, though. This reports where the hashes of
         /// the real hero ids actually fell, and names the top few so they can be
         /// looked up in game.
@@ -1873,45 +1877,44 @@ namespace HeroesEvolve
         }
 
         /// <summary>
-        /// Who takes his talent from what TaleWorlds wrote, from which sheet,
-        /// and what it came to -- with every reigning ruler alongside.
+        /// Who stands on the sheet TaleWorlds wrote him rather than on his own
+        /// dice, which sheet it was, and what it came to -- with every reigning
+        /// ruler alongside.
         ///
-        /// Written to check the reading of TaleWorlds' templates against figures
-        /// worked out from the game's own files before any of it shipped. On the
-        /// vanilla roster ten characters should read as authored and no more:
-        /// the kings, in combat Caladog 1.95, Halthdar 1.89, Derthert, Monchug
-        /// and Raganvad 1.82, Unqid 1.67, Garios 1.60, Lucon and Rhagaea 1.53,
-        /// and Hurunag at 1.60 on his clan-leader sheet. In civil, Unqid 1.49,
-        /// Caladog, Garios, Lucon and Rhagaea 1.43, the other kings 1.37 and
-        /// Hurunag 1.31; at sea, Halthdar 1.67. A vanilla king reported as hash
-        /// means the template was not where it was expected.
+        /// Written to check the reading of TaleWorlds' sheets against figures
+        /// worked out from the game's own files before any of it shipped. Of the
+        /// 484 lords TaleWorlds wrote, 284 should stand on their sheet in some
+        /// field -- combat 124, civil 223, naval 22 -- and 200 be left entirely
+        /// to the dice. The census population adds the wanderers and every hero
+        /// born in play, none of whom has a sheet of his own, so its share is
+        /// lower and falls as a campaign goes on.
         ///
-        /// The archetype count is the other half. The first campaign on authored
-        /// talent read 406 of 441 lords from their templates, because nearly all
-        /// of them carry one; those lords are counted here as keeping the hash,
-        /// so a count that climbs back toward the hundreds means archetypes are
-        /// being read as talent again.
+        /// The ten written for a station are the spot check, their figures being
+        /// known: their sheets ask for Caladog 1.95 in combat, Halthdar 1.82,
+        /// Derthert, Monchug and Raganvad 1.75, Unqid 1.61, Hurunag 1.54; in
+        /// civil Unqid 1.75, Caladog, Garios, Lucon and Rhagaea 1.68, the other
+        /// kings 1.61, Hurunag 1.54; at sea Halthdar 1.95. Three are dealt more
+        /// than their sheet asks with a blade -- Lucon 1.93, Garios 1.80,
+        /// Rhagaea 1.56 -- and keep it, because a sheet is a floor and not a
+        /// wage. A king below the figure above means his sheet was not where it
+        /// was expected.
         /// </summary>
         private static void ReportAuthoredTalent()
         {
-            int growing = 0, archetype = 0;
+            int combat = 0, civil = 0, naval = 0;
+            List<Hero> growing = new List<Hero>();
             List<Hero> authored = new List<Hero>();
-            List<Hero> hashed = new List<Hero>();
             foreach (Hero hero in Hero.AllAliveHeroes)
             {
                 try
                 {
                     if (!HeroFilter.IsEligibleToGrow(hero)) continue;
-                    growing++;
+                    growing.Add(hero);
 
-                    if (HeroTalent.IsAuthored(hero))
-                    {
-                        authored.Add(hero);
-                        continue;
-                    }
-
-                    hashed.Add(hero);
-                    if (HeroTalent.TemplateOf(hero) != null) archetype++;
+                    if (HeroTalent.StandsOnSheet(hero, Talent.Combat)) combat++;
+                    if (HeroTalent.StandsOnSheet(hero, Talent.Civil)) civil++;
+                    if (HeroTalent.StandsOnSheet(hero, Talent.Naval)) naval++;
+                    if (HeroTalent.IsAuthored(hero)) authored.Add(hero);
                 }
                 catch
                 {
@@ -1919,16 +1922,18 @@ namespace HeroesEvolve
                 }
             }
 
-            ModLog.Info("TALENT authored " + authored.Count + " of " + growing
-                        + " growing heroes take their talent from a ruler or clan-leader template;"
-                        + " archetype=" + archetype + " carry a shared template and keep the hash");
-            ModLog.Info("TALENT anchor the typical grown lord TaleWorlds wrote, combat=" + AuthoredTalent.TypicalCombat
-                        + " civil=" + AuthoredTalent.TypicalCivil
-                        + " naval=" + AuthoredTalent.TypicalNaval
-                        + ", reads as the median talent " + TwoPlaces(Talent.Median)
+            ModLog.Info("TALENT sheets " + authored.Count + " of " + growing.Count
+                        + " growing heroes stand on what TaleWorlds wrote in some field"
+                        + " (combat=" + combat + " civil=" + civil + " naval=" + naval + ");"
+                        + " the rest are left to the hash");
+            ModLog.Info("TALENT floor a sheet's best skill in a field is what its man must reach:"
+                        + " talent = best * " + TwoPlaces(1f + AuthoredTalent.Surplus)
+                        + " / " + SkillGrowth.PeakNorm + ", so he is back on his sheet near 55"
+                        + " and " + (int)(AuthoredTalent.Surplus * 100f) + "% above it at "
+                        + SkillGrowth.MatureAge
                         + "; no sheet gives more than " + TwoPlaces(AuthoredTalent.Ceiling));
 
-            ReportAboveAuthored(authored, hashed);
+            ReportAboveAuthored(growing);
 
             List<Hero> shown = new List<Hero>(authored);
             foreach (Kingdom kingdom in Kingdom.All)
@@ -1949,13 +1954,16 @@ namespace HeroesEvolve
                 try
                 {
                     Hero hero = shown[i];
-                    string template = HeroTalent.TemplateOf(hero);
+                    string sheet = HeroTalent.SheetIdOf(hero);
                     string station = hero.IsKingdomLeader && hero.Clan != null && hero.Clan.Kingdom != null
                                    ? "ruler " + hero.Name + " (" + hero.Clan.Kingdom.Name
                                    : "lord " + hero.Name + " (" + (hero.Clan != null ? hero.Clan.Name.ToString() : "no clan");
 
                     ModLog.Info("TALENT " + station + ", " + (int)hero.Age + ")"
-                                + " template=" + (template ?? "none")
+                                + " sheet=" + (sheet ?? "none")
+                                + " written=" + HeroTalent.BestWritten(hero, Talent.Combat)
+                                + "/" + HeroTalent.BestWritten(hero, Talent.Civil)
+                                + "/" + HeroTalent.BestWritten(hero, Talent.Naval)
                                 + " combat=" + TwoPlaces(HeroTalent.For(hero, Talent.Combat))
                                 + " civil=" + TwoPlaces(HeroTalent.For(hero, Talent.Civil))
                                 + " naval=" + TwoPlaces(HeroTalent.For(hero, Talent.Naval))
@@ -1969,38 +1977,48 @@ namespace HeroesEvolve
         }
 
         /// <summary>
-        /// How many heroes on the hash were dealt more talent than every authored
-        /// hero, field by field and in several fields at once.
+        /// How many heroes the dice favoured stand above every hero whose sheet
+        /// decided that same field.
         ///
         /// The check on AuthoredTalent.Ceiling. Kings are meant to be formidable,
         /// not the best the world can hold: a lord the dice favoured should be
-        /// able to stand above all of them, in any field or in several. Combat is
-        /// where that is tight: on the vanilla roster seven lords were dealt more
-        /// than Caladog's 1.95, the same seven every campaign since the dice are
-        /// their ids, and wanderers and the heroes born later add to them. Civil
-        /// runs far looser, because no king was written much above the typical
-        /// lord there. The best of the ten in each field counts whatever the
-        /// hash dealt them too, so at sea the bar is Monchug's lucky 1.86 rather
-        /// than Halthdar's written 1.67. Worked out from the game files over every
-        /// lord TaleWorlds wrote: combat 7, civil 120, naval 17, and none above
-        /// the ten in two fields at once. The census counts only heroes old
-        /// enough to grow and adds the wanderers, so it lands near those rather
-        /// than on them.
+        /// able to stand above all of them, in any field. Combat is where that is
+        /// tight, because Caladog's sheet reaches the ceiling itself -- over the
+        /// lords TaleWorlds wrote, seven were dealt more than his 1.95, the same
+        /// seven every campaign since the dice are their ids, and the wanderers
+        /// and the heroes born later add to them. Civil and naval run looser, 46
+        /// and 10 on that roster, because no sheet there asks for as much: 1.75
+        /// in civil, Halthdar's 1.95 at sea.
+        ///
+        /// Counted field by field rather than hero by hero, because a man can
+        /// stand on his sheet with a ledger and on his dice with a sword, and the
+        /// question is about the field.
         /// </summary>
-        private static void ReportAboveAuthored(List<Hero> authored, List<Hero> hashed)
+        private static void ReportAboveAuthored(List<Hero> growing)
         {
-            if (authored.Count == 0) return;
-
             string[] fields = { Talent.Combat, Talent.Civil, Talent.Naval };
             float[] best = new float[fields.Length];
-            for (int a = 0; a < authored.Count; a++)
+            Hero[] strongest = new Hero[fields.Length];
+            List<float>[] dealt = new List<float>[fields.Length];
+            for (int f = 0; f < fields.Length; f++) dealt[f] = new List<float>();
+
+            for (int i = 0; i < growing.Count; i++)
             {
                 try
                 {
+                    Hero hero = growing[i];
                     for (int f = 0; f < fields.Length; f++)
                     {
-                        float talent = HeroTalent.For(authored[a], fields[f]);
-                        if (talent > best[f]) best[f] = talent;
+                        float talent = HeroTalent.For(hero, fields[f]);
+                        if (!HeroTalent.StandsOnSheet(hero, fields[f]))
+                        {
+                            dealt[f].Add(talent);
+                            continue;
+                        }
+
+                        if (talent <= best[f]) continue;
+                        best[f] = talent;
+                        strongest[f] = hero;
                     }
                 }
                 catch
@@ -2009,33 +2027,18 @@ namespace HeroesEvolve
                 }
             }
 
-            int[] above = new int[fields.Length];
-            int inTwoOrMore = 0, inAllThree = 0;
-            for (int h = 0; h < hashed.Count; h++)
+            for (int f = 0; f < fields.Length; f++)
             {
-                try
+                int above = 0;
+                for (int i = 0; i < dealt[f].Count; i++)
                 {
-                    int count = 0;
-                    for (int f = 0; f < fields.Length; f++)
-                    {
-                        if (HeroTalent.For(hashed[h], fields[f]) <= best[f]) continue;
-                        above[f]++;
-                        count++;
-                    }
-                    if (count >= 2) inTwoOrMore++;
-                    if (count == fields.Length) inAllThree++;
+                    if (dealt[f][i] > best[f]) above++;
                 }
-                catch
-                {
-                    // Same reason as above.
-                }
-            }
 
-            ModLog.Info("TALENT above every authored hero (best combat=" + TwoPlaces(best[0])
-                        + " civil=" + TwoPlaces(best[1]) + " naval=" + TwoPlaces(best[2]) + "):"
-                        + " combat=" + above[0] + " civil=" + above[1] + " naval=" + above[2]
-                        + " inTwoOrMore=" + inTwoOrMore + " inAllThree=" + inAllThree
-                        + " of " + hashed.Count + " on the hash");
+                ModLog.Info("TALENT above every " + fields[f] + " sheet (" + TwoPlaces(best[f])
+                            + (strongest[f] != null ? ", " + strongest[f].Name : "") + "):"
+                            + " " + above + " of " + dealt[f].Count + " left to the hash there");
+            }
         }
 
         private static string TwoPlaces(float value)

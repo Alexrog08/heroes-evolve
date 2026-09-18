@@ -1,61 +1,57 @@
 namespace HeroesEvolve.Core
 {
     /// <summary>
-    /// The talent a character TaleWorlds wrote was meant to have, read from the
-    /// skills his template gives him.
+    /// The talent the sheet TaleWorlds wrote for a character insists on.
     ///
-    /// A template is not a curve. TaleWorlds wrote a king's skills once and in
-    /// the base game they never move, so a figure there is not where he stands
-    /// at his age but how formidable the character was meant to be: intent.
-    /// Read that way it maps onto the one quantity this mod already uses for how
-    /// far a hero can go, and the curve does the rest. He grows toward what that
-    /// talent and his own focus allow, rather than being pinned to the number
-    /// he was written with.
+    /// A sheet is not a curve. TaleWorlds wrote a lord's skills once and in the
+    /// base game they never move, so a figure there is not where he stands at
+    /// his age: it is what the man was written to be worth. This mod takes his
+    /// years back off that sheet so he grows into his strength instead of
+    /// opening the campaign with it -- and that is only fair if the sheet is a
+    /// promise rather than a loan. So it is one. Whatever the dice dealt him,
+    /// his sheet is a floor under his talent: he climbs back onto it in his
+    /// fifties and stands Surplus above it once he is grown. A lord written
+    /// with 250 in a lance is never left permanently lesser than that because
+    /// the hash disliked his id.
     ///
-    /// The scale is TaleWorlds' own nobility. A sheet as strong as the typical
-    /// grown lord's is the typical talent the hash deals, and a stronger one
-    /// lifts its man above the map about as far as TaleWorlds lifted him above
-    /// the lords it wrote -- short of the very top, which is left to the hash
-    /// (see Ceiling). The first version read 150, the peak norm, as
-    /// ordinary; but the hash deals its middle hero 1.31, not 1.0, so every
-    /// king landed a step below where he was written -- Garios ahead of 83% of
-    /// TaleWorlds' grown lords, yet of only 68% of the map. A domain the
-    /// template leaves empty carries no intent at all, and the hash decides it
-    /// instead.
+    /// Measured against SkillGrowth.PeakNorm, which is what talent multiplies,
+    /// so a talent of best/PeakNorm peaks exactly on the sheet's best skill.
+    /// The sheet's own figure is the whole calibration and no field needs a
+    /// norm of its own.
     ///
-    /// Only a template written for a station counts; see IsLeaderTemplate.
+    /// The first version read each field against the typical grown lord
+    /// TaleWorlds wrote -- combat 180, civil 220 -- and put that in place of the
+    /// dice. It placed the ten rulers on TaleWorlds' nobility scale and said
+    /// nothing about anybody else: 428 lords share 74 sheets, mostly archetypes,
+    /// and read as intent an archetype deals every lord on it the same gift, so
+    /// all 74 were set aside. A floor needs no such care, because it only speaks
+    /// when it stands above what the dice dealt. A rookie sheet asks for
+    /// nothing; a knight's asks for what a knight is worth; and the dice still
+    /// separate the twenty-two knights who share it. Over the roster TaleWorlds
+    /// wrote, 284 of 484 lords stand on their sheet in some field and 200 are
+    /// left entirely to the dice -- and where it speaks it lifts the unlucky
+    /// tail and nothing else: the median lord still peaks at 143% of his written
+    /// best in combat, while the tenth percentile goes from 82% to 105%.
+    ///
+    /// Only Ceiling limits it, so the luckiest heroes still outgrow the kings.
     /// </summary>
     public static class AuthoredTalent
     {
         /// <summary>
-        /// Whether a skill template was written for a ruler or a clan leader,
-        /// the only kind that says how formidable one particular man was meant
-        /// to be.
+        /// How far past his sheet a lord stands once he is grown, at
+        /// SkillGrowth.MatureAge.
         ///
-        /// Nearly every lord TaleWorlds wrote carries a template, but 428 lords
-        /// share 74 of them, and most are archetypes: twenty-two knights on one
-        /// sheet, eighteen chatelaines on another. Read as talent, an archetype
-        /// deals every lord on it the same gift, and its rookie variant is worse:
-        /// it writes a young lord's youth into his sheet, and the curve then
-        /// takes his age off a second time. What is left once archetypes are set
-        /// aside is the rulers' sheets and Hurunag's -- ten characters written
-        /// for what they are, which is where TaleWorlds' intent actually lives.
-        ///
-        /// A ruler template several kings share still counts: it was written for
-        /// the crown, not for a kind of soldier. Matched on the id's ending,
-        /// whatever its case, so a mod that follows TaleWorlds' naming is read
-        /// the same way; one that does not simply leaves its lords on the hash.
+        /// Five percent. Forty years of war have to be worth something, or a
+        /// lord's whole career leaves him exactly where the generator would have
+        /// handed him over on the first day. Small on purpose: the sheet is the
+        /// statement and this is only the interest on it. With the curve's own
+        /// maturity the sheet itself is back at about fifty-five, and his dice
+        /// may take him far past either figure.
         /// </summary>
-        public static bool IsLeaderTemplate(string templateId)
-        {
-            if (string.IsNullOrEmpty(templateId)) return false;
-
-            return templateId.EndsWith("_ruler", System.StringComparison.OrdinalIgnoreCase)
-                || templateId.EndsWith("_clanleader", System.StringComparison.OrdinalIgnoreCase);
-        }
+        public const float Surplus = 0.05f;
 
         /// <summary>
-        /// Which talent a template skill speaks for: Talent.Combat for the six
+        /// Which talent a skill on a sheet speaks for: Talent.Combat for the six
         /// weapons, Talent.Naval for the War Sails skills, and Talent.Civil for
         /// everything else, including skills other mods add, which growth already
         /// treats as civil. Riding and Athletics return null: they follow the
@@ -90,64 +86,49 @@ namespace HeroesEvolve.Core
         }
 
         /// <summary>
-        /// What TaleWorlds' typical grown lord was written with, field by field:
-        /// the median best skill among the 139 lords aged thirty-five or more
-        /// that the base game and War Sails ship, read from their templates.
+        /// The most talent a sheet can insist on, in any field.
         ///
-        /// Each field against its own, because they do not run alike. A civil
-        /// best is the best of a dozen skills and sits higher than any single
-        /// weapon, so 230 in stewardship is ordinary where 230 with a sword is
-        /// not. Naval is measured on the eight grown War Sails lords who carry it.
+        /// Below Talent.Maximum on purpose. Caladog's 300 with a sword asks for
+        /// 2.10, more than the hash can ever deal, and no lord could then
+        /// outgrow him at anything. Kings are meant to be formidable, not the
+        /// best the world can hold: only the dice go past this, so the lords
+        /// they favoured most stand above every king, in whichever field they
+        /// were favoured.
         ///
-        /// Grown lords only: a young lord's sheet has his youth written into it,
-        /// and the curve accounts for youth on its own.
-        /// </summary>
-        public const int TypicalCombat = 180;
-        public const int TypicalCivil = 220;
-        public const int TypicalNaval = 220;
-
-        /// <summary>
-        /// The most talent a sheet can give, in any field.
-        ///
-        /// Below Talent.Maximum on purpose. Measured against TaleWorlds' own
-        /// nobility, Caladog's 300 would read as the most talent there is, and
-        /// no lord could ever outgrow him. Kings are meant to be formidable, not
-        /// the best the world can hold: only the hash goes past this, so the
-        /// lords the dice favoured most stand above every king, in whichever
-        /// field they were favoured.
-        ///
-        /// Set where the hash's rarest one hero in eighty begins. At 2.00, which
-        /// would have let Caladog peak on his written 300, the vanilla roster
-        /// holds three lords above him, and those by a hundredth: a tie in all
-        /// but name. At 1.95 it holds seven -- the same seven every campaign,
-        /// since their ids are the dice -- and heroes born or hired later can be
-        /// dealt up to the maximum. Caladog finishes near 292 and stays one of
-        /// the strongest men alive.
+        /// Set where the hash's rarest one hero in fifty begins. At 1.95 the
+        /// vanilla roster holds seven lords above Caladog in combat -- the same
+        /// seven every campaign, since their ids are the dice -- and heroes born
+        /// or hired later can be dealt up to the maximum. He is also the one man
+        /// on the roster this holds back: he finishes near 292 against the 300 he
+        /// was written with, three percent short of his own sheet, and remains
+        /// the strongest written lord in the game.
         /// </summary>
         public const float Ceiling = 1.95f;
 
         /// <summary>
-        /// The talent a template's best skill in one field implies, measured
-        /// against the typical grown lord in that field, never below the least
-        /// talent and never above the ceiling. Zero when the template writes
-        /// nothing there, so the caller falls back to the hash. A field it does
-        /// not recognise is measured as combat, as HeroTalent looks it up.
+        /// The talent a sheet's best skill in one field insists on: enough for a
+        /// grown lord to peak Surplus above it. Zero where the sheet writes
+        /// nothing there, so the dice decide that field alone, and never more
+        /// than the ceiling.
         /// </summary>
-        public static float From(int bestAuthoredSkill, string domain)
+        public static float Floor(int bestAuthoredSkill)
         {
             if (bestAuthoredSkill <= 0) return 0f;
 
-            float talent = bestAuthoredSkill / (float)TypicalFor(domain) * Talent.Median;
-            if (talent < Talent.Minimum) return Talent.Minimum;
-            if (talent > Ceiling) return Ceiling;
-            return talent;
+            float talent = bestAuthoredSkill * (1f + Surplus) / SkillGrowth.PeakNorm;
+            return talent < Ceiling ? talent : Ceiling;
         }
 
-        private static int TypicalFor(string domain)
+        /// <summary>
+        /// A hero's talent in one field: what the dice dealt him, never below
+        /// what his sheet insists on. Nothing here ever lowers a hero, which is
+        /// what makes a sheet safe to read for every lord TaleWorlds wrote
+        /// rather than for ten of them.
+        /// </summary>
+        public static float AtLeastHisSheet(float dealt, int bestAuthoredSkill)
         {
-            if (domain == Talent.Civil) return TypicalCivil;
-            if (domain == Talent.Naval) return TypicalNaval;
-            return TypicalCombat;
+            float floor = Floor(bestAuthoredSkill);
+            return dealt > floor ? dealt : floor;
         }
     }
 }
