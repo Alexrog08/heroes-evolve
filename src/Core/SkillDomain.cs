@@ -61,7 +61,15 @@ namespace HeroesEvolve.Core
             if (factor > MaximumFocusFactor) factor = MaximumFocusFactor;
 
             int peak = Talent.TargetFor(SkillGrowth.PeakNorm, talent);
-            return (int)(peak * SkillGrowth.Maturity(age) * factor);
+            int target = (int)(peak * SkillGrowth.Maturity(age) * factor);
+
+            // The focus factor multiplies after the peak has been capped, so
+            // without this a lord with a strong sheet and five focus chased 437
+            // in stewardship: Talent.TargetFor refuses to invent a figure the
+            // game would never show, and then this method invented it anyway. It
+            // costs nothing at the median, where three focus earns exactly the
+            // peak, and only bites where heavy focus meets high talent.
+            return target < SkillGrowth.GameSkillMaximum ? target : SkillGrowth.GameSkillMaximum;
         }
     }
 }

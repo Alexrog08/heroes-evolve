@@ -28,6 +28,8 @@ namespace HeroesEvolve.Tests
             Check.True(hoarded <= (int)(SkillGrowth.PeakNorm * Talent.Maximum
                                         * FocusGrowth.MaximumFocusFactor) + 1,
                        "the focus multiplier is capped");
+            Check.Equal(SkillGrowth.GameSkillMaximum, hoarded,
+                        "and the target itself stops at what the game can show");
             Check.True(hoarded > 0, "...but still produces a target");
 
             // Age matters here as it does everywhere: the peak belongs to old
