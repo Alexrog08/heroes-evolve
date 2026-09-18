@@ -42,6 +42,17 @@ namespace HeroesEvolve
         /// </summary>
         public static Core.CultureChoice ShoppingCulture = Core.CultureChoice.Hero;
 
+        /// <summary>
+        /// Refuse armour that is not the favoured culture's outright, rather
+        /// than merely preferring it. Off by default: with it on, a culture the
+        /// game gives no leg armour at all -- aserai, khuzait and nord have none
+        /// on sale -- leaves its lords nothing to buy for that slot.
+        /// </summary>
+        public static bool OwnCultureArmorOnly = false;
+
+        /// <summary>The same wall for weapons. Off by default, for the same reason.</summary>
+        public static bool OwnCultureWeaponsOnly = false;
+
         /// <summary>Write hev.log. Off costs nothing and writes nothing.</summary>
         public static bool EnableLogging = true;
 
@@ -267,6 +278,8 @@ namespace HeroesEvolve
                 ReserveMultiplier = Number(root, "ReserveMultiplier", ReserveMultiplier, 0f, 10f);
                 ShopChancePerVisit = Number(root, "ShopChancePerVisit", ShopChancePerVisit, 0f, 1f);
                 ShoppingCulture = Core.CultureChoices.Parse(Text(root, "ShoppingCulture"), ShoppingCulture);
+                OwnCultureArmorOnly = Flag(root, "OwnCultureArmorOnly", OwnCultureArmorOnly);
+                OwnCultureWeaponsOnly = Flag(root, "OwnCultureWeaponsOnly", OwnCultureWeaponsOnly);
                 PlunderChance = Number(root, "PlunderChance", PlunderChance, 0f, 5f);
                 CaravanGearShare = Number(root, "CaravanGearShare", CaravanGearShare, 0f, 1f);
 
@@ -302,6 +315,8 @@ namespace HeroesEvolve
                    + " reserveMultiplier=" + ReserveMultiplier
                    + " shopChance=" + ShopChancePerVisit
                    + " shoppingCulture=" + Core.CultureChoices.NameOf(ShoppingCulture)
+                   + " ownCultureArmorOnly=" + OwnCultureArmorOnly
+                   + " ownCultureWeaponsOnly=" + OwnCultureWeaponsOnly
                    + " captureLoss=" + EnableCaptureLoss
                    + " plunderChance=" + PlunderChance
                    + " caravanGearShare=" + CaravanGearShare

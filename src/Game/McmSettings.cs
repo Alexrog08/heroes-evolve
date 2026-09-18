@@ -117,10 +117,20 @@ namespace HeroesEvolve
 
         // Listed in CultureChoice's own order, so the selected index is the value.
         [SettingPropertyDropdown("Culture favoured when buying", RequireRestart = false, Order = 4,
-            HintText = "Whose colours a lord prefers at market: his clan's, his own, or none. Worth one tier. Repair still dresses him as his own people.")]
+            HintText = "Whose colours a lord prefers at market: his clan's, his own, or none. A piece in those colours counts a quarter of itself better. Repair still dresses him as his own people.")]
         [SettingPropertyGroup("Shopping", GroupOrder = 6)]
         public Dropdown<string> ShoppingCulture { get; set; } =
             new Dropdown<string>(new string[] { "His clan's culture", "His own culture", "No preference" }, 1);
+
+        [SettingPropertyBool("Armour of his own culture only", RequireRestart = false, Order = 5,
+            HintText = "A wall instead of a preference: no foreign armour or horse harness is ever bought. Aserai, Khuzait and Nord have no leg armour on sale at all, so their lords will keep whatever boots they have.")]
+        [SettingPropertyGroup("Shopping", GroupOrder = 6)]
+        public bool OwnCultureArmorOnly { get; set; } = false;
+
+        [SettingPropertyBool("Weapons of his own culture only", RequireRestart = false, Order = 6,
+            HintText = "The same wall for weapons. A lord abroad with nothing of his own on the shelf simply buys nothing.")]
+        [SettingPropertyGroup("Shopping", GroupOrder = 6)]
+        public bool OwnCultureWeaponsOnly { get; set; } = false;
 
         // ---- Gear limits: what a lord may wear, from a kit or a market --------------
 

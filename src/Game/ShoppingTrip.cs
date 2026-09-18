@@ -56,7 +56,7 @@ namespace HeroesEvolve
             /// the term the ordering actually leads on. Left raw, a foreign
             /// piece one tier better would outrank a same-tier piece in his own
             /// colours every time, and the preference would never once decide
-            /// anything -- see MarketRules.CulturePreference.
+            /// anything -- see MarketRules.CultureShare.
             /// </summary>
             public int Gain
             {

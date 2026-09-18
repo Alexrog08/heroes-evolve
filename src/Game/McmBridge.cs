@@ -119,6 +119,8 @@ namespace HeroesEvolve
             Settings.ShoppingCulture = Core.CultureChoices.FromIndex(
                 settings.ShoppingCulture != null ? settings.ShoppingCulture.SelectedIndex : -1,
                 Settings.ShoppingCulture);
+            Settings.OwnCultureArmorOnly = settings.OwnCultureArmorOnly;
+            Settings.OwnCultureWeaponsOnly = settings.OwnCultureWeaponsOnly;
             Settings.SpendingShare = settings.SpendingShare;
             Settings.ReserveMultiplier = settings.ReserveMultiplier;
 

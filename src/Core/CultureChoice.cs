@@ -4,7 +4,7 @@ namespace HeroesEvolve.Core
     /// Whose colours a lord favours when he buys: his clan's, his own, or no
     /// one's.
     ///
-    /// The preference itself is MarketRules.CulturePreference, worth a whole
+    /// The preference itself is MarketRules.CultureShare, worth a quarter of a
     /// tier. This only decides which culture it is measured against. The two
     /// differ more often than they look: a wife married into a foreign house,
     /// a lord who changed kingdoms, every companion in a clan of another people.

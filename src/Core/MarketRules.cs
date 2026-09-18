@@ -53,46 +53,64 @@ namespace HeroesEvolve.Core
         /// offered, so MinimumGain keeps its meaning, the arithmetic comes out
         /// exactly as intended:
         ///
-        ///   offered >= worn + 0.5 tier   for a foreigner replacing a foreigner
-        ///   offered >= worn - 0.5 tier   for his own culture replacing a foreigner
-        ///   offered >= worn + 1.5 tiers  for a foreigner replacing his own
+        ///   offered >= worn + 0.5 tier              between two foreigners, or two of his own
+        ///   offered >= worn - a quarter of itself   for his own replacing a foreigner
+        ///   offered >= worn + a quarter of worn     for a foreigner replacing his own
         ///
         /// So abroad he wears what he can get; at home he trades back into his
         /// own colours for the same tier, or half a tier worse; and once he is
         /// dressed as his people dress, only a very large improvement moves him
         /// out again. Nobody is stranded and the map still looks like itself.
         ///
-        /// One hundred rather than fifty because fifty makes culture a
-        /// tiebreak only -- it would never buy a downgrade, and the whole point
-        /// is that a Battanian in Battania should be willing to take a slightly
-        /// plainer Battanian helm over the fine Khuzait one he is wearing.
-        /// A constant rather than a setting until a census says what it should
-        /// be; it is one number and the build takes thirty seconds.
+        /// A share of the piece rather than a flat tier, which is the whole
+        /// difference between this and the hundred it replaces. The flat figure
+        /// was worth a whole tier at the bottom of the scale, where a lord
+        /// should be free to dress himself out of whatever is on the shelf, and
+        /// only a fifth of a piece at the top, where the question actually
+        /// matters. The catalogue says where it matters: measured over the
+        /// armour on sale, the gap between the best a culture can field and the
+        /// best anybody can reaches 1.62 tiers (a Sturgian cape against a
+        /// Vlandian one), 1.44 (a Nord helmet against a Sturgian) and 1.30 (a
+        /// Battanian cuirass against a Khuzait). A flat tier leaves every one of
+        /// those open, so a lord at his ceiling drifts into whichever culture
+        /// happens to top his slot and the map slowly dresses alike.
+        ///
+        /// At a quarter, a foreigner must beat what he wears by 0.5 + a quarter
+        /// of it: 2.25 tiers over a tier-7 piece, which closes every gap above,
+        /// and 1.0 over a tier-2 one, which leaves a poorly dressed lord abroad
+        /// free to dress himself. That is the shape the problem has.
         /// </summary>
-        public const int CulturePreference = 100;
+        public const int CultureShare = 25;
 
         /// <summary>
-        /// A fine tier as this hero values it, rather than as the game scores
-        /// it. Neutral items get nothing: they are equally acceptable to
+        /// What a piece is worth on top of its own tier for being his people's
+        /// work. Neutral items get nothing: they are equally acceptable to
         /// everyone, and paying them the bonus would rank a generic helm above
         /// a hero's own culture's.
         /// </summary>
+        public static int Bonus(int fine)
+        {
+            return fine > 0 ? fine * CultureShare / 100 : 0;
+        }
+
+        /// <summary>
+        /// A fine tier as this hero values it, rather than as the game scores it.
+        /// </summary>
         public static int Effective(int fine, bool ownCulture)
         {
-            return ownCulture ? fine + CulturePreference : fine;
+            return ownCulture ? fine + Bonus(fine) : fine;
         }
 
         /// <summary>
         /// The same, in whole tiers, for the coarse term the ordering leads on.
         ///
-        /// Derived from the one constant rather than given a second, so the two
-        /// halves of the comparison cannot drift apart. At a preference of 100
-        /// his own culture is worth a whole rank; at 50 it is worth none, and
-        /// culture decides only ties. That is the honest shape of the knob.
+        /// Derived from the one share rather than given a second constant, so
+        /// the two halves of the comparison cannot drift apart, and rounded
+        /// rather than truncated so a quarter of a tier-2 piece is not nothing.
         /// </summary>
         public static int EffectiveTier(int tier, bool ownCulture)
         {
-            return ownCulture ? tier + CulturePreference / 100 : tier;
+            return ownCulture ? tier + (tier * CultureShare + 50) / 100 : tier;
         }
 
         /// <summary>
@@ -128,12 +146,18 @@ namespace HeroesEvolve.Core
             if (wornFine < 1 || offeredFine < 1) return false;
             if (offeredTier < 1 || offeredTier > ceiling) return false;
 
-            // Both sides through the same transform. Applying the preference to
-            // the offer alone would let a lord churn his own culture's gear for
-            // trivial gains, because every same-culture swap would start a whole
-            // tier ahead -- MinimumGain would stop meaning half a tier.
-            return Effective(offeredFine, offeredOwnCulture)
-                 - Effective(wornFine, wornOwnCulture) >= MinimumGain;
+            // The bonus enters only where the two sides differ in culture.
+            // Running both through Effective instead would scale a same-culture
+            // swap by the share as well -- (offered - worn) * 1.25 -- and
+            // MinimumGain would quietly stop meaning half a tier. The ordering
+            // does put both sides through it, on purpose: there the question is
+            // which of two gains to spend on first, and a gain in his own
+            // colours is worth more.
+            int gain = offeredFine - wornFine;
+            if (offeredOwnCulture && !wornOwnCulture) gain += Bonus(offeredFine);
+            else if (!offeredOwnCulture && wornOwnCulture) gain -= Bonus(wornFine);
+
+            return gain >= MinimumGain;
         }
 
         /// <summary>

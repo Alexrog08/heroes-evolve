@@ -15,7 +15,7 @@ namespace HeroesEvolve
     ///
     /// Most of the time he keeps almost none of it, and that is right -- but the
     /// reason changed when culture stopped being a wall. A Vlandian who strips a
-    /// Khuzait is holding Khuzait gear, and MarketRules.CulturePreference makes
+    /// Khuzait is holding Khuzait gear, and MarketRules.CultureShare makes
     /// him want a full tier and a half of it before he will take off his own
     /// people's harness for it. So he wears the odd piece that is genuinely
     /// better and sells the rest, which is what anyone would do and what makes

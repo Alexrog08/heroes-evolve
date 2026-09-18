@@ -42,7 +42,7 @@ namespace HeroesEvolve
         /// <summary>
         /// True when the item is dressed in the hero's own culture's colours.
         /// Both the upgrade gate and the ordering read it -- see
-        /// MarketRules.CulturePreference.
+        /// MarketRules.CultureShare.
         /// </summary>
         public bool OwnCulture;
 

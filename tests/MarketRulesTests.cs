@@ -48,7 +48,7 @@ namespace HeroesEvolve.Tests
             // The wall came down because armour is always culture-stamped: two
             // of 2,332 pieces in the shipped catalogue carry no culture, so a
             // lord abroad could buy a sword and never a cuirass. See
-            // MarketRules.CulturePreference.
+            // MarketRules.CultureShare.
 
             // Abroad, nothing changes. He is held to the ordinary bar.
             Check.True(MarketRules.IsUpgrade(400, false, 450, false, 5, 6),
@@ -60,19 +60,26 @@ namespace HeroesEvolve.Tests
             Check.True(MarketRules.IsUpgrade(400, false, 400, true, 4, 6),
                        "his own culture at the same tier is worth the swap");
 
-            // ...and at half a tier worse, which is the whole point: a lord
-            // trades a fine foreign helm for a plainer one of his own people.
-            Check.True(MarketRules.IsUpgrade(400, false, 350, true, 4, 6),
-                       "half a tier worse in his own colours still is");
-            Check.False(MarketRules.IsUpgrade(400, false, 349, true, 4, 6),
+            // ...and at a quarter of itself worse, which is the whole point: a
+            // lord trades a fine foreign helm for a plainer one of his people.
+            Check.True(MarketRules.IsUpgrade(400, false, 360, true, 4, 6),
+                       "two fifths of a tier worse in his own colours still is");
+            Check.False(MarketRules.IsUpgrade(400, false, 359, true, 4, 6),
                         "one hundredth further is not");
 
             // Once dressed as his people dress, it takes a great deal to move
-            // him out again.
+            // him out again -- and more the better he is dressed, which is what
+            // the share buys over the flat tier it replaced.
             Check.False(MarketRules.IsUpgrade(400, true, 500, false, 5, 6),
                         "a whole tier of foreign gear does not tempt him");
             Check.True(MarketRules.IsUpgrade(400, true, 550, false, 6, 6),
                        "a tier and a half does");
+            Check.False(MarketRules.IsUpgrade(700, true, 900, false, 6, 6),
+                        "at the top of the scale two tiers is not enough");
+            Check.True(MarketRules.IsUpgrade(700, true, 925, false, 6, 6),
+                       "and it takes two and a quarter, which no culture gap in the game reaches");
+            Check.True(MarketRules.IsUpgrade(200, true, 300, false, 3, 6),
+                       "while a poorly dressed lord abroad still dresses himself at one tier");
 
             // Symmetry, which is what keeps MinimumGain meaning half a tier.
             // Applied to the offer alone, every same-culture swap would start a
@@ -84,10 +91,13 @@ namespace HeroesEvolve.Tests
 
             // A neutral item belongs to nobody and gets no thumb on the scale.
             Check.Equal(400, MarketRules.Effective(400, false), "a neutral item is valued as scored");
-            Check.Equal(400 + MarketRules.CulturePreference, MarketRules.Effective(400, true),
+            Check.Equal(400 + MarketRules.Bonus(400), MarketRules.Effective(400, true),
                         "his own is valued higher");
+            Check.Equal(100, MarketRules.Bonus(400), "by a quarter of what it is worth");
+            Check.Equal(0, MarketRules.Bonus(0), "and nothing is worth nothing");
             Check.Equal(5, MarketRules.EffectiveTier(4, true),
-                        "and a whole rank higher, at a preference of one tier");
+                        "a whole rank higher in the middle of the scale");
+            Check.Equal(8, MarketRules.EffectiveTier(6, true), "two at the top of it");
             Check.Equal(4, MarketRules.EffectiveTier(4, false), "a foreign one is not");
 
             // --- ordering ---

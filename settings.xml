@@ -148,10 +148,24 @@
 
   <!-- Whose colours a lord favours when he buys: clan (his clan's culture),
        hero (his own culture) or none (no preference: the best piece wins,
-       whoever made it). A piece in the favoured culture counts one tier
-       better, so a lord abroad still buys foreign gear when it is clearly the
-       better piece. Repair always dresses a lord as his own people. -->
+       whoever made it). A piece in the favoured culture counts a quarter of
+       itself better, so a lord abroad still buys foreign gear when it is
+       clearly the better piece, while a well-dressed lord at home needs a very
+       large improvement to leave his own colours. Repair always dresses a lord
+       as his own people. -->
   <ShoppingCulture>hero</ShoppingCulture>
+
+  <!-- A wall instead of a preference: with this on, a lord never buys armour
+       (or horse harness) that is not the favoured culture's. OFF BY DEFAULT,
+       because the catalogue is uneven — aserai, khuzait and nord have no leg
+       armour on sale at all, so their lords would keep whatever boots they
+       arrived in for the rest of the campaign. Unassigned pieces, which belong
+       to no culture, are always allowed. -->
+  <OwnCultureArmorOnly>false</OwnCultureArmorOnly>
+
+  <!-- The same wall for weapons. A lord abroad with nothing of his own on the
+       shelf simply buys nothing that trip. -->
+  <OwnCultureWeaponsOnly>false</OwnCultureWeaponsOnly>
 
 
   <!-- ============ Losing gear ============ -->

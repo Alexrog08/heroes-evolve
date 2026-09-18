@@ -112,6 +112,16 @@ namespace HeroesEvolve
             for (int i = 0; i < stock.Count; i++)
             {
                 StockEntry entry = stock[i];
+
+                // The wall, when the player has asked for one. A preference
+                // cannot keep a lord out of foreign steel for good -- that is
+                // what makes it a preference -- so this is the setting for
+                // anybody who wants each culture fighting in its own weapons and
+                // will accept the cost: a lord abroad with nothing of his own on
+                // the shelf simply buys nothing.
+                if (Settings.OwnCultureWeaponsOnly
+                    && !ItemCatalog.IsOwnOrNeutral(entry.Item, culture)) continue;
+
                 bool own = ItemCatalog.IsOwnCulture(entry.Item, culture);
                 if (!MarketRules.IsUpgrade(wornFine, wornOwnCulture, entry.FineTier, own,
                                            entry.Tier, ceiling)) continue;
@@ -145,6 +155,13 @@ namespace HeroesEvolve
             {
                 StockEntry entry = stock[i];
                 if (entry.Type != wanted) continue;
+
+                // The same wall for armour, harnesses included. Three cultures
+                // have no leg armour on sale at all, so with this on their lords
+                // keep whatever boots they arrived in.
+                if (Settings.OwnCultureArmorOnly
+                    && !ItemCatalog.IsOwnOrNeutral(entry.Item, culture)) continue;
+
                 bool own = ItemCatalog.IsOwnCulture(entry.Item, culture);
                 if (!MarketRules.IsUpgrade(wornFine, wornOwnCulture, entry.FineTier, own,
                                            entry.Tier, ceiling)) continue;

@@ -240,7 +240,7 @@ namespace HeroesEvolve
         /// alone, where the engine could not reach it.
         ///
         /// Any culture, because the market sells across cultures and only
-        /// prefers a man's own (see MarketRules.CulturePreference): what he
+        /// prefers a man's own (see MarketRules.CultureShare): what he
         /// could be sold is what anyone sells.
         ///
         /// Scanned once per campaign load and kept. The catalogue does not
@@ -327,7 +327,7 @@ namespace HeroesEvolve
         /// it wears.
         ///
         /// Culture used to be refused here and is now a preference inside
-        /// MarketRules instead -- see CulturePreference for why the wall had to
+        /// MarketRules instead -- see CultureShare for why the wall had to
         /// come down. The grant still refuses across cultures, and should: that
         /// is a lord's own people handing him his first kit, not a shelf.
         ///
@@ -502,6 +502,24 @@ namespace HeroesEvolve
         public static bool IsOwnCulture(ItemObject item, CultureObject culture)
         {
             if (item == null || item.Culture == null || culture == null) return false;
+            return item.Culture.StringId == culture.StringId;
+        }
+
+        /// <summary>
+        /// Whether an item is his own people's work, or nobody's.
+        ///
+        /// What the hard culture filters ask, where the preference asks
+        /// IsOwnCulture. The difference is the unassigned pieces: they carry no
+        /// colours to clash with anybody's, so a wall has no reason to stop
+        /// them, while a preference has no reason to pay them a bonus. With no
+        /// culture to favour at all -- a lord under "no preference" -- there is
+        /// nothing to enforce and everything passes.
+        /// </summary>
+        public static bool IsOwnOrNeutral(ItemObject item, CultureObject culture)
+        {
+            if (item == null) return false;
+            if (culture == null || item.Culture == null) return true;
+
             return item.Culture.StringId == culture.StringId;
         }
 

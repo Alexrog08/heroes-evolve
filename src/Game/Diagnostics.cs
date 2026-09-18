@@ -3307,7 +3307,7 @@ namespace HeroesEvolve
                         // stopped being true the moment culture became a
                         // preference: a foreigner can buy the whole shelf, he
                         // simply values his own people's work a tier higher.
-                        // See MarketRules.CulturePreference.
+                        // See MarketRules.CultureShare.
                         if (item.Culture == null) anyone++;
                     }
                     usable.Add(fits);
@@ -3557,7 +3557,7 @@ namespace HeroesEvolve
                 rightTier++;
 
                 // Counted, not blamed. Culture stopped refusing anything when it
-                // became a preference -- see MarketRules.CulturePreference -- so
+                // became a preference -- see MarketRules.CultureShare -- so
                 // a foreign offer that got this far is eligible, merely less
                 // attractive than a local one would have been. "culture" is no
                 // longer a blocker this can return, and the census will stop
