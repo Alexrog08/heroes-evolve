@@ -67,7 +67,8 @@ namespace HeroesEvolve
             if (hero == null) return Talent.For(null, domain);
 
             return AuthoredTalent.AtLeastHisSheet(Talent.For(hero.StringId, domain),
-                                                  Sheet(hero)[IndexOf(domain)]);
+                                                  Sheet(hero)[IndexOf(domain)],
+                                                  SkillGrowth.PeakNormFor(domain));
         }
 
         /// <summary>Whether his sheet, rather than his dice, decides any of his talent.</summary>
@@ -126,7 +127,8 @@ namespace HeroesEvolve
 
         private static bool StandsOnSheet(Hero hero, string domain, int bestWritten)
         {
-            return AuthoredTalent.Floor(bestWritten) > Talent.For(hero.StringId, domain);
+            return AuthoredTalent.Floor(bestWritten, SkillGrowth.PeakNormFor(domain))
+                   > Talent.For(hero.StringId, domain);
         }
 
         private static MBCharacterSkills SheetOf(Hero hero)

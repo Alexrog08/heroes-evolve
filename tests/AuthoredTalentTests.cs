@@ -28,7 +28,8 @@ namespace HeroesEvolve.Tests
             {
                 int best = written[i];
                 int promised = (int)(best * (1f + AuthoredTalent.Surplus));
-                int peak = SkillGrowth.PrimaryTarget(SkillGrowth.MatureAge, AuthoredTalent.Floor(best));
+                int peak = SkillGrowth.PrimaryTarget(SkillGrowth.MatureAge,
+                                                     AuthoredTalent.Floor(best, SkillGrowth.PeakNorm));
 
                 Check.True(peak >= best, "a lord written with " + best + " gets it back: " + peak);
                 Check.True(peak >= promised - 1 && peak <= promised + 1,
@@ -38,14 +39,15 @@ namespace HeroesEvolve.Tests
             // Caladog's 300 is the highest sheet in the game and is honoured in
             // full, which carries him past anything the dice can deal -- the one
             // man nobody outgrows. See AuthoredTalent.Ceiling for the choice.
-            Check.True(AuthoredTalent.Floor(300) > Talent.Maximum,
+            Check.True(AuthoredTalent.Floor(300, SkillGrowth.PeakNorm) > Talent.Maximum,
                        "his 300 asks for more talent than the hash can give");
-            int caladog = SkillGrowth.PrimaryTarget(SkillGrowth.MatureAge, AuthoredTalent.Floor(300));
+            int caladog = SkillGrowth.PrimaryTarget(SkillGrowth.MatureAge,
+                                                    AuthoredTalent.Floor(300, SkillGrowth.PeakNorm));
             Check.True(caladog > 300, "so he matures past what he was written with: " + caladog);
 
             // Before sixty he is still climbing toward it, which is the whole
             // point of taking his years off the sheet in the first place.
-            float grown = AuthoredTalent.Floor(220);
+            float grown = AuthoredTalent.Floor(220, SkillGrowth.PeakNorm);
             Check.True(SkillGrowth.PrimaryTarget(40f, grown) < 220, "at forty he has not arrived");
             Check.True(SkillGrowth.PrimaryTarget(18f, grown) < SkillGrowth.PrimaryTarget(40f, grown),
                        "and a youth stands lower than a man in his prime");
@@ -53,30 +55,45 @@ namespace HeroesEvolve.Tests
                         SkillGrowth.PrimaryTarget(90f, grown),
                         "past sixty his sheet asks for nothing further");
 
-            // A sheet written at the peak norm asks for barely more than the norm,
-            // and the middle hero is dealt more than that: a floor speaks for the
-            // unlucky rather than for everyone.
-            Check.True(Near(AuthoredTalent.Floor(SkillGrowth.PeakNorm), 1f + AuthoredTalent.Surplus),
-                       "the peak norm is the anchor, because it is what talent multiplies");
-            Check.True(AuthoredTalent.Floor(SkillGrowth.PeakNorm) < Talent.Median,
+            // A sheet written at its field's norm asks for barely more than the
+            // norm, and the middle hero is dealt more than that: a floor speaks
+            // for the unlucky rather than for everyone.
+            Check.True(Near(AuthoredTalent.Floor(SkillGrowth.PeakNorm, SkillGrowth.PeakNorm),
+                            1f + AuthoredTalent.Surplus),
+                       "the field norm is the anchor, because it is what talent multiplies");
+            Check.True(AuthoredTalent.Floor(SkillGrowth.PeakNorm, SkillGrowth.PeakNorm) < Talent.Median,
                        "which the dice already beat at the median");
-            Check.True(AuthoredTalent.Floor(90) < Talent.Median,
+            Check.True(AuthoredTalent.Floor(90, SkillGrowth.PeakNorm) < Talent.Median,
                        "a rookie sheet asks for less still, so a young lord is not aged twice");
-            Check.True(AuthoredTalent.Floor(260) > AuthoredTalent.Floor(250), "TaleWorlds order is kept");
+            Check.True(AuthoredTalent.Floor(260, SkillGrowth.PeakNorm)
+                       > AuthoredTalent.Floor(250, SkillGrowth.PeakNorm), "TaleWorlds order is kept");
+
+            // Each field on its own scale: the same figure says more in a ledger
+            // than with a sword, because TaleWorlds wrote 300 with a sword and
+            // only 250 in trade.
+            Check.True(AuthoredTalent.Floor(230, SkillGrowth.CivilPeakNorm)
+                       > AuthoredTalent.Floor(230, SkillGrowth.PeakNorm),
+                       "230 in stewardship is nearer the top of its field than 230 with a sword");
+            Check.Equal(300, Talent.TargetFor(SkillGrowth.PeakNorm, Talent.Maximum),
+                        "the luckiest hero alive finishes level with Caladog");
+            Check.Equal(250, Talent.TargetFor(SkillGrowth.CivilPeakNorm, Talent.Maximum),
+                        "and with Pharon in the ledger");
+            Check.Equal(279, Talent.TargetFor(SkillGrowth.NavalPeakNorm, Talent.Maximum),
+                        "and with Halthdar at sea");
 
             // A floor, never a demotion: the dice answer whenever they are kinder.
-            Check.True(AuthoredTalent.AtLeastHisSheet(1.80f, 130) == 1.80f,
+            Check.True(AuthoredTalent.AtLeastHisSheet(1.80f, 130, SkillGrowth.PeakNorm) == 1.80f,
                        "lucky dice stand above a modest sheet");
-            Check.True(AuthoredTalent.AtLeastHisSheet(0.60f, 250) > 1.70f,
+            Check.True(AuthoredTalent.AtLeastHisSheet(0.60f, 250, SkillGrowth.PeakNorm) > 1.70f,
                        "and a strong sheet lifts unlucky dice");
-            Check.True(AuthoredTalent.AtLeastHisSheet(Talent.Minimum, 0) == Talent.Minimum,
+            Check.True(AuthoredTalent.AtLeastHisSheet(Talent.Minimum, 0, SkillGrowth.PeakNorm) == Talent.Minimum,
                        "no sheet, no floor");
 
             int lowered = 0, lifted = 0;
             for (int i = 0; i < 4000; i++)
             {
                 float dealt = Talent.For("CharacterObject_" + i, Talent.Combat);
-                float standing = AuthoredTalent.AtLeastHisSheet(dealt, 180);
+                float standing = AuthoredTalent.AtLeastHisSheet(dealt, 180, SkillGrowth.PeakNorm);
                 if (standing < dealt) lowered++;
                 if (standing > dealt) lifted++;
             }
@@ -86,29 +103,34 @@ namespace HeroesEvolve.Tests
 
             // A sheet is held only where it asks for a figure the game could
             // never show, whatever a modded roster writes.
-            Check.True(Near(AuthoredTalent.Floor(400), AuthoredTalent.Ceiling),
+            Check.True(Near(AuthoredTalent.Floor(400, SkillGrowth.PeakNorm),
+                            AuthoredTalent.CeilingFor(SkillGrowth.PeakNorm)),
                        "a sheet past what the game can show is held there");
             Check.Equal(SkillGrowth.GameSkillMaximum,
-                        SkillGrowth.PrimaryTarget(SkillGrowth.MatureAge, AuthoredTalent.Floor(400)),
+                        SkillGrowth.PrimaryTarget(SkillGrowth.MatureAge,
+                                                  AuthoredTalent.Floor(400, SkillGrowth.PeakNorm)),
                         "and peaks on exactly what the game can show");
-            Check.True(AuthoredTalent.Ceiling > Talent.Maximum,
+            Check.True(AuthoredTalent.CeilingFor(SkillGrowth.PeakNorm) > Talent.Maximum,
                        "the dice are no longer the limit on a lord TaleWorlds wrote");
 
             // Every sheet but Caladog's is still within reach of them: Halthdar's
-            // 260 with a blade asks for 1.82, and the rarest prodigies pass it.
-            Check.True(AuthoredTalent.Floor(260) < Talent.Maximum, "a strong sheet is not beyond the dice");
+            // 260 with a blade asks for 1.88, and the rarest prodigies pass it.
+            Check.True(AuthoredTalent.Floor(260, SkillGrowth.PeakNorm) < Talent.Maximum,
+                       "a strong sheet is not beyond the dice");
             int beyondHalthdar = 0;
             for (int i = 0; i < 4000; i++)
             {
-                if (Talent.For("CharacterObject_" + i, Talent.Combat) > AuthoredTalent.Floor(260)) beyondHalthdar++;
+                if (Talent.For("CharacterObject_" + i, Talent.Combat)
+                    > AuthoredTalent.Floor(260, SkillGrowth.PeakNorm)) beyondHalthdar++;
             }
             Check.True(beyondHalthdar > 0 && beyondHalthdar * 10 < 4000,
                        "and a rare few of them do, fewer than one in ten");
 
             // Nothing written there means no floor, and the dice decide that
             // field on their own.
-            Check.True(AuthoredTalent.Floor(0) == 0f, "a field the sheet leaves empty asks for nothing");
-            Check.True(AuthoredTalent.Floor(-5) == 0f, "nor does a nonsense value");
+            Check.True(AuthoredTalent.Floor(0, SkillGrowth.PeakNorm) == 0f,
+                       "a field the sheet leaves empty asks for nothing");
+            Check.True(AuthoredTalent.Floor(-5, SkillGrowth.PeakNorm) == 0f, "nor does a nonsense value");
         }
 
         private static bool Near(float a, float b)

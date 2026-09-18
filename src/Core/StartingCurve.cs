@@ -37,9 +37,9 @@ namespace HeroesEvolve.Core
             return primaryTarget * UnusedCombatPercent / 100;
         }
 
-        public static int UnusedCivilCap(float age, float talent)
+        public static int UnusedCivilCap(float age, float talent, int peakNorm)
         {
-            return FocusGrowth.TargetFor(age, talent, UnusedCivilFocus, FocusGrowth.NoCeiling);
+            return FocusGrowth.TargetFor(age, talent, UnusedCivilFocus, peakNorm);
         }
 
         /// <summary>

@@ -14,10 +14,10 @@ namespace HeroesEvolve.Core
     /// with 250 in a lance is never left permanently lesser than that because
     /// the hash disliked his id.
     ///
-    /// Measured against SkillGrowth.PeakNorm, which is what talent multiplies,
-    /// so a talent of best/PeakNorm peaks exactly on the sheet's best skill.
-    /// The sheet's own figure is the whole calibration and no field needs a
-    /// norm of its own.
+    /// Measured against the norm of its own field (SkillGrowth.PeakNormFor),
+    /// which is what talent multiplies, so a talent of best/norm peaks exactly
+    /// on the sheet's best skill there. The sheet's own figure is the whole
+    /// calibration.
     ///
     /// The first version read each field against the typical grown lord
     /// TaleWorlds wrote -- combat 180, civil 220 -- and put that in place of the
@@ -87,38 +87,46 @@ namespace HeroesEvolve.Core
         }
 
         /// <summary>
-        /// The most talent a sheet can insist on: what the game itself can show,
-        /// GameSkillMaximum over PeakNorm. A sheet written past that asks for a
-        /// number no hero could display, and the target would clamp to 330
-        /// regardless, so it is held here. Nothing TaleWorlds wrote comes near
-        /// it; the highest is Caladog's 300 with a sword, which asks for 2.10.
+        /// The most talent a sheet can insist on in a field: what the game
+        /// itself can show, GameSkillMaximum over that field's norm. A sheet
+        /// written past that asks for a number no hero could display and the
+        /// target would clamp to 330 regardless, so it is held here.
+        ///
+        /// Nothing TaleWorlds wrote comes near it, because every norm is his own
+        /// ceiling in that field over Talent.Maximum: the strongest sheet in each
+        /// field asks for a little over the most talent there is, and nothing
+        /// else asks for as much.
         ///
         /// It was 1.95 until the sheets became a floor, deliberately below
-        /// Talent.Maximum so that no written lord could stand beyond the reach
-        /// of the dice: seven lords were dealt more than Caladog, and he
-        /// finished near 292, three percent short of his own sheet. That was the
-        /// single place where the sheet was not a promise, and the choice was
-        /// made the other way. A sheet is honoured in full, Caladog's included,
-        /// so he matures past his written 300 to 315 and is the one man in the
-        /// world the dice cannot match. Every other written lord is still passed
-        /// by the luckiest heroes -- 46 above the strongest civil sheet on the
-        /// vanilla roster, 8 above Halthdar at sea -- because no other sheet was
-        /// written anywhere near the top.
+        /// Talent.Maximum so that no written lord could stand beyond the reach of
+        /// the dice: seven lords were dealt more than Caladog, and he finished
+        /// near 292, three percent short of his own sheet. That was the single
+        /// place where the sheet was not a promise, and the choice was made the
+        /// other way. A sheet is honoured in full, Caladog's included, so he
+        /// matures past his written 300 and is the one man in the world the dice
+        /// cannot match. Every other written lord is still passed by the luckiest
+        /// heroes, because no other sheet was written at the top of its field.
         /// </summary>
-        public const float Ceiling = SkillGrowth.GameSkillMaximum / (float)SkillGrowth.PeakNorm;
+        public static float CeilingFor(int peakNorm)
+        {
+            if (peakNorm <= 0) return 0f;
+
+            return SkillGrowth.GameSkillMaximum / (float)peakNorm;
+        }
 
         /// <summary>
         /// The talent a sheet's best skill in one field insists on: enough for a
-        /// grown lord to peak Surplus above it. Zero where the sheet writes
-        /// nothing there, so the dice decide that field alone, and never more
-        /// than the ceiling.
+        /// grown lord to peak Surplus above it, against that field's norm. Zero
+        /// where the sheet writes nothing there, so the dice decide that field
+        /// alone, and never more than the ceiling.
         /// </summary>
-        public static float Floor(int bestAuthoredSkill)
+        public static float Floor(int bestAuthoredSkill, int peakNorm)
         {
-            if (bestAuthoredSkill <= 0) return 0f;
+            if (bestAuthoredSkill <= 0 || peakNorm <= 0) return 0f;
 
-            float talent = bestAuthoredSkill * (1f + Surplus) / SkillGrowth.PeakNorm;
-            return talent < Ceiling ? talent : Ceiling;
+            float talent = bestAuthoredSkill * (1f + Surplus) / peakNorm;
+            float ceiling = CeilingFor(peakNorm);
+            return talent < ceiling ? talent : ceiling;
         }
 
         /// <summary>
@@ -127,9 +135,9 @@ namespace HeroesEvolve.Core
         /// what makes a sheet safe to read for every lord TaleWorlds wrote
         /// rather than for ten of them.
         /// </summary>
-        public static float AtLeastHisSheet(float dealt, int bestAuthoredSkill)
+        public static float AtLeastHisSheet(float dealt, int bestAuthoredSkill, int peakNorm)
         {
-            float floor = Floor(bestAuthoredSkill);
+            float floor = Floor(bestAuthoredSkill, peakNorm);
             return dealt > floor ? dealt : floor;
         }
     }

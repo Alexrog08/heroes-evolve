@@ -25,8 +25,8 @@ namespace HeroesEvolve.Tests
 
             Check.Equal(94, StartingCurve.UnusedCombatCap(188), "the unused-weapon cap is half the main weapon's target");
             Check.Equal(0, StartingCurve.UnusedCombatCap(0), "no target, no cap");
-            Check.Equal(FocusGrowth.TargetFor(40f, 1.2f, 1, FocusGrowth.NoCeiling),
-                        StartingCurve.UnusedCivilCap(40f, 1.2f),
+            Check.Equal(FocusGrowth.TargetFor(40f, 1.2f, 1, SkillGrowth.CivilPeakNorm),
+                        StartingCurve.UnusedCivilCap(40f, 1.2f, SkillGrowth.CivilPeakNorm),
                         "a civil skill with no focus keeps at most what one focus point would give");
 
             // Inside what the game can show.

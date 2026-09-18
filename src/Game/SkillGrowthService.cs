@@ -134,10 +134,10 @@ namespace HeroesEvolve
                 int focus = hero.HeroDeveloper.GetFocus(skill);
                 if (focus <= 0) continue;
 
-                float aptitude = IsNavalSkill(skill) ? naval : civil;
-                Add(targets, skill,
-                    FocusGrowth.TargetFor(age, aptitude, focus, WrittenSkills.HighestIn(skill)),
-                    aptitude);
+                bool atSea = IsNavalSkill(skill);
+                float aptitude = atSea ? naval : civil;
+                int norm = atSea ? SkillGrowth.NavalPeakNorm : SkillGrowth.CivilPeakNorm;
+                Add(targets, skill, FocusGrowth.TargetFor(age, aptitude, focus, norm), aptitude);
             }
 
             return targets;

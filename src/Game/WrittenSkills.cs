@@ -9,13 +9,13 @@ namespace HeroesEvolve
     /// The highest figure TaleWorlds wrote anybody in each skill: the envelope
     /// he balanced the game inside.
     ///
-    /// Asked because this mod can multiply past it without noticing. A target is
-    /// the peak norm times a talent, and for a skill a lord has focus in it is
-    /// that again times his focus -- two multipliers compounding. A well-invested
-    /// steward reached 380 that way, where the highest stewardship TaleWorlds
-    /// wrote any lord is 240 and no hero of his holds more than 250 in any civil
-    /// skill at all. The engine would display it; the game was never balanced for
-    /// it, and the armies a steward feeds are balanced against his sheet.
+    /// Measured rather than enforced. Nothing here holds a skill down: the
+    /// envelope is where SkillGrowth takes its norms from, one per field, so the
+    /// most talent there is lands on his ceiling by arithmetic instead of by a
+    /// clamp. This class is how the census checks that the premise still holds
+    /// for the roster actually installed -- and how the error was found in the
+    /// first place, when a fresh campaign aimed stewards at 380 against the 240
+    /// of the best steward he ever wrote.
     ///
     /// Read from the heroes themselves rather than written down as a constant.
     /// A mod with a stronger roster raises the envelope with it, and a skill
@@ -45,20 +45,6 @@ namespace HeroesEvolve
         {
             _highest = null;
             _heroes = 0;
-        }
-
-        /// <summary>
-        /// The most TaleWorlds wrote anyone in this skill, or zero where he wrote
-        /// nobody any of it.
-        /// </summary>
-        public static int HighestIn(SkillObject skill)
-        {
-            if (skill == null || skill.StringId == null) return 0;
-
-            Build();
-
-            int value;
-            return _highest.TryGetValue(skill.StringId, out value) ? value : 0;
         }
 
         /// <summary>The whole envelope on one line, and how many heroes it was read from.</summary>

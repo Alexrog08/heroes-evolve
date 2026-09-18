@@ -1928,11 +1928,16 @@ namespace HeroesEvolve
                         + " the rest are left to the hash");
             ModLog.Info("TALENT floor a sheet's best skill in a field is what its man must reach:"
                         + " talent = best * " + TwoPlaces(1f + AuthoredTalent.Surplus)
-                        + " / " + SkillGrowth.PeakNorm + ", so he is back on his sheet near 55"
-                        + " and " + (int)(AuthoredTalent.Surplus * 100f) + "% above it at "
-                        + SkillGrowth.MatureAge
-                        + "; a sheet is held only at " + TwoPlaces(AuthoredTalent.Ceiling)
-                        + ", which is all the game can show");
+                        + " / the norm of that field, so he is back on his sheet near 55 and "
+                        + (int)(AuthoredTalent.Surplus * 100f) + "% above it at " + SkillGrowth.MatureAge);
+            ModLog.Info("TALENT norms combat=" + SkillGrowth.PeakNorm
+                        + " civil=" + SkillGrowth.CivilPeakNorm
+                        + " naval=" + SkillGrowth.NavalPeakNorm
+                        + ", each the most TaleWorlds wrote in that field over the most talent there is,"
+                        + " so the luckiest hero alive finishes level with his best written lord:"
+                        + " combat " + Talent.TargetFor(SkillGrowth.PeakNorm, Talent.Maximum)
+                        + " civil " + Talent.TargetFor(SkillGrowth.CivilPeakNorm, Talent.Maximum)
+                        + " naval " + Talent.TargetFor(SkillGrowth.NavalPeakNorm, Talent.Maximum));
 
             ReportAboveAuthored(growing);
             ReportSheetPromise(growing);
@@ -2017,7 +2022,8 @@ namespace HeroesEvolve
                         int written = HeroTalent.BestWritten(hero, fields[f]);
                         if (written <= 0) continue;
 
-                        int peak = Talent.TargetFor(SkillGrowth.PeakNorm, HeroTalent.For(hero, fields[f]));
+                        int peak = Talent.TargetFor(SkillGrowth.PeakNormFor(fields[f]),
+                                                    HeroTalent.For(hero, fields[f]));
                         ratios.Add(peak * 100 / written);
                         if (HeroTalent.StandsOnSheet(hero, fields[f])) onSheet++;
                         if (peak >= written) continue;
@@ -2288,7 +2294,7 @@ namespace HeroesEvolve
 
                         string domain = IsNaval(skill) ? Talent.Naval : Talent.Civil;
                         int target = FocusGrowth.TargetFor(hero.Age, HeroTalent.For(hero, domain),
-                                                           focus, WrittenSkills.HighestIn(skill));
+                                                           focus, SkillGrowth.PeakNormFor(domain));
                         if (target <= 0) continue;
 
                         string name = skill.Name.ToString();

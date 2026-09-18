@@ -22,8 +22,9 @@ namespace HeroesEvolve.Core
     public static class SkillGrowth
     {
         /// <summary>
-        /// The peak a lord of average talent should reach by the end of his
-        /// life.
+        /// The peak a lord of average talent reaches by the end of his life,
+        /// with a weapon. One norm per field, because TaleWorlds did not write
+        /// the three alike -- see CivilPeakNorm and NavalPeakNorm.
         ///
         /// Set from the lords TaleWorlds authored, not from the ones a campaign
         /// produces. The first version used 134, the median best combat skill of
@@ -33,11 +34,46 @@ namespace HeroesEvolve.Core
         /// own lords sit at 175 to 200, which is what the game considers a noble
         /// worth the name.
         ///
-        /// At 150 a lord of average talent finishes around 190, level with the
-        /// roster TaleWorlds shipped, so a generation born in play replaces the
-        /// one it buries rather than diminishing it.
+        /// The figure is his own ceiling over Talent.Maximum. The highest anyone
+        /// was ever written with a weapon is Caladog's 300, so the most gifted
+        /// hero the dice can deal finishes exactly level with him and a lord of
+        /// median talent finishes around 190 -- the same 190 the hand-set 150
+        /// was aiming at, with the arithmetic now saying where it comes from.
+        /// Nothing needs to hold the top down: the scale ends where TaleWorlds
+        /// ended.
         /// </summary>
-        public const int PeakNorm = 150;
+        public const int PeakNorm = 145;
+
+        /// <summary>
+        /// The same for everything that is neither a weapon nor a sail: 250 over
+        /// Talent.Maximum.
+        ///
+        /// Lower than the combat norm because TaleWorlds wrote the fields on
+        /// different scales. A sword reaches 300 on his sheets; the eleven civil
+        /// skills all top out between 230 and 250, the highest being Pharon's 250
+        /// in trade. Lending the ledger a norm measured on swords was worth a
+        /// quarter of a field, and a census of a fresh campaign caught it: lords
+        /// aimed at 302 in scouting, where the best scout he ever wrote holds
+        /// 230. The scale was the error; a cap would only have hidden it.
+        /// </summary>
+        public const int CivilPeakNorm = 121;
+
+        /// <summary>
+        /// And at sea: Halthdar's 280 in Shipmaster over Talent.Maximum. The War
+        /// Sails skills are written above the civil ones and below a sword.
+        /// </summary>
+        public const int NavalPeakNorm = 135;
+
+        /// <summary>
+        /// The norm one field is measured against. Combat for anything the
+        /// caller cannot name, which is how the weapon passes ask for it.
+        /// </summary>
+        public static int PeakNormFor(string domain)
+        {
+            if (domain == Talent.Civil) return CivilPeakNorm;
+            if (domain == Talent.Naval) return NavalPeakNorm;
+            return PeakNorm;
+        }
 
         /// <summary>
         /// The highest skill value Bannerlord shows. Nothing here should invent

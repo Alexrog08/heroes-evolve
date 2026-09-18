@@ -130,8 +130,10 @@ namespace HeroesEvolve
 
             float age = hero.Age;
             int combatCap = StartingCurve.UnusedCombatCap(SkillGrowth.PrimaryTarget(age, HeroTalent.For(hero)));
-            int civilCap = StartingCurve.UnusedCivilCap(age, HeroTalent.For(hero, Talent.Civil));
-            int navalCap = StartingCurve.UnusedCivilCap(age, HeroTalent.For(hero, Talent.Naval));
+            int civilCap = StartingCurve.UnusedCivilCap(age, HeroTalent.For(hero, Talent.Civil),
+                                                        SkillGrowth.CivilPeakNorm);
+            int navalCap = StartingCurve.UnusedCivilCap(age, HeroTalent.For(hero, Talent.Naval),
+                                                        SkillGrowth.NavalPeakNorm);
 
             foreach (SkillObject skill in TaleWorlds.CampaignSystem.Extensions.Skills.All)
             {

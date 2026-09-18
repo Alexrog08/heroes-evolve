@@ -39,57 +39,46 @@ namespace HeroesEvolve.Core
         public const float TypicalFocus = 3f;
 
         /// <summary>
-        /// Ceiling on the focus multiplier, so a hero who has poured everything
-        /// into one skill does not chase a target the game would never show.
+        /// The most focus can do: carry a skill all the way to what the hero's
+        /// years and aptitude allow, and no further.
+        ///
+        /// It was 1.8, which let heavy investment aim a man most of a field past
+        /// his own ceiling. Talent multiplied the norm and then focus multiplied
+        /// that, and the two compounded: a census found stewards aiming at 380
+        /// where no lord TaleWorlds wrote holds more than 240 in stewardship.
+        /// His own sheets say the top of a lord's ledger is flat rather than
+        /// spiked -- the grown lords he wrote hold their second-best civil skill
+        /// at 89% of their best and the third at 84% -- which is what three,
+        /// four and five focus all arriving at the same ceiling produces.
+        ///
+        /// Talent says how far a man can go; focus says in what.
         /// </summary>
-        public const float MaximumFocusFactor = 1.8f;
-
-        /// <summary>
-        /// Passed as highestWritten by a caller with no roster to ask. A token
-        /// point of focus aims at a third of the peak and could not reach an
-        /// envelope anyway, so the answer is the same either way.
-        /// </summary>
-        public const int NoCeiling = 0;
+        public const float MaximumFocusFactor = 1.0f;
 
         /// <summary>
         /// Where a skill should be heading for a hero of this age and aptitude
-        /// who has invested this much focus in it, given the most TaleWorlds
-        /// ever wrote anyone in that skill.
+        /// who has invested this much focus in it, measured against the norm of
+        /// its own field (SkillGrowth.PeakNormFor).
         ///
         /// Zero focus means zero target, and that is deliberate rather than a
         /// gap: 72% of lords have never put a point into Smithing and they
         /// should stay at zero. The purpose is to develop what a lord has chosen
         /// to be, not to make every lord a blacksmith.
         ///
-        /// Focus may carry a man past what his years and aptitude alone give
-        /// him, but not past the highest figure TaleWorlds wrote in that skill.
-        /// Two multipliers were compounding here -- the peak norm times his
-        /// talent, then that times his focus -- and a well-invested steward came
-        /// out at 380 where no lord was written above 240 in stewardship and no
-        /// hero above 250 in anything civil. Clamping at the game's display
-        /// maximum of 330 was not enough: 330 is what the engine can show, not
-        /// what the game was balanced for, and stewardship feeds armies.
-        ///
-        /// His own aptitude is never capped by somebody else's sheet, though. A
-        /// prodigy whose years and talent alone aim him above the envelope keeps
-        /// that figure, which is how the rarest heroes still end up beyond
-        /// anything TaleWorlds wrote. Only the part focus adds is held.
+        /// Nothing here holds a figure down. The field's norm times the most
+        /// talent there is lands exactly on the highest TaleWorlds ever wrote in
+        /// that field, and focus only says how far toward his own ceiling a
+        /// given skill goes, so the arithmetic cannot leave his world.
         /// </summary>
-        public static int TargetFor(float age, float talent, int focus, int highestWritten)
+        public static int TargetFor(float age, float talent, int focus, int peakNorm)
         {
             if (focus <= 0) return 0;
 
             float factor = focus / TypicalFocus;
             if (factor > MaximumFocusFactor) factor = MaximumFocusFactor;
 
-            int peak = Talent.TargetFor(SkillGrowth.PeakNorm, talent);
-            int alone = (int)(peak * SkillGrowth.Maturity(age));
-            int target = (int)(alone * factor);
-
-            int ceiling = highestWritten > alone ? highestWritten : alone;
-            if (ceiling > SkillGrowth.GameSkillMaximum) ceiling = SkillGrowth.GameSkillMaximum;
-
-            return target < ceiling ? target : ceiling;
+            int peak = Talent.TargetFor(peakNorm, talent);
+            return (int)(peak * SkillGrowth.Maturity(age) * factor);
         }
     }
 }
