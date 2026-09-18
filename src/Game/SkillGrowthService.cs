@@ -135,7 +135,9 @@ namespace HeroesEvolve
                 if (focus <= 0) continue;
 
                 float aptitude = IsNavalSkill(skill) ? naval : civil;
-                Add(targets, skill, FocusGrowth.TargetFor(age, aptitude, focus), aptitude);
+                Add(targets, skill,
+                    FocusGrowth.TargetFor(age, aptitude, focus, WrittenSkills.HighestIn(skill)),
+                    aptitude);
             }
 
             return targets;

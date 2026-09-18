@@ -2173,6 +2173,11 @@ namespace HeroesEvolve
 
             ModLog.Info("ALLSKILL lords=" + lords + " focusPointsPerLord " + Percentiles(focusTotals));
 
+            // The envelope beside the values, because the question every one of
+            // these lines raises is whether the mod has carried anybody past
+            // what TaleWorlds wrote for that skill.
+            ModLog.Info("WRITTEN highest TaleWorlds wrote per skill: " + WrittenSkills.Describe());
+
             foreach (KeyValuePair<string, List<int>> pair in values)
             {
                 List<int> fs;
@@ -2282,8 +2287,8 @@ namespace HeroesEvolve
                         if (focus <= 0) continue;
 
                         string domain = IsNaval(skill) ? Talent.Naval : Talent.Civil;
-                        int target = FocusGrowth.TargetFor(hero.Age,
-                                                           HeroTalent.For(hero, domain), focus);
+                        int target = FocusGrowth.TargetFor(hero.Age, HeroTalent.For(hero, domain),
+                                                           focus, WrittenSkills.HighestIn(skill));
                         if (target <= 0) continue;
 
                         string name = skill.Name.ToString();

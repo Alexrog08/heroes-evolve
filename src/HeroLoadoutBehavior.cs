@@ -76,6 +76,7 @@ namespace HeroesEvolve
             PurchaseWatch.ResetSession();
             ItemCatalog.ResetSession();
             HeroTalent.ResetSession();
+            WrittenSkills.ResetSession();
             CultureProfile.Reset();
             CultureArchetypes.Reset();
             WeaponPerks.Reset();

@@ -39,7 +39,7 @@ namespace HeroesEvolve.Core
 
         public static int UnusedCivilCap(float age, float talent)
         {
-            return FocusGrowth.TargetFor(age, talent, UnusedCivilFocus);
+            return FocusGrowth.TargetFor(age, talent, UnusedCivilFocus, FocusGrowth.NoCeiling);
         }
 
         /// <summary>
