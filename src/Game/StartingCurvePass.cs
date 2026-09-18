@@ -151,7 +151,7 @@ namespace HeroesEvolve
                 // rather than his. So the cap never falls below the sheet: the
                 // bow he does not carry keeps what he was written with, and only
                 // what the generator invented on top of it comes off.
-                int written = AuthoredTalent.WrittenFloor(HeroTalent.WrittenIn(hero, skill), age);
+                int written = AuthoredTalent.WrittenFloor(HeroTalent.WrittenIn(hero, skill));
                 if (written > cap) cap = written;
 
                 int current = hero.GetSkillValue(skill);

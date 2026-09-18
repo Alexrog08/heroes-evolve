@@ -2073,7 +2073,10 @@ namespace HeroesEvolve
         /// above his sheet the mod has actually carried each line. It was the
         /// civil middle that prompted this -- a census found trade at 60 against
         /// the 90 he wrote, medicine 62 against 90 -- so those two skills are
-        /// the ones to watch.
+        /// the ones to watch. A second census, with the floor in but still aged,
+        /// had them at 65 and 73: the floor was being multiplied by a maturity
+        /// the sheet already carried, which is what took the age term out of
+        /// AuthoredTalent.WrittenFloor.
         /// </summary>
         private static void ReportWrittenLines(List<Hero> growing)
         {
@@ -2090,7 +2093,7 @@ namespace HeroesEvolve
                     {
                         if (skill == null) continue;
 
-                        int floor = AuthoredTalent.WrittenFloor(HeroTalent.WrittenIn(hero, skill), hero.Age);
+                        int floor = AuthoredTalent.WrittenFloor(HeroTalent.WrittenIn(hero, skill));
                         if (floor <= 0) continue;
 
                         written++;

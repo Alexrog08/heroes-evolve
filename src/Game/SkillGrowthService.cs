@@ -153,7 +153,7 @@ namespace HeroesEvolve
         {
             if (skill == null) return;
 
-            int written = AuthoredTalent.WrittenFloor(HeroTalent.WrittenIn(hero, skill), hero.Age);
+            int written = AuthoredTalent.WrittenFloor(HeroTalent.WrittenIn(hero, skill));
             if (written > target) target = written;
 
             if (target <= 0) return;

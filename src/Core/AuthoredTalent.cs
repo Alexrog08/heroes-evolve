@@ -130,30 +130,35 @@ namespace HeroesEvolve.Core
         }
 
         /// <summary>
-        /// What one written skill is worth at a given age: the figure itself,
-        /// carried along the same maturity curve as everything else, with the
-        /// same surplus on top once he is grown.
+        /// What one written skill is worth: itself, at any age.
         ///
-        /// The talent floor promises a man the best skill of each field. This
-        /// promises him the rest of his sheet, one line at a time, and the two
-        /// agree by construction because both are the written figure times
-        /// Surplus at MatureAge. It exists because the field promise left the
-        /// other lines to the mod's own rules, and those cut them: a lord
-        /// TaleWorlds wrote with 90 in trade and no focus there had it shaved to
-        /// the fifty a single point of focus earns, and a census found the whole
-        /// civil middle sitting ten to thirty-five percent under what he wrote --
-        /// trade 60 against 90, medicine 62 against 90.
+        /// The talent floor promises a man the best skill of each field, and
+        /// leaves the other lines of his sheet to the mod's own rules, which cut
+        /// them: a lord TaleWorlds wrote with 90 in trade and no focus there had
+        /// it shaved to the fifty a single point of focus earns, and a census
+        /// found the whole civil middle ten to thirty-five percent under what he
+        /// wrote. This is the rest of the promise, one line at a time.
         ///
-        /// A floor and nothing else. It never lifts a skill above the sheet, so
-        /// what a lord grows beyond it is still decided by what he carries and
-        /// where his focus went; it only stops us taking from him what TaleWorlds
-        /// put there.
+        /// No age term, which is the correction the second census forced. The
+        /// first version carried each line along the maturity curve like
+        /// everything else, and that ages the same man twice: TaleWorlds already
+        /// wrote his sheet for his years. Measured over his roster, the median
+        /// best weapon runs 110 at eighteen to twenty-four against 200 past
+        /// fifty-five -- 55% -- so multiplying a 27-year-old's written 90 by the
+        /// 0.65 his age earns left the floor at 61 and the curve cut him to it.
+        /// The census showed it plainly: trade still at 65 against his 90,
+        /// medicine 73 against 90.
+        ///
+        /// What a lord was written with is what he has, whatever his age. What
+        /// he grows beyond it is decided by his talent, his weapons and his
+        /// focus -- and his best skill in each field still ends Surplus above
+        /// the sheet at MatureAge, because the talent floor puts it there.
+        ///
+        /// A floor and nothing else: it never lifts a line above the sheet.
         /// </summary>
-        public static int WrittenFloor(int writtenSkill, float age)
+        public static int WrittenFloor(int writtenSkill)
         {
-            if (writtenSkill <= 0) return 0;
-
-            return (int)(writtenSkill * (1f + Surplus) * SkillGrowth.Maturity(age));
+            return writtenSkill > 0 ? writtenSkill : 0;
         }
 
         /// <summary>
