@@ -123,12 +123,12 @@ namespace HeroesEvolve
             new Dropdown<string>(new string[] { "His clan's culture", "His own culture", "No preference" }, 1);
 
         [SettingPropertyBool("Armour of his own culture only", RequireRestart = false, Order = 5,
-            HintText = "A wall instead of a preference: no foreign armour or horse harness is ever bought. Aserai, Khuzait and Nord have no leg armour on sale at all, so their lords will keep whatever boots they have.")]
+            HintText = "A wall instead of a preference: no foreign armour or horse harness is ever bought, nor worn out of loot. Aserai, Khuzait and Nord have no leg armour on sale at all, so their lords will keep whatever boots they have.")]
         [SettingPropertyGroup("Shopping", GroupOrder = 6)]
         public bool OwnCultureArmorOnly { get; set; } = false;
 
         [SettingPropertyBool("Weapons of his own culture only", RequireRestart = false, Order = 6,
-            HintText = "The same wall for weapons. A lord abroad with nothing of his own on the shelf simply buys nothing.")]
+            HintText = "The same wall for weapons, in a market or over a beaten enemy kit. A lord abroad with nothing of his own on the shelf simply buys nothing.")]
         [SettingPropertyGroup("Shopping", GroupOrder = 6)]
         public bool OwnCultureWeaponsOnly { get; set; } = false;
 

@@ -156,7 +156,8 @@
   <ShoppingCulture>hero</ShoppingCulture>
 
   <!-- A wall instead of a preference: with this on, a lord never buys armour
-       (or horse harness) that is not the favoured culture's. OFF BY DEFAULT,
+       (or horse harness) that is not the favoured culture's, and never puts a
+       foreign piece on out of what he took from a beaten enemy. OFF BY DEFAULT,
        because the catalogue is uneven — aserai, khuzait and nord have no leg
        armour on sale at all, so their lords would keep whatever boots they
        arrived in for the rest of the campaign. Unassigned pieces, which belong

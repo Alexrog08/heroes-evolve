@@ -271,6 +271,11 @@ namespace HeroesEvolve
             {
                 StockEntry entry = stock[i];
                 if (entry.Type != ItemObject.ItemTypeEnum.HorseHarness) continue;
+
+                // A harness is armour, and the armour wall covers it.
+                if (Settings.OwnCultureArmorOnly
+                    && !ItemCatalog.IsOwnOrNeutral(entry.Item, culture)) continue;
+
                 bool own = ItemCatalog.IsOwnCulture(entry.Item, culture);
                 if (!MarketRules.IsUpgrade(wornFine, wornOwnCulture, entry.FineTier, own,
                                            entry.Tier, ceiling)) continue;
