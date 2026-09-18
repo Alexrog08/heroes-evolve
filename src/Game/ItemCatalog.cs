@@ -302,12 +302,21 @@ namespace HeroesEvolve
         }
 
         /// <summary>
-        /// The filters every catalogue lookup shares: not a quest or crafted
-        /// item, within the tier ceiling, and either the hero's culture or
-        /// unassigned. One policy, so armour and weapons cannot drift apart --
-        /// and public, so the market shares it too. A lord who may not be given
-        /// a Khuzait lamellar may not buy one either; letting the shop keep its
-        /// own copy of this rule is how the two would quietly diverge.
+        /// What the free repair asks on top of what a shelf asks: provenance,
+        /// and his own people's colours.
+        ///
+        /// Both halves used to live here and one of them quietly left. When the
+        /// culture wall came down for the market -- see CultureShare -- this
+        /// method went on delegating the whole question to PassesMarketFilters,
+        /// so the grant stopped refusing across cultures while three places went
+        /// on saying it did, the MCM hint and settings.xml among them. A
+        /// Battanian could be handed a Vlandian crossbow by his own people.
+        ///
+        /// Restored where it belongs: a shelf is a shelf, and whatever reached
+        /// it is for sale to whoever walks in, but a repair is a lord's own
+        /// house dressing him. Unassigned items pass, which is what arms a Nord
+        /// archer -- his people make no bows at all -- and what puts a harness
+        /// on his horse.
         /// </summary>
         public static bool PassesCommonFilters(ItemObject item, CultureObject culture, int maxTier)
         {
@@ -318,6 +327,7 @@ namespace HeroesEvolve
             if (item.NotMerchandise) return false;
             if (item.IsCraftedByPlayer) return false;
             if (item.IsUniqueItem) return false;
+            if (!IsOwnOrNeutral(item, culture)) return false;
 
             return PassesMarketFilters(item, culture, maxTier);
         }
@@ -327,9 +337,10 @@ namespace HeroesEvolve
         /// it wears.
         ///
         /// Culture used to be refused here and is now a preference inside
-        /// MarketRules instead -- see CultureShare for why the wall had to
-        /// come down. The grant still refuses across cultures, and should: that
-        /// is a lord's own people handing him his first kit, not a shelf.
+        /// MarketRules instead -- see CultureShare for why the wall had to come
+        /// down. The grant refuses across cultures in PassesCommonFilters, and
+        /// should: that is a lord's own people handing him his first kit, not a
+        /// shelf.
         ///
         /// What is on a shelf is for sale, whatever it is. An item only reaches
         /// a town roster because somebody put it there, so once a gilded helm
