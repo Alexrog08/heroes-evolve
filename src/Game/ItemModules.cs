@@ -4,7 +4,9 @@ using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
 using TaleWorlds.Core;
+using TaleWorlds.Library;
 using TaleWorlds.ModuleManager;
+using TaleWorlds.ObjectSystem;
 using HeroesEvolve.Core;
 
 namespace HeroesEvolve
@@ -57,6 +59,8 @@ namespace HeroesEvolve
             public int Items;
         }
 
+        private static Dictionary<string, string> _titleOf;
+        private static HashSet<string> _official;
         private static Dictionary<string, string> _moduleOf;
         private static Dictionary<string, int> _declaredBy;
         private static List<string> _installed;
@@ -72,6 +76,8 @@ namespace HeroesEvolve
             _moduleOf = null;
             _declaredBy = null;
             _installed = null;
+            _titleOf = null;
+            _official = null;
             _gear = null;
         }
 
@@ -137,19 +143,108 @@ namespace HeroesEvolve
 
         /// <summary>
         /// The mods a player might actually want to keep out: installed, not
-        /// TaleWorlds' own, and shipping at least one item.
+        /// TaleWorlds' own, and shipping at least one piece of gear.
         ///
-        /// This is what the options screen draws a tick box from, so the two
-        /// conditions are both about not handing anybody a footgun. Official
-        /// modules are left out because a tick box marked SandBoxCore would
-        /// empty the game of gear, and asking the game which ids are its own is
-        /// better than a list kept here. A module that declares no items is
-        /// left out because ticking it would do nothing and look broken.
+        /// This is what the options screen draws a tick box from, and every
+        /// condition here exists to keep that list short. Somebody running four
+        /// hundred mods should see the handful that dress his lords, not four
+        /// hundred names.
+        ///
+        /// Official modules are left out with the game's own
+        /// GetOfficialModuleIds rather than a list kept here, because a tick
+        /// box marked SandBoxCore would empty the world of gear.
+        ///
+        /// And gear means gear. Counting item elements was the first version
+        /// and it was wrong: banners are items, so are trade goods, so are
+        /// sheep -- 46, 23 and 7 of them in the base game's own files -- so a
+        /// mod that adds nothing but banners would have appeared in this list
+        /// looking exactly like an armoury. What is counted now is what a lord
+        /// could actually wear or wield, read off the items the game has
+        /// loaded rather than off the XML, so an item that failed to load does
+        /// not vote.
+        ///
+        /// Null when the catalogue is not loaded yet, which is not the same
+        /// answer as "no mods" and must not be cached as though it were.
         /// </summary>
         public static List<GearModule> GearModules()
         {
             Scan();
+
+            if (_gear == null) _gear = BuildGearList();
             return _gear;
+        }
+
+        /// <summary>
+        /// Whether a lord could wear or wield this, which is the only kind of
+        /// item excluding a module can affect.
+        ///
+        /// Listed by what is in rather than what is out. The enum grows between
+        /// releases and a mod may add types of its own; a list of exclusions
+        /// would quietly start counting whatever appeared next, and this list
+        /// simply would not.
+        /// </summary>
+        private static bool IsGear(ItemObject item)
+        {
+            if (item == null) return false;
+
+            ItemObject.ItemTypeEnum type = item.ItemType;
+            if (ItemCatalog.IsArmorSlot(type)) return true;
+
+            return type == ItemObject.ItemTypeEnum.OneHandedWeapon
+                || type == ItemObject.ItemTypeEnum.TwoHandedWeapon
+                || type == ItemObject.ItemTypeEnum.Polearm
+                || type == ItemObject.ItemTypeEnum.Bow
+                || type == ItemObject.ItemTypeEnum.Crossbow
+                || type == ItemObject.ItemTypeEnum.Thrown
+                || type == ItemObject.ItemTypeEnum.Arrows
+                || type == ItemObject.ItemTypeEnum.Bolts
+                || type == ItemObject.ItemTypeEnum.Shield
+                || type == ItemObject.ItemTypeEnum.Horse
+                || type == ItemObject.ItemTypeEnum.HorseHarness;
+        }
+
+        /// <summary>
+        /// Counts each module's gear off the loaded catalogue, and returns null
+        /// while there is no catalogue to count.
+        /// </summary>
+        private static List<GearModule> BuildGearList()
+        {
+            MBReadOnlyList<ItemObject> all = MBObjectManager.Instance.GetObjectTypeList<ItemObject>();
+            if (all == null || all.Count == 0) return null;
+
+            Dictionary<string, int> gear = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            for (int i = 0; i < all.Count; i++)
+            {
+                ItemObject item = all[i];
+                if (!IsGear(item)) continue;
+
+                string module;
+                if (item.StringId == null || !_moduleOf.TryGetValue(item.StringId, out module)) continue;
+                if (_official.Contains(module)) continue;
+
+                int seen;
+                gear.TryGetValue(module, out seen);
+                gear[module] = seen + 1;
+            }
+
+            // In the order the launcher loads them, which is the order the
+            // player arranged and therefore the one he can find a name in.
+            List<GearModule> list = new List<GearModule>();
+            for (int i = 0; i < _installed.Count; i++)
+            {
+                string id = _installed[i];
+
+                int items;
+                if (!gear.TryGetValue(id, out items) || items <= 0) continue;
+
+                GearModule entry = new GearModule();
+                entry.Id = id;
+                entry.Name = _titleOf.ContainsKey(id) ? _titleOf[id] : id;
+                entry.Items = items;
+                list.Add(entry);
+            }
+
+            return list;
         }
 
         private static void Scan()
@@ -159,36 +254,20 @@ namespace HeroesEvolve
             _moduleOf = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             _declaredBy = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
             _installed = new List<string>();
-            _gear = new List<GearModule>();
+            _titleOf = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            _official = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             try
             {
-                HashSet<string> official = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                foreach (string id in ModuleHelper.GetOfficialModuleIds()) official.Add(id);
+                foreach (string id in ModuleHelper.GetOfficialModuleIds()) _official.Add(id);
 
-                List<ModuleInfo> modules = new List<ModuleInfo>();
                 foreach (ModuleInfo info in ModuleHelper.GetActiveModules())
                 {
                     if (info == null || string.IsNullOrEmpty(info.Id)) continue;
 
-                    modules.Add(info);
                     _installed.Add(info.Id);
+                    _titleOf[info.Id] = string.IsNullOrEmpty(info.Name) ? info.Id : info.Name;
                     ReadModule(info.Id, info.FolderPath);
-                }
-
-                for (int i = 0; i < modules.Count; i++)
-                {
-                    ModuleInfo info = modules[i];
-                    if (official.Contains(info.Id)) continue;
-
-                    int declared;
-                    if (!_declaredBy.TryGetValue(info.Id, out declared) || declared <= 0) continue;
-
-                    GearModule entry = new GearModule();
-                    entry.Id = info.Id;
-                    entry.Name = string.IsNullOrEmpty(info.Name) ? info.Id : info.Name;
-                    entry.Items = declared;
-                    _gear.Add(entry);
                 }
             }
             catch (Exception e)

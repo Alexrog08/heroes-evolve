@@ -125,10 +125,18 @@ namespace HeroesEvolve
         private static void BindGearMods()
         {
             if (_gearModsBound) return;
-            _gearModsBound = true;
 
             List<ItemModules.GearModule> mods = ItemModules.GearModules();
-            if (mods == null || mods.Count == 0)
+
+            // Null is the catalogue saying it is not loaded yet, which is a
+            // different answer from an empty list and must not be remembered as
+            // one. Attach runs again on the next campaign load, and by then it
+            // will be.
+            if (mods == null) return;
+
+            _gearModsBound = true;
+
+            if (mods.Count == 0)
             {
                 ModLog.Info("MCM no gear mods installed; the mod-gear screen is not shown");
                 return;
