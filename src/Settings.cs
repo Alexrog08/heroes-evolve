@@ -320,6 +320,17 @@ namespace HeroesEvolve
             _excludedModules = next.ToArray();
         }
 
+        /// <summary>
+        /// The exclusion list as one line, which is what a text box shows and
+        /// what settings.xml holds. Joined the way Split expects to read it
+        /// back, so a value that makes a round trip through the screen comes
+        /// out as it went in.
+        /// </summary>
+        public static string ExcludedItemsText()
+        {
+            return string.Join(", ", _excludedItems);
+        }
+
         /// <summary>Whether the player has struck this item from his campaign.</summary>
         public static bool IsExcluded(string itemId)
         {

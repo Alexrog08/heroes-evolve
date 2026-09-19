@@ -156,11 +156,6 @@ namespace HeroesEvolve
         [SettingPropertyGroup("Gear limits", GroupOrder = 5)]
         public int MinimumTier { get; set; } = 1;
 
-        [SettingPropertyText("Items lords never get", RequireRestart = false, Order = 4,
-            HintText = "Item ids separated by commas: never bought, never given in a kit. For outliers another mod adds. Incendiaries are already refused.")]
-        [SettingPropertyGroup("Gear limits", GroupOrder = 5)]
-        public string ExcludedItems { get; set; } = "";
-
 
         // ---- Caravans ------------------------------------------------------------
 

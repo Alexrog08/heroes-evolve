@@ -97,8 +97,14 @@ namespace HeroesEvolve
         }
 
         /// <summary>
-        /// A second options screen, built at run time, with one tick box per
-        /// gear mod the player has installed.
+        /// A second options screen: everything about gear a player wants kept
+        /// out of his campaign, in one place.
+        ///
+        /// Two groups. A tick box per gear mod he has installed, and the list
+        /// of single item ids that used to sit on the main screen under Gear
+        /// limits. They answer the same question at two sizes -- a whole mod,
+        /// or one sword another mod got wrong -- and reading them beside each
+        /// other is how a player works out which one he needs.
         ///
         /// Because the first version of this feature was a text box asking for
         /// module ids, and ids are folder names a player would have had to go
@@ -113,13 +119,14 @@ namespace HeroesEvolve
         ///
         /// A separate screen rather than a group on the first one, which is not
         /// a preference: the attribute-driven settings object and a built one
-        /// are two different containers in MCM and cannot be merged. Not
-        /// registered at all when there is nothing to show, so a player with no
-        /// gear mods never sees an empty page.
+        /// are two different containers in MCM and cannot be merged. It is
+        /// registered whether or not any gear mod is installed, because the
+        /// item box belongs to a player who has none just as much; MCM draws no
+        /// group for an empty one.
         ///
-        /// The tick boxes read and write Settings directly through ProxyRef, so
-        /// this screen owns no state of its own and cannot drift from the list
-        /// settings.xml carries for players without MCM.
+        /// Every control reads and writes Settings directly through ProxyRef,
+        /// so this screen owns no state of its own and cannot drift from the
+        /// lists settings.xml carries for players without MCM.
         /// </summary>
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static void BindGearMods()
@@ -136,22 +143,19 @@ namespace HeroesEvolve
 
             _gearModsBound = true;
 
-            if (mods.Count == 0)
-            {
-                ModLog.Info("MCM no gear mods installed; the mod-gear screen is not shown");
-                return;
-            }
-
             ISettingsBuilder builder = BaseSettingsBuilder
-                .Create("HeroesEvolve_GearMods", "Heroes Evolve - Mod gear")
+                .Create("HeroesEvolve_ExcludedGear", "Heroes Evolve - Excluded gear")
                 .SetFormat("xml")
                 .SetFolderName("HeroesEvolve")
-                .SetSubFolder("GearMods");
+                .SetSubFolder("ExcludedGear");
 
             builder.CreateGroup("Mods whose gear lords never get", group =>
             {
                 group.SetGroupOrder(0);
 
+                // Empty when he runs no gear mods, and MCM simply draws no
+                // group. The page is still worth registering for the box below,
+                // which is why this no longer returns early on an empty list.
                 for (int i = 0; i < mods.Count; i++)
                 {
                     // Copied out of the loop before the closure takes it. The
@@ -173,8 +177,21 @@ namespace HeroesEvolve
                 }
             });
 
+            builder.CreateGroup("Single items", group =>
+            {
+                group.SetGroupOrder(1);
+                group.AddText("ExcludedItems", "Items lords never get",
+                    new ProxyRef<string>(
+                        () => Settings.ExcludedItemsText(),
+                        value => ExcludeItems(value)),
+                    box => box.SetHintText(
+                        "Item ids separated by commas: never bought, never given in a kit."
+                        + " For the odd piece another mod got wrong, when excluding the whole"
+                        + " mod above would be too much. Incendiaries are already refused."));
+            });
+
             builder.BuildAsGlobal().Register();
-            ModLog.Info("MCM mod-gear screen built for " + mods.Count + " installed gear mods");
+            ModLog.Info("MCM excluded-gear screen built; " + mods.Count + " installed gear mods listed");
         }
 
         /// <summary>
@@ -186,6 +203,17 @@ namespace HeroesEvolve
         private static void ExcludeModule(string moduleId, bool excluded)
         {
             Settings.SetModuleExcluded(moduleId, excluded);
+            ItemCatalog.ResetSession();
+        }
+
+        /// <summary>
+        /// The item list rewritten. Same reason for forgetting the scan: the
+        /// best tier on sale was worked out against the old list.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void ExcludeItems(string ids)
+        {
+            Settings.SetExcludedItems(ids);
             ItemCatalog.ResetSession();
         }
 
@@ -254,7 +282,6 @@ namespace HeroesEvolve
             // nobody reads. And the exclusion list is held parsed, so it has to
             // be handed the text rather than the array.
             ModLog.Enabled = Settings.EnableLogging;
-            Settings.SetExcludedItems(settings.ExcludedItems);
 
             // The best tier on sale was scanned against the old list. Forgotten
             // every time rather than only on a change, because swapping one id
