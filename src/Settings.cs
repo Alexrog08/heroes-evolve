@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Xml;
@@ -274,6 +275,49 @@ namespace HeroesEvolve
             string[] copy = new string[_excludedModules.Length];
             _excludedModules.CopyTo(copy, 0);
             return copy;
+        }
+
+        /// <summary>Whether this module's gear is excluded.</summary>
+        public static bool IsModuleExcluded(string moduleId)
+        {
+            if (string.IsNullOrEmpty(moduleId)) return false;
+
+            for (int i = 0; i < _excludedModules.Length; i++)
+            {
+                if (string.Equals(_excludedModules[i], moduleId, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Excludes or restores one module, which is what a tick box does.
+        ///
+        /// A list rather than a set because the same list is written by hand in
+        /// settings.xml, where order and spelling are the player's. Adding
+        /// rebuilds it; so does removing. Both run when somebody clicks, not in
+        /// any loop, so the copying costs nothing worth avoiding.
+        /// </summary>
+        public static void SetModuleExcluded(string moduleId, bool excluded)
+        {
+            if (string.IsNullOrEmpty(moduleId)) return;
+            if (IsModuleExcluded(moduleId) == excluded) return;
+
+            List<string> next = new List<string>();
+            for (int i = 0; i < _excludedModules.Length; i++)
+            {
+                if (!string.Equals(_excludedModules[i], moduleId, StringComparison.OrdinalIgnoreCase))
+                {
+                    next.Add(_excludedModules[i]);
+                }
+            }
+
+            if (excluded) next.Add(moduleId);
+
+            _excludedModules = next.ToArray();
         }
 
         /// <summary>Whether the player has struck this item from his campaign.</summary>

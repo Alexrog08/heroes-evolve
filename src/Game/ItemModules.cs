@@ -27,11 +27,12 @@ namespace HeroesEvolve
     /// items in ModuleData/items.xml and declares no Items node at all. The
     /// root element never lies.
     ///
-    /// Nothing is scanned until something is excluded. With an empty list --
-    /// which is the default and what nearly every campaign runs -- this class
-    /// costs one array-length check per item and never touches the disk. The
-    /// census pays for the scan itself, because listing what is installed is
-    /// how a player learns the names he can type.
+    /// Who pays for the scan, and when. Refuses asks one array-length question
+    /// first, so a campaign with nothing excluded never reads a file on account
+    /// of an item. Two callers do make it happen: the census, and the options
+    /// screen MCM builds at load, which needs the list of installed gear mods
+    /// to draw a tick box for each. So a player with MCM pays it once while the
+    /// campaign is loading and a player without it pays nothing until he asks.
     /// </summary>
     public static class ItemModules
     {
@@ -45,9 +46,21 @@ namespace HeroesEvolve
         private static readonly Regex ItemId =
             new Regex("<(?:Item|CraftedItem)\\b[^>]*?\\bid=\"([^\"]+)\"", RegexOptions.Compiled);
 
+        /// <summary>
+        /// One installed module that ships gear: what to call it on screen,
+        /// what to call it in settings.xml, and how much it brought.
+        /// </summary>
+        public struct GearModule
+        {
+            public string Id;
+            public string Name;
+            public int Items;
+        }
+
         private static Dictionary<string, string> _moduleOf;
         private static Dictionary<string, int> _declaredBy;
         private static List<string> _installed;
+        private static List<GearModule> _gear;
 
         /// <summary>
         /// Forgets the scan. Called where ItemCatalog forgets its own, since a
@@ -59,6 +72,7 @@ namespace HeroesEvolve
             _moduleOf = null;
             _declaredBy = null;
             _installed = null;
+            _gear = null;
         }
 
         /// <summary>
@@ -121,6 +135,23 @@ namespace HeroesEvolve
             return text.Length > 0 ? text.ToString() : "none";
         }
 
+        /// <summary>
+        /// The mods a player might actually want to keep out: installed, not
+        /// TaleWorlds' own, and shipping at least one item.
+        ///
+        /// This is what the options screen draws a tick box from, so the two
+        /// conditions are both about not handing anybody a footgun. Official
+        /// modules are left out because a tick box marked SandBoxCore would
+        /// empty the game of gear, and asking the game which ids are its own is
+        /// better than a list kept here. A module that declares no items is
+        /// left out because ticking it would do nothing and look broken.
+        /// </summary>
+        public static List<GearModule> GearModules()
+        {
+            Scan();
+            return _gear;
+        }
+
         private static void Scan()
         {
             if (_moduleOf != null) return;
@@ -128,18 +159,36 @@ namespace HeroesEvolve
             _moduleOf = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             _declaredBy = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
             _installed = new List<string>();
+            _gear = new List<GearModule>();
 
             try
             {
+                HashSet<string> official = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (string id in ModuleHelper.GetOfficialModuleIds()) official.Add(id);
+
+                List<ModuleInfo> modules = new List<ModuleInfo>();
                 foreach (ModuleInfo info in ModuleHelper.GetActiveModules())
                 {
-                    if (info == null) continue;
+                    if (info == null || string.IsNullOrEmpty(info.Id)) continue;
 
-                    string id = info.Id;
-                    if (string.IsNullOrEmpty(id)) continue;
+                    modules.Add(info);
+                    _installed.Add(info.Id);
+                    ReadModule(info.Id, info.FolderPath);
+                }
 
-                    _installed.Add(id);
-                    ReadModule(id, info.FolderPath);
+                for (int i = 0; i < modules.Count; i++)
+                {
+                    ModuleInfo info = modules[i];
+                    if (official.Contains(info.Id)) continue;
+
+                    int declared;
+                    if (!_declaredBy.TryGetValue(info.Id, out declared) || declared <= 0) continue;
+
+                    GearModule entry = new GearModule();
+                    entry.Id = info.Id;
+                    entry.Name = string.IsNullOrEmpty(info.Name) ? info.Id : info.Name;
+                    entry.Items = declared;
+                    _gear.Add(entry);
                 }
             }
             catch (Exception e)

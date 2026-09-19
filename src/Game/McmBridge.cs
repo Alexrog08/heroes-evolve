@@ -1,6 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using MCM.Abstractions.Base.Global;
+using MCM.Abstractions.FluentBuilder;
+using MCM.Common;
 
 namespace HeroesEvolve
 {
@@ -22,6 +26,13 @@ namespace HeroesEvolve
     public static class McmBridge
     {
         private static bool _bound;
+
+        /// <summary>
+        /// Whether the mod-gear screen has been built. Separate from _bound
+        /// because MCM refuses a second registration under the same id, and
+        /// Attach runs again on every campaign load.
+        /// </summary>
+        private static bool _gearModsBound;
 
         /// <summary>
         /// Copies MCM's stored values into Settings and keeps them there.
@@ -68,6 +79,106 @@ namespace HeroesEvolve
                 settings.PropertyChanged += OnChanged;
                 _bound = true;
             }
+
+            // Its own catch. Without one, a fluent builder that threw would
+            // reach Attach's handler and be logged as "MCM not available",
+            // which is the sort of message that sends somebody reinstalling
+            // MCM for an hour. The main screen is already bound by here, so
+            // losing this one costs the tick boxes and nothing else.
+            try
+            {
+                BindGearMods();
+            }
+            catch (Exception ex)
+            {
+                ModLog.Error("MCM mod-gear screen failed, the rest of the options stand: "
+                             + ex.GetType().Name + " " + ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// A second options screen, built at run time, with one tick box per
+        /// gear mod the player has installed.
+        ///
+        /// Because the first version of this feature was a text box asking for
+        /// module ids, and ids are folder names a player would have had to go
+        /// and find -- by running a console command and reading a log. That is
+        /// a developer's answer to a player's problem. A mod is something you
+        /// recognise by its name on its download page, so the screen shows that
+        /// name and the player ticks it.
+        ///
+        /// It has to be built rather than declared because nobody knows at
+        /// compile time which mods are installed, and MCM's attribute screen is
+        /// a fixed class. Its fluent builder exists for exactly this.
+        ///
+        /// A separate screen rather than a group on the first one, which is not
+        /// a preference: the attribute-driven settings object and a built one
+        /// are two different containers in MCM and cannot be merged. Not
+        /// registered at all when there is nothing to show, so a player with no
+        /// gear mods never sees an empty page.
+        ///
+        /// The tick boxes read and write Settings directly through ProxyRef, so
+        /// this screen owns no state of its own and cannot drift from the list
+        /// settings.xml carries for players without MCM.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void BindGearMods()
+        {
+            if (_gearModsBound) return;
+            _gearModsBound = true;
+
+            List<ItemModules.GearModule> mods = ItemModules.GearModules();
+            if (mods == null || mods.Count == 0)
+            {
+                ModLog.Info("MCM no gear mods installed; the mod-gear screen is not shown");
+                return;
+            }
+
+            ISettingsBuilder builder = BaseSettingsBuilder
+                .Create("HeroesEvolve_GearMods", "Heroes Evolve - Mod gear")
+                .SetFormat("xml")
+                .SetFolderName("HeroesEvolve")
+                .SetSubFolder("GearMods");
+
+            builder.CreateGroup("Mods whose gear lords never get", group =>
+            {
+                group.SetGroupOrder(0);
+
+                for (int i = 0; i < mods.Count; i++)
+                {
+                    // Copied out of the loop before the closure takes it. The
+                    // language makes this safe on its own for foreach; an index
+                    // loop it does not, and this is the one place where getting
+                    // it wrong would tick every box at once.
+                    string id = mods[i].Id;
+                    string name = mods[i].Name;
+                    int items = mods[i].Items;
+
+                    group.AddBool(id, name,
+                        new ProxyRef<bool>(
+                            () => Settings.IsModuleExcluded(id),
+                            value => ExcludeModule(id, value)),
+                        box => box.SetHintText(
+                            "Ticked, your lords never buy or receive this mod's "
+                            + items + " items. The mod itself is untouched: you and your"
+                            + " troops keep it. Folder name: " + id + "."));
+                }
+            });
+
+            builder.BuildAsGlobal().Register();
+            ModLog.Info("MCM mod-gear screen built for " + mods.Count + " installed gear mods");
+        }
+
+        /// <summary>
+        /// One tick box moved. The catalogue's scan of what is on sale was made
+        /// against the old answer, so it goes, exactly as it does when the item
+        /// exclusion list changes.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void ExcludeModule(string moduleId, bool excluded)
+        {
+            Settings.SetModuleExcluded(moduleId, excluded);
+            ItemCatalog.ResetSession();
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
@@ -136,7 +247,6 @@ namespace HeroesEvolve
             // be handed the text rather than the array.
             ModLog.Enabled = Settings.EnableLogging;
             Settings.SetExcludedItems(settings.ExcludedItems);
-            Settings.SetExcludedModules(settings.ExcludedModules);
 
             // The best tier on sale was scanned against the old list. Forgotten
             // every time rather than only on a change, because swapping one id

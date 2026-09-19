@@ -254,6 +254,11 @@
        them one item at a time in ExcludedItems above is the alternative, and
        nobody should have to.
 
+       With MCM installed you do not need this: a screen called "Heroes Evolve
+       - Mod gear" lists every gear mod you have by name, with a tick box each.
+       This is the route for a player without MCM, and the escape hatch for a
+       mod that screen cannot show.
+
        Run the census (hev.census) to see every module you have installed and
        how many items each one declares, which is where the ids come from. A
        module that declares none either adds no gear or adds it from code, and
