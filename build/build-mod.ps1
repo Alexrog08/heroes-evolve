@@ -12,7 +12,8 @@ $refs = @(
   "$bin\mono\lib\mono\4.5\Facades\netstandard.dll",
   "$bin\TaleWorlds.CampaignSystem.dll", "$bin\TaleWorlds.Core.dll",
   "$bin\TaleWorlds.Library.dll", "$bin\TaleWorlds.ObjectSystem.dll",
-  "$bin\TaleWorlds.Localization.dll", "$bin\TaleWorlds.MountAndBlade.dll"
+  "$bin\TaleWorlds.Localization.dll", "$bin\TaleWorlds.MountAndBlade.dll",
+  "$bin\TaleWorlds.ModuleManager.dll"
 )
 foreach ($r in $refs) {
   if (-not (Test-Path $r)) { Write-Host "MISSING REFERENCE: $r"; exit 1 }

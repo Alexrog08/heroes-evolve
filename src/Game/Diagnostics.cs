@@ -382,6 +382,11 @@ namespace HeroesEvolve
             ModLog.Info("CATALOG armor head=" + head + " body=" + body + " leg=" + leg
                         + " hand=" + hand + " cape=" + cape
                         + " mounts=" + mounts + " harnesses=" + harnesses);
+            // What is installed and what each one brought, which is how a
+            // player learns the ids he may put in ExcludedModules. Printed
+            // whether or not anything is excluded: the question "what could I
+            // exclude?" is the one that comes first.
+            ModLog.Info("MODULES declaredItems " + ItemModules.Describe());
             ModLog.Info("CATALOG armor kit=" + kit + " clothing=" + clothing
                         + " (below tier " + KitTier.Lowest + ", refused for a battle outfit)");
         }

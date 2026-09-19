@@ -240,6 +240,42 @@ namespace HeroesEvolve
             return copy;
         }
 
+        /// <summary>
+        /// Modules whose gear a lord may not buy or be granted, by module id --
+        /// the folder name under Modules, which the census prints beside each
+        /// module's title.
+        ///
+        /// The coarse instrument beside ExcludedItems' fine one. A gear pack
+        /// ships hundreds of pieces and a player who wants it out of his lords'
+        /// hands should not have to name them one at a time; see ModuleRules
+        /// for the report that asked for this and for why the unit is the
+        /// module rather than a list of mod names kept in the source.
+        ///
+        /// Empty by default, and empty costs nothing: with nothing named here
+        /// ItemModules never reads a file.
+        /// </summary>
+        private static string[] _excludedModules = new string[0];
+
+        /// <summary>
+        /// Replaces the excluded-module list from one line of text, for the
+        /// options screen. Same splitter as everything else.
+        /// </summary>
+        public static void SetExcludedModules(string text)
+        {
+            _excludedModules = Split(text);
+        }
+
+        /// <summary>
+        /// The excluded modules as entered. A copy, for the same reason
+        /// ExcludedIds hands one out.
+        /// </summary>
+        public static string[] ExcludedModuleIds()
+        {
+            string[] copy = new string[_excludedModules.Length];
+            _excludedModules.CopyTo(copy, 0);
+            return copy;
+        }
+
         /// <summary>Whether the player has struck this item from his campaign.</summary>
         public static bool IsExcluded(string itemId)
         {
@@ -301,6 +337,7 @@ namespace HeroesEvolve
                 CaravanGearShare = Number(root, "CaravanGearShare", CaravanGearShare, 0f, 1f);
 
                 _excludedItems = List(root, "ExcludedItems");
+                _excludedModules = List(root, "ExcludedModules");
 
                 ModLog.Enabled = EnableLogging;
                 ModLog.Info("SETTINGS loaded from " + path);
@@ -337,7 +374,8 @@ namespace HeroesEvolve
                    + " captureLoss=" + EnableCaptureLoss
                    + " plunderChance=" + PlunderChance
                    + " caravanGearShare=" + CaravanGearShare
-                   + " excludedItems=" + _excludedItems.Length;
+                   + " excludedItems=" + _excludedItems.Length
+                   + " excludedModules=" + _excludedModules.Length;
         }
 
         /// <summary>

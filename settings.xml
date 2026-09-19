@@ -243,4 +243,24 @@
          AR_naptha_pot, some_other_item                                    -->
   <ExcludedItems></ExcludedItems>
 
+  <!-- Whole mods whose gear lords never buy and are never granted, by module
+       id: the folder name under Modules, not the title on its download page.
+       Separated by commas or spaces, e.g.
+
+         BensUltimateArmory, SomeOtherArmoury
+
+       For gear packs, which ship hundreds of pieces at the top of the tier
+       scale and would otherwise dress the whole map within a few days. Listing
+       them one item at a time in ExcludedItems above is the alternative, and
+       nobody should have to.
+
+       Run the census (hev.census) to see every module you have installed and
+       how many items each one declares, which is where the ids come from. A
+       module that declares none either adds no gear or adds it from code, and
+       gear added from code cannot be excluded this way.
+
+       Empty by default, and empty costs nothing: with no module named here the
+       mod never reads a module's files at all. -->
+  <ExcludedModules></ExcludedModules>
+
 </HeroesEvolve>

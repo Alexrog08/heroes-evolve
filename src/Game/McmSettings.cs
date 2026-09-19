@@ -161,6 +161,11 @@ namespace HeroesEvolve
         [SettingPropertyGroup("Gear limits", GroupOrder = 5)]
         public string ExcludedItems { get; set; } = "";
 
+        [SettingPropertyText("Mods whose gear lords never get", RequireRestart = false, Order = 5,
+            HintText = "Module ids separated by commas, e.g. BensUltimateArmory. Keeps a whole gear pack out of your lords' hands without listing its items. Run the census to see the ids of what you have installed.")]
+        [SettingPropertyGroup("Gear limits", GroupOrder = 5)]
+        public string ExcludedModules { get; set; } = "";
+
         // ---- Caravans ------------------------------------------------------------
 
         [SettingPropertyFloatingInteger("Caravan leader's commission", 0f, 1f, "0.00",

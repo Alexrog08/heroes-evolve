@@ -59,6 +59,7 @@ namespace HeroesEvolve.Tests
             FocusGrowthTests.RunAll();
             GrantTierTests.RunAll();
             MarketRulesTests.RunAll();
+            ModuleRulesTests.RunAll();
             ItemGradeTests.RunAll();
             QualityValueTests.RunAll();
             CultureChoiceTests.RunAll();

@@ -366,6 +366,13 @@ namespace HeroesEvolve
             // two vocabularies meet raw.
             if ((int)item.Tier + 1 > maxTier) return false;
             if (IsRefused(item)) return false;
+
+            // A whole gear pack kept out by name, when the player has asked for
+            // one. Last because it is the only line here that can touch the
+            // disk, and it does not touch it at all until something is
+            // excluded. See ModuleRules.
+            if (ItemModules.Refuses(item)) return false;
+
             return true;
         }
 
