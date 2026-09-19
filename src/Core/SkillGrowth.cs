@@ -129,12 +129,29 @@ namespace HeroesEvolve.Core
         }
 
         /// <summary>
-        /// The share of the primary target a hero's Nth-best skill should reach.
+        /// The share of the primary target a hero's Nth-best weapon should
+        /// reach: what a lord's profile looks like once his best is known.
         ///
-        /// Taken from the shape healthy lords actually have: the median lord's
-        /// ranked weapon skills fall at 100%, 79%, 50%, 9%, 0%, 0% of his best.
-        /// Seeding a single skill would produce a hero unlike any in the game --
-        /// three meaningful weapons is what a lord looks like.
+        /// Read off the 458 lord sheets TaleWorlds shipped, each one's six
+        /// weapon lines sorted high to low and divided by its own best. The
+        /// medians are 100, 80, 66, 54, 44, 27, and the spread is tight enough
+        /// to trust: the third line runs 60 at the lower quartile and 73 at the
+        /// upper. Only the first four ranks are asked for, because four is all
+        /// the weapon slots a hero has.
+        ///
+        /// The first version of this table read 100, 79, 50, 9 -- measured off
+        /// the live lords of one save rather than off the sheets. The first two
+        /// ranks were right and the rest were not: 50 is the tenth percentile of
+        /// what TaleWorlds gives a third weapon, so every lord in the world was
+        /// being shaped like his most single-minded tenth, and 9 for a fourth
+        /// weapon is a figure no sheet in the game carries. A census caught it
+        /// -- our lords measured 100/78/51/49/46/24 against his 100/80/66/54/
+        /// 44/27, out of line at exactly the rank this table pins.
+        ///
+        /// 79 is left where it stands rather than nudged to 80. Riding and
+        /// Athletics are aimed at this same rank (SkillGrowthService.
+        /// MovementRank), and a point of difference is not worth moving every
+        /// lord's legs for.
         ///
         /// Rank is zero-based: rank 0 is the primary.
         /// </summary>
@@ -147,8 +164,8 @@ namespace HeroesEvolve.Core
             {
                 case 0: percent = 100; break;
                 case 1: percent = 79; break;
-                case 2: percent = 50; break;
-                case 3: percent = 9; break;
+                case 2: percent = 66; break;
+                case 3: percent = 54; break;
                 default: return 0;
             }
 

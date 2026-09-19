@@ -60,8 +60,16 @@ namespace HeroesEvolve.Tests
             int primary = 200;
             Check.Equal(200, SkillGrowth.TargetForRank(primary, 0), "the primary is the target itself");
             Check.Equal(158, SkillGrowth.TargetForRank(primary, 1), "second skill at 79%");
-            Check.Equal(100, SkillGrowth.TargetForRank(primary, 2), "third at 50%");
-            Check.Equal(18, SkillGrowth.TargetForRank(primary, 3), "fourth barely registers");
+            Check.Equal(132, SkillGrowth.TargetForRank(primary, 2), "third at 66%, TaleWorlds' own median");
+            Check.Equal(108, SkillGrowth.TargetForRank(primary, 3), "and a fourth weapon is a real one, at 54%");
+
+            // The whole row falls away, rank by rank, the way his sheets do.
+            for (int rank = 1; rank < 4; rank++)
+            {
+                Check.True(SkillGrowth.TargetForRank(primary, rank)
+                           < SkillGrowth.TargetForRank(primary, rank - 1),
+                           "rank " + rank + " stands below the one above it");
+            }
             Check.Equal(0, SkillGrowth.TargetForRank(primary, 4), "there is no fifth");
             Check.Equal(0, SkillGrowth.TargetForRank(0, 0), "no target means no ranks");
 

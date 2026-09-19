@@ -1337,6 +1337,14 @@ namespace HeroesEvolve
                 ModLog.Info("SKILLAGE authored " + labels[b] + " " + Percentiles(authoredByBucket[b]));
             }
 
+            // The line this one is read against. Measured over the 458 lord
+            // sheets TaleWorlds shipped, the same way: six weapon lines sorted
+            // high to low, each as a share of that sheet's own best, median at
+            // each rank. It is what SkillGrowth.TargetForRank is calibrated to,
+            // so the two lines together say whether the world came out the
+            // shape he drew. The first four ranks are the ones the rule sets;
+            // the last two are whatever a lord's own sheet and his years leave
+            // behind.
             StringBuilder text = new StringBuilder("SKILLSHAPE medianRatioToBest");
             for (int i = 0; i < shape.Length; i++)
             {
@@ -1345,6 +1353,7 @@ namespace HeroesEvolve
                 System.Array.Sort(sorted);
                 text.Append(" s").Append(i + 1).Append('=').Append(At(sorted, 0.50f)).Append('%');
             }
+            text.Append(" | TaleWorlds' own sheets s1=100% s2=80% s3=66% s4=54% s5=44% s6=27%");
             ModLog.Info(text.ToString());
         }
 
@@ -2082,26 +2091,40 @@ namespace HeroesEvolve
         /// The other half of the promise: every single line of a sheet, not just
         /// the best of each field.
         ///
-        /// A lord is never taken below where his own written profile puts a line
-        /// at his age (AuthoredTalent.WrittenAt), so after a campaign has started
-        /// on the curve nothing here should sit below it. A count above zero
-        /// means either a save the curve never ran on -- growth lifts a skill but
-        /// never restores one it did not cut -- or a line that is not being read
-        /// where it is needed. Below what he was written is expected and not
-        /// counted here: a young lord is meant to be, and grows into it.
+        /// Every line is aimed at where his own written profile puts it at his
+        /// age (AuthoredTalent.WrittenAt). Below what he was written is expected
+        /// and not counted: a young lord is meant to be, and grows into it.
         ///
-        /// The share is the interesting figure once the count is nought: how far
-        /// above his sheet the mod has actually carried each line. It was the
-        /// civil middle that prompted this -- a census found trade at 60 against
-        /// the 90 he wrote, medicine 62 against 90 -- so those two skills are
-        /// the ones to watch -- against his profile rather than against his raw
-        /// figures, since a lord below his written trade at twenty-seven is on
-        /// the curve rather than short of it.
+        /// The count below the line is not expected to be nought, and the second
+        /// census of the curve is what taught us to stop asking for that. A line
+        /// that carries an age term rises every single day, while the skill
+        /// chasing it moves in whole points as experience arrives, so a lord who
+        /// stood exactly on his line in the morning stands a point under it a
+        /// season later. Measured: the maturity ramp climbs 0.0107 a year, so a
+        /// written 200 asks for about six tenths of a point more each season,
+        /// and a first census that read 10 lines below read 794 three weeks
+        /// later -- all of them a point or so short, none of them falling away.
+        ///
+        /// So the size of the gap is the figure that means something, and the
+        /// three worst are named rather than the three found first. Points, not
+        /// shares, because a share exaggerates at the bottom of the scale: a
+        /// line of 25 that is one point short reads as 96%, the same as a line
+        /// of 250 that is ten points short. A gap of a point or two is a hero
+        /// mid-step. A gap of twenty is a line nobody is aiming at.
+        ///
+        /// The share is the other half: how far above his sheet the mod has
+        /// carried each line. It was the civil middle that prompted this -- a
+        /// census found trade at 60 against the 90 he wrote, medicine 62 against
+        /// 90 -- so those two skills are the ones to watch, against his profile
+        /// rather than against his raw figures, since a lord below his written
+        /// trade at twenty-seven is on the curve rather than short of it.
         /// </summary>
         private static void ReportWrittenLines(List<Hero> growing)
         {
             List<int> ratios = new List<int>();
-            List<string> named = new List<string>();
+            List<int> gaps = new List<int>();
+            int[] worst = new int[3];
+            string[] named = new string[3];
             int written = 0, below = 0;
 
             for (int i = 0; i < growing.Count; i++)
@@ -2122,9 +2145,25 @@ namespace HeroesEvolve
                         if (has >= floor) continue;
 
                         below++;
-                        if (named.Count < 3 && skill.Name != null)
+                        int gap = floor - has;
+                        gaps.Add(gap);
+
+                        // The three widest, kept in order, so the sample names
+                        // the lines that are actually being missed rather than
+                        // whichever hero the roster happens to start with.
+                        for (int w = 0; w < worst.Length; w++)
                         {
-                            named.Add(hero.Name + " " + skill.Name + " " + has + " of " + floor);
+                            if (gap <= worst[w]) continue;
+
+                            for (int m = worst.Length - 1; m > w; m--)
+                            {
+                                worst[m] = worst[m - 1];
+                                named[m] = named[m - 1];
+                            }
+                            worst[w] = gap;
+                            named[w] = hero.Name + " " + (skill.Name != null ? skill.Name.ToString() : "?")
+                                     + " " + has + " of " + floor;
+                            break;
                         }
                     }
                 }
@@ -2134,9 +2173,16 @@ namespace HeroesEvolve
                 }
             }
 
-            ModLog.Info("TALENT written lines " + written + " carry a floor; below it " + below
-                        + (named.Count > 0 ? " (" + string.Join("; ", named.ToArray()) + ")" : "")
-                        + " | value as a share of the floor " + Percentiles(ratios));
+            List<string> sample = new List<string>();
+            for (int w = 0; w < named.Length; w++)
+            {
+                if (named[w] != null) sample.Add(named[w]);
+            }
+
+            ModLog.Info("TALENT written lines " + written + " chase a line; below it " + below
+                        + (sample.Count > 0 ? " (widest: " + string.Join("; ", sample.ToArray()) + ")" : "")
+                        + " | short by points " + Percentiles(gaps)
+                        + " | value as a share of the line " + Percentiles(ratios));
         }
 
         /// <summary>
