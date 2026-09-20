@@ -3178,6 +3178,61 @@ namespace HeroesEvolve
             tiers.Add((int)worn.Tier + 1);
         }
 
+        /// <summary>
+        /// How many heroes the mod now looks after who belong to a mercenary
+        /// company, and how many of those companies are represented.
+        ///
+        /// Exists because they used to be nobody. The clan filter refused every
+        /// minor faction, so seventeen companies' worth of lords never grew a
+        /// skill, never replaced a lost piece and could not be robbed when
+        /// captured -- which is how the miss was found, from a player asking why
+        /// a fully geared mercenary lord in his dungeon offered him nothing.
+        ///
+        /// Expected to read a non-zero managed count on any campaign. A zero
+        /// means the clan filter has gone back to refusing them, and the only
+        /// visible symptom of that would be the same unanswerable dialogue.
+        /// </summary>
+        private static void ReportMercenaryCompanies()
+        {
+            int managed = 0, growing = 0;
+            Dictionary<string, int> companies = new Dictionary<string, int>();
+
+            foreach (Hero hero in Hero.AllAliveHeroes)
+            {
+                try
+                {
+                    if (hero == null || hero.Clan == null) continue;
+                    if (hero.Clan == Clan.PlayerClan) continue;
+                    if (!hero.Clan.IsMinorFaction && !hero.Clan.IsOutlaw) continue;
+                    if (hero.Clan.IsBanditFaction) continue;
+
+                    bool gear = HeroFilter.IsEligible(hero);
+                    bool grows = HeroFilter.IsEligibleToGrow(hero);
+                    if (!gear && !grows) continue;
+
+                    if (gear) managed++;
+                    if (grows) growing++;
+
+                    string name = hero.Clan.Name != null ? hero.Clan.Name.ToString() : hero.Clan.StringId;
+                    int seen;
+                    companies.TryGetValue(name, out seen);
+                    companies[name] = seen + 1;
+                }
+                catch
+                {
+                    // One unreadable hero must not cost the count.
+                }
+            }
+
+            ModLog.Info("MERCENARIES managedForGear=" + managed + " growing=" + growing
+                        + " companies=" + companies.Count);
+
+            foreach (KeyValuePair<string, int> pair in companies)
+            {
+                ModLog.Info("MERCENARIES " + pair.Key + " heroes=" + pair.Value);
+            }
+        }
+
         private static void ReportClanWealth()
         {
             List<int> gold = new List<int>();
@@ -3189,7 +3244,9 @@ namespace HeroesEvolve
                 {
                     if (clan == null || clan.Leader == null) continue;
                     if (clan.IsEliminated) continue;
-                    if (clan.IsBanditFaction || clan.IsOutlaw) continue;
+                    // Bandits only. A mercenary company's purse is now worth
+                    // counting: its lords shop out of it like anybody else.
+                    if (clan.IsBanditFaction) continue;
                     if (clan == Clan.PlayerClan) continue;
 
                     gold.Add(clan.Gold);
@@ -3993,6 +4050,8 @@ namespace HeroesEvolve
                         + " player=" + player + ")");
             ModLog.Info("HEROES needingGrant=" + broken.Count
                         + " alreadyRepairedThisSession=" + _repairsBeforeCensus);
+
+            ReportMercenaryCompanies();
 
             for (int i = 0; i < broken.Count; i++)
             {

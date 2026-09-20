@@ -36,14 +36,7 @@ namespace HeroesEvolve
                 return "inMainParty";
             }
             if (hero.IsTemplate) return "isTemplate";
-            if (hero.Clan != null
-                && hero.Clan != Clan.PlayerClan
-                && (hero.Clan.IsMinorFaction
-                    || hero.Clan.IsBanditFaction
-                    || hero.Clan.IsOutlaw
-                    || hero.Clan.IsSect
-                    || hero.Clan.IsNomad
-                    || hero.Clan.IsMafia)) return "clanKind";
+            if (hero.Clan != null && hero.Clan.IsBanditFaction) return "banditClan";
             return null;
         }
 
@@ -107,18 +100,38 @@ namespace HeroesEvolve
 
             if (hero.IsTemplate) return false;
 
-            if (hero.Clan != null
-                && hero.Clan != Clan.PlayerClan
-                && (hero.Clan.IsMinorFaction
-                    || hero.Clan.IsBanditFaction
-                    || hero.Clan.IsOutlaw
-                    || hero.Clan.IsSect
-                    || hero.Clan.IsNomad
-                    || hero.Clan.IsMafia)) return false;
+            if (hero.Clan != null && hero.Clan.IsBanditFaction) return false;
 
             return true;
         }
 
+        /// <remarks>
+        /// The clan test below was six flags and is now one, which let thirteen
+        /// mercenary companies back into the campaign.
+        ///
+        /// It used to refuse IsMinorFaction, IsOutlaw, IsSect, IsNomad and
+        /// IsMafia alongside IsBanditFaction, on the reading that all of them
+        /// meant bandits. Counted over the shipped clans, they do not. Every one
+        /// of the eight bandit clans carries is_bandit, and nothing else does.
+        /// The other five flags mark the mercenary companies a player hires and
+        /// fights: is_minor_faction covers all seventeen of them, is_outlaw
+        /// thirteen, is_mafia six (Wolfskins, Hidden Hand, Lake Rats and their
+        /// like), is_nomad five (Jawwal, Forest People, Eleftheroi) and is_sect
+        /// two (Embers of the Flame, Chosen of the Sky). None of them is a
+        /// bandit clan.
+        ///
+        /// So their lords were frozen: no skill growth, no repair when stripped,
+        /// no market, and -- the report that found this -- no way to rob one you
+        /// had captured, however well dressed he was. Every other lord on the map
+        /// improved around them for the length of a campaign. That is the exact
+        /// stagnation this mod exists to undo, applied to seventeen companies by
+        /// accident.
+        ///
+        /// IsBanditFaction alone separates the two groups cleanly, so the
+        /// Clan.PlayerClan guard that stood in front of this goes with the rest:
+        /// it was there because the player's own clan carries is_minor_faction,
+        /// and nothing now tests that.
+        /// </remarks>
         public static bool IsEligible(Hero hero)
         {
             if (hero == null) return false;
@@ -181,14 +194,7 @@ namespace HeroesEvolve
             // not somebody else's design, and if the engine marks it with one
             // of these that is a fact about how the clan was created rather
             // than a statement that it should stay rough.
-            if (hero.Clan != null
-                && hero.Clan != Clan.PlayerClan
-                && (hero.Clan.IsMinorFaction
-                    || hero.Clan.IsBanditFaction
-                    || hero.Clan.IsOutlaw
-                    || hero.Clan.IsSect
-                    || hero.Clan.IsNomad
-                    || hero.Clan.IsMafia)) return false;
+            if (hero.Clan != null && hero.Clan.IsBanditFaction) return false;
 
             return true;
         }
@@ -252,7 +258,13 @@ namespace HeroesEvolve
             if (hero.IsTemplate) return false;
 
             if (hero.Clan == null) return false;
-            if (hero.Clan.IsBanditFaction || hero.Clan.IsOutlaw) return false;
+
+            // Bandits only, the same one flag the gear filter uses and for the
+            // same reason. Thirteen mercenary companies carry is_outlaw and not
+            // one of them is a bandit clan; refusing them here would have left
+            // them dressed by the repair and unable to buy anything afterwards,
+            // which is the half-measure worth avoiding.
+            if (hero.Clan.IsBanditFaction) return false;
 
             MobileParty party = hero.PartyBelongedTo;
             if (party != null && party == MobileParty.MainParty) return false;
