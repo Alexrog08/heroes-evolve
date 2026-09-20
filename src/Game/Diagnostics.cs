@@ -188,6 +188,15 @@ namespace HeroesEvolve
             // of prisoners this lord would rob, all else being neutral.
             ModLog.Info("PLUNDERCHANCE percent " + Percentiles(chances));
 
+            // Whether the player is currently exempt, and why. Expected to read
+            // locked=True only inside the story mode's opening phase, where
+            // every town is shut to him and being stripped is unrecoverable --
+            // see TutorialLock. A census run on any ordinary campaign that
+            // reports locked=True is reporting a bug, because it means the mod
+            // is refusing a robbery it should allow for the rest of that save.
+            ModLog.Info("PLUNDERCHANCE tutorial locksTheMap=" + TutorialLock.LocksTheMap()
+                        + " playerCanBeStripped=" + PlunderService.CanBeStripped(Hero.MainHero));
+
             for (int i = 0; i < dishonourable.Count; i++)
             {
                 ModLog.Info("TRAITS dishonourable " + dishonourable[i]);

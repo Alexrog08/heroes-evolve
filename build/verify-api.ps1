@@ -180,9 +180,13 @@ function Get-Members([string]$path) {
     }
 }
 
-# Every TaleWorlds.* member our own compiled DLL references, whatever kind
-# of type owns it (plain type, nested type, or constructed generic type --
-# blind spot 3).
+# Every TaleWorlds.* and StoryMode.* member our own compiled DLL references,
+# whatever kind of type owns it (plain type, nested type, or constructed
+# generic type -- blind spot 3).
+#
+# StoryMode is here because TutorialLock reads its tutorial phase, and a
+# reference nobody checks is the one that breaks on a game update without
+# saying so. It is the only non-TaleWorlds game assembly this mod touches.
 function Get-References([string]$path) {
     $fs = [System.IO.File]::OpenRead($path)
     try {
@@ -193,7 +197,7 @@ function Get-References([string]$path) {
             $m = $mr.GetMemberReference($h)
             $owner = Get-OwnerName $mr $m.Parent
             if (-not $owner) { continue }
-            if ($owner -notmatch '^TaleWorlds') { continue }
+            if ($owner -notmatch '^(TaleWorlds|StoryMode)') { continue }
             "$owner::" + $mr.GetString($m.Name)
         }
     } finally {
@@ -206,7 +210,15 @@ function Get-References([string]$path) {
 $known = @{}
 $scanned = 0
 $skipped = 0
-Get-ChildItem (Join-Path $game "bin\Win64_Shipping_Client") -Filter "TaleWorlds*.dll" | ForEach-Object {
+$assemblies = @(Get-ChildItem (Join-Path $game "bin\Win64_Shipping_Client") -Filter "TaleWorlds*.dll")
+
+# StoryMode ships inside its own module rather than the game's bin folder, so
+# the wildcard above never sees it. TutorialLock calls into it.
+$storyMode = Join-Path $game "Modules\StoryMode\bin\Win64_Shipping_Client\StoryMode.dll"
+if (Test-Path $storyMode) { $assemblies += Get-Item $storyMode }
+else { Write-Host "MISSING: $storyMode -- StoryMode members cannot be checked"; exit 1 }
+
+$assemblies | ForEach-Object {
     $names = Get-Members $_.FullName
     if ($null -eq $names) { $skipped++; return }
     $scanned++
@@ -258,5 +270,5 @@ if ($missing) {
     $missing | ForEach-Object { Write-Host "  $_" }
     exit 1
 }
-Write-Host "API OK: every TaleWorlds member referenced exists in v1.4.8"
+Write-Host "API OK: every TaleWorlds and StoryMode member referenced exists in v1.4.8"
 exit 0

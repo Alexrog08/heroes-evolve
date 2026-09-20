@@ -13,7 +13,10 @@ $refs = @(
   "$bin\TaleWorlds.CampaignSystem.dll", "$bin\TaleWorlds.Core.dll",
   "$bin\TaleWorlds.Library.dll", "$bin\TaleWorlds.ObjectSystem.dll",
   "$bin\TaleWorlds.Localization.dll", "$bin\TaleWorlds.MountAndBlade.dll",
-  "$bin\TaleWorlds.ModuleManager.dll"
+  "$bin\TaleWorlds.ModuleManager.dll",
+  # StoryMode, for the tutorial phase alone: see TutorialLock. A declared
+  # dependency in SubModule.xml already, so it is always loaded beside us.
+  "$game\Modules\StoryMode\bin\Win64_Shipping_Client\StoryMode.dll"
 )
 foreach ($r in $refs) {
   if (-not (Test-Path $r)) { Write-Host "MISSING REFERENCE: $r"; exit 1 }

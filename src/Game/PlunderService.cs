@@ -344,11 +344,19 @@ namespace HeroesEvolve
         /// already filled. Strip one of those and he is naked for the rest of
         /// the campaign, with nothing in the mod able to help him. Taking a
         /// man's gear should cost him a war, not his existence.
+        ///
+        /// The player is the exception to that exception, for the first hour
+        /// only. "He can dress himself" is true of every campaign except while
+        /// the tutorial refuses him entry to the towns -- and it sends him to
+        /// fight Radagos, which he can lose, to bandits who rob half their
+        /// prisoners. That was a coin flip on leaving a new campaign with
+        /// nothing and nowhere to fix it. Until the map opens he is the
+        /// troubadour: see TutorialLock.
         /// </summary>
         public static bool CanBeStripped(Hero prisoner)
         {
             if (prisoner == null) return false;
-            if (prisoner == Hero.MainHero) return true;
+            if (prisoner == Hero.MainHero) return !TutorialLock.LocksTheMap();
             return HeroFilter.IsEligible(prisoner);
         }
 
