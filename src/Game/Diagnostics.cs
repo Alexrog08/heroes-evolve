@@ -152,7 +152,7 @@ namespace HeroesEvolve
                     float chance = PlunderRules.Chance(false, h, m, g, c,
                                                        hero.GetSkillValue(DefaultSkills.Roguery),
                                                        0, PlunderRules.Kinship.None,
-                                                       Settings.PlunderChance);
+                                                       Settings.RobberyMultiplier());
                     chances.Add((int)(chance * 100f + 0.5f));
 
                     if (h >= 0) continue;

@@ -272,7 +272,7 @@ namespace HeroesEvolve
             Settings.ReserveMultiplier = settings.ReserveMultiplier;
 
             Settings.EnableCaptureLoss = settings.EnableCaptureLoss;
-            Settings.PlunderChance = settings.PlunderChance;
+            Settings.RobberyRate = settings.RobberyRate;
             Settings.CaravanGearShare = settings.CaravanGearShare;
 
             // Two that are not plain fields, and both would have gone stale.

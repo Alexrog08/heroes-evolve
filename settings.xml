@@ -189,7 +189,8 @@
        it circulates rather than rotting in a baggage train. Only quest items
        are safe. A lord never trades his OWN unique gear away when shopping.
 
-       Who robs is character, not dice. Bandits always do. A merciful and
+       Who robs is character, not dice. Bandits are outside it and rob half
+       their prisoners at the default rate. A merciful and
        generous lord never does. Dishonour, closefistedness and roguery raise
        the odds; goodwill between the two men lowers them; a father will not
        strip his son unless the two of them are already at war. A lord who
@@ -200,16 +201,23 @@
        this game are yours to earn. -->
   <EnableCaptureLoss>true</EnableCaptureLoss>
 
-  <!-- Scales how often a captor robs. 0 is the same as off, 0.5 is the
-       default, 1 runs the character rules at full strength, 2 doubles them.
+  <!-- How often a captor robs. 1 is a normal campaign, 2 doubles every
+       captor's chance, 0 stops AI lords robbing without switching the system
+       off. You can still rob in conversation at any value.
 
-       Halved after measurement. At full strength a census found 83 robberies
-       among 405 lords in seven months — a third of the nobility stripped every
-       year — which made robbery the largest single influence on what a lord
-       wears, ahead of his skill, his clan's wealth and the market put together.
-       The purchase engine was working; it simply could not build faster than
-       this tore down. At 0.5 it shapes the map without ruling it. -->
-  <PlunderChance>0.5</PlunderChance>
+       1 does not mean the character rules at full strength: it means half of
+       them, which is a calibration measured rather than guessed and lives in
+       PlunderRules.NormalRate. At full strength — this dial at 2 — a census
+       found 83 robberies among 405 lords in seven months, a third of the
+       nobility stripped every year, which made robbery the largest single
+       influence on what a lord wears, ahead of his skill, his clan's wealth
+       and the market put together. The purchase engine was working; it simply
+       could not build faster than this tore down.
+
+       The key was called PlunderChance and defaulted to 0.5 until 2026-09-20.
+       It was renamed rather than rescaled in place so that an old value is
+       ignored instead of quietly meaning half of what it used to. -->
+  <RobberyRate>1.0</RobberyRate>
 
   <!-- You rob by asking. When EnableCaptureLoss is on and you are holding a
        captured lord, talking to him offers "Hand over your arms and armour."

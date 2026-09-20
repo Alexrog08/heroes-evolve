@@ -93,6 +93,28 @@ namespace HeroesEvolve.Tests
             int feudingStranger = Percent(-2, -2, -2, -2, 0, -100, Stranger);
             Check.True(feudingBrother < feudingStranger, "even in a feud, blood is robbed less than a stranger");
 
+            // --- the calibration the player's dial is measured against ---
+            // NormalRate is not applied inside Chance: multiplier 1.0 still
+            // means the character model at full strength, which is what every
+            // assertion above is written against. It is what Settings hands in
+            // when the dial reads 1.00, so a normal campaign gets half.
+            float full = PlunderRules.Chance(false, 0, 0, 0, 0, 0, 0, Stranger, 1f);
+            float normal = PlunderRules.Chance(false, 0, 0, 0, 0, 0, 0, Stranger,
+                                               PlunderRules.NormalRate);
+            Check.True(System.Math.Abs(normal - full * PlunderRules.NormalRate) < 0.0001f,
+                       "the dial multiplies the model rather than reshaping it");
+
+            // The figures the store page prints, so the page cannot drift from
+            // the code without a test saying so.
+            Check.Equal(6, (int)(normal * 100f + 0.5f),
+                        "a lord neutral in all four robs 6% of his prisoners in a normal campaign");
+            Check.Equal(21, (int)(PlunderRules.Chance(false, -1, -1, -1, -1, 0, 0, Stranger,
+                                                      PlunderRules.NormalRate) * 100f + 0.5f),
+                        "minus one throughout, 21%");
+            Check.Equal(50, (int)(PlunderRules.Chance(true, 0, 0, 0, 0, 0, 0, Stranger,
+                                                      PlunderRules.NormalRate) * 100f + 0.5f),
+                        "and a bandit robs half his prisoners, not all of them");
+
             // --- the player's one dial ---
             Check.True(PlunderRules.Chance(false, -2, -2, -2, -2, 0, -100, Stranger, 0f) == 0f,
                        "a zero multiplier switches the whole thing off");

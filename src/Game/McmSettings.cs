@@ -172,11 +172,11 @@ namespace HeroesEvolve
         [SettingPropertyGroup("Robbery", GroupOrder = 3)]
         public bool EnableCaptureLoss { get; set; } = true;
 
-        [SettingPropertyFloatingInteger("Robbery chance multiplier", 0f, 5f, "0.00",
+        [SettingPropertyFloatingInteger("How often lords rob", 0f, 3f, "0.00",
             RequireRestart = false, Order = 1,
-            HintText = "Scales every captor's chance; bandits always rob. At 1.00 robbery becomes the biggest influence on what lords wear. 0.00 stops it without switching the system off.")]
+            HintText = "1.00 is a normal campaign. It multiplies every captor's chance, so 2.00 doubles them all and 0.00 stops AI lords robbing without switching the system off (you can still rob in conversation). At 2.00 robbery becomes the biggest influence on what lords wear.")]
         [SettingPropertyGroup("Robbery", GroupOrder = 3)]
-        public float PlunderChance { get; set; } = 0.5f;
+        public float RobberyRate { get; set; } = 1.0f;
 
         // ---- Your own clan ----------------------------------------------------------
 

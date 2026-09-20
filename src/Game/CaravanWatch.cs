@@ -347,7 +347,7 @@ namespace HeroesEvolve
             // beating him returns it. Both errors point the same way, so a kit
             // this says is safe really is safe.
             long yearlyIncome = (long)(meanIncome * year);
-            float robbed = hostilePerCaravanYear * Settings.PlunderChance;
+            float robbed = hostilePerCaravanYear * Settings.RobberyMultiplier();
             if (robbed <= 0f) return;
 
             ModLog.Info("CARAVANBREAKEVEN yearlyIncomePerCaravan=" + yearlyIncome

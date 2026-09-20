@@ -359,7 +359,7 @@ namespace HeroesEvolve
         public static float ChanceFor(bool bandit, Hero captor, Hero prisoner)
         {
             if (bandit) return PlunderRules.Chance(true, 0, 0, 0, 0, 0, 0,
-                                                   PlunderRules.Kinship.None, Settings.PlunderChance);
+                                                   PlunderRules.Kinship.None, Settings.RobberyMultiplier());
             if (captor == null) return 0f;
 
             return PlunderRules.Chance(false,
@@ -370,7 +370,7 @@ namespace HeroesEvolve
                                        captor.GetSkillValue(DefaultSkills.Roguery),
                                        captor.GetRelation(prisoner),
                                        KinshipBetween(captor, prisoner),
-                                       Settings.PlunderChance);
+                                       Settings.RobberyMultiplier());
         }
 
         /// <summary>

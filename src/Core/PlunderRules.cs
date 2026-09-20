@@ -30,6 +30,32 @@ namespace HeroesEvolve.Core
         /// </summary>
         public const float BanditChance = 1.0f;
 
+        /// <summary>
+        /// What a slider setting of 1.00 hands these rules: the rate a normal
+        /// campaign runs at.
+        ///
+        /// Not applied here. Chance takes the multiplier it is given and means
+        /// it, so multiplier 1.0 is the character model at full strength -- a
+        /// paragon at zero, a brute at one, bandits at one -- which is the
+        /// anchor the tests and the arithmetic are written against. This
+        /// constant is the separate question of how much of that model a
+        /// campaign should actually get, and Settings applies it.
+        ///
+        /// Half, from measurement. At full strength a census found 83 robberies
+        /// among 405 lords in seven months: a third of the nobility stripped
+        /// every year, which made robbery a bigger influence on what a lord
+        /// wears than his skill, his clan's wealth and the market put together.
+        /// The purchase engine was working; it simply could not build faster
+        /// than this tore down.
+        ///
+        /// It is a constant rather than the slider's default because a default
+        /// of 0.50 invites the question "half of what?", and the honest answer
+        /// -- half of a setting nobody should use -- is not something a player
+        /// should have to read a comment to learn. The dial he sees starts at
+        /// 1.00 and means his campaign.
+        /// </summary>
+        public const float NormalRate = 0.5f;
+
         // --- disposition: who the captor is ---------------------------------
 
         /// <summary>

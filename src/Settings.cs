@@ -153,7 +153,17 @@ namespace HeroesEvolve
         /// invented, so this is the dial that matters until a campaign has
         /// measured the rate.
         /// </summary>
-        public static float PlunderChance = 0.5f;
+        public static float RobberyRate = 1.0f;
+
+        /// <summary>
+        /// What the rules are actually handed: the player's rate times the
+        /// calibration that makes 1.00 mean a normal campaign. See
+        /// PlunderRules.NormalRate.
+        /// </summary>
+        public static float RobberyMultiplier()
+        {
+            return RobberyRate * Core.PlunderRules.NormalRate;
+        }
 
         /// <summary>
         /// The commission a caravan's leader keeps out of what it earns, and
@@ -388,7 +398,7 @@ namespace HeroesEvolve
                 ShoppingCulture = Core.CultureChoices.Parse(Text(root, "ShoppingCulture"), ShoppingCulture);
                 OwnCultureArmorOnly = Flag(root, "OwnCultureArmorOnly", OwnCultureArmorOnly);
                 OwnCultureWeaponsOnly = Flag(root, "OwnCultureWeaponsOnly", OwnCultureWeaponsOnly);
-                PlunderChance = Number(root, "PlunderChance", PlunderChance, 0f, 5f);
+                RobberyRate = Number(root, "RobberyRate", RobberyRate, 0f, 3f);
                 CaravanGearShare = Number(root, "CaravanGearShare", CaravanGearShare, 0f, 1f);
 
                 _excludedItems = List(root, "ExcludedItems");
@@ -427,7 +437,7 @@ namespace HeroesEvolve
                    + " ownCultureArmorOnly=" + OwnCultureArmorOnly
                    + " ownCultureWeaponsOnly=" + OwnCultureWeaponsOnly
                    + " captureLoss=" + EnableCaptureLoss
-                   + " plunderChance=" + PlunderChance
+                   + " robberyRate=" + RobberyRate
                    + " caravanGearShare=" + CaravanGearShare
                    + " excludedItems=" + _excludedItems.Length
                    + " excludedModules=" + _excludedModules.Length;
