@@ -172,7 +172,7 @@ namespace HeroesEvolve
         [SettingPropertyGroup("Robbery", GroupOrder = 3)]
         public bool EnableCaptureLoss { get; set; } = true;
 
-        [SettingPropertyFloatingInteger("How often lords rob", 0f, 3f, "0.00",
+        [SettingPropertyFloatingInteger("How often lords rob", 0f, 2f, "0.00",
             RequireRestart = false, Order = 1,
             HintText = "1.00 is a normal campaign. It multiplies every captor's chance, so 2.00 doubles them all and 0.00 stops AI lords robbing without switching the system off (you can still rob in conversation). At 2.00 robbery becomes the biggest influence on what lords wear.")]
         [SettingPropertyGroup("Robbery", GroupOrder = 3)]

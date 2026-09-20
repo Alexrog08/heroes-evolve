@@ -398,7 +398,7 @@ namespace HeroesEvolve
                 ShoppingCulture = Core.CultureChoices.Parse(Text(root, "ShoppingCulture"), ShoppingCulture);
                 OwnCultureArmorOnly = Flag(root, "OwnCultureArmorOnly", OwnCultureArmorOnly);
                 OwnCultureWeaponsOnly = Flag(root, "OwnCultureWeaponsOnly", OwnCultureWeaponsOnly);
-                RobberyRate = Number(root, "RobberyRate", RobberyRate, 0f, 3f);
+                RobberyRate = Number(root, "RobberyRate", RobberyRate, 0f, 2f);
                 CaravanGearShare = Number(root, "CaravanGearShare", CaravanGearShare, 0f, 1f);
 
                 _excludedItems = List(root, "ExcludedItems");

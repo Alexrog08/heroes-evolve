@@ -201,9 +201,12 @@
        this game are yours to earn. -->
   <EnableCaptureLoss>true</EnableCaptureLoss>
 
-  <!-- How often a captor robs. 1 is a normal campaign, 2 doubles every
-       captor's chance, 0 stops AI lords robbing without switching the system
-       off. You can still rob in conversation at any value.
+  <!-- How often a captor robs, from 0 to 2. 1 is a normal campaign, 2 doubles
+       every captor's chance, 0 stops AI lords robbing without switching the
+       system off. You can still rob in conversation at any value. Anything
+       above 2 is clamped to it: past that the worst lords are already robbing
+       every prisoner and only the middle keeps climbing, which is the same
+       world with more noise in it.
 
        1 does not mean the character rules at full strength: it means half of
        them, which is a calibration measured rather than guessed and lives in
