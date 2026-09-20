@@ -159,6 +159,12 @@ $source = Get-Content $descriptionFile -Raw
 # Steam's cap with these steps in it, which is not headroom, it is a trap for
 # whoever edits this next.
 $nexusOnly = '(?s)\[nexus-only\].*?\[/nexus-only\]\r?\n?'
+# Normalised to LF before anything counts it. Git decides on checkout
+# whether this file lands CRLF or LF, so the same description measured
+# 7,969 characters in one working copy and 8,154 in another -- over
+# Steam's cap, from a git checkout and nothing else. BBCode does not care
+# which it gets, and the count has to mean the same thing every time.
+$source = $source -replace "`r`n", "`n"
 $description = ($source -replace $nexusOnly, '').TrimEnd() + "`n"
 
 # Steam caps a Workshop description at 8000 characters and does not say so
