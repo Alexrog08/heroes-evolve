@@ -20,8 +20,8 @@ a poor steward.
 young, level with it in their fifties, 5% above it at 60.
 [*]Roughly 1 hero in 200 is exceptional enough to end above the strongest lord in
 the base game. It can be a companion you hired.
-[*]Growth reaches lords sitting in castles and wanderers waiting in taverns, so a
-companion hired late is already developed and priced accordingly.
+[*]Growth reaches lords sitting in castles and wanderers waiting in taverns, so
+a companion hired late is already developed.
 [*]A new campaign starts every lord at skills matching his age. Campaigns already
 in progress are left as they are.
 [/list]
@@ -35,8 +35,8 @@ into top-tier armour.
 [*]He only upgrades what he already carries. He never picks up a weapon type he
 did not have, never fills an empty slot, never mounts up if he fought on foot,
 and rides a camel only if his culture does.
-[*]This is what keeps your own clan under your control: equip a companion, give
-him a party, and he will improve that loadout rather than replace it.
+[*]That keeps your own clan under your control: equip a companion, give him a
+party, and he improves that loadout rather than replacing it.
 [*]His worst piece of armour is replaced first, so you do not see lords in good
 gloves and boots over cheap body armour.
 [*]Gear of his own culture counts 25% better to him, so lords mostly stay in
@@ -110,9 +110,15 @@ That result is then adjusted: Roguery up to +50% at 300. Relation +100 = never,
 -100 = +50%. Clansmen x0.25. Close family never, unless relation is under -50.
 Bandits ignore all of it and sit at a flat 50%.
 
-One slider multiplies the lot. It reads 1.00 for a normal campaign, which is
-what the table above shows; 2.00 doubles every figure in it, and 0.00 stops AI
-lords robbing while leaving you free to rob in conversation.
+One slider, [b]How often lords rob[/b], multiplies every figure above. It runs
+0 to 3 and ships at 1.00.
+
+[code]
+0.00   no AI lord robs -- you can still rob in conversation
+1.00   a normal campaign: the numbers above, as printed
+2.00   every figure doubled; robbery then outweighs skill, clan wealth
+       and the market as the reason a lord wears what he does
+[/code]
 
 [h2]Keeping other mods' gear out[/h2]
 [list]
@@ -173,9 +179,8 @@ places it after the official modules, and after MCM if you have it.
 merit. The numbers here are not its numbers.
 [*][b]Lords Gear[/b] -- the starting point for how much of a clan's money a lord
 may spend on armour.
-[*][b]NoblesBuyStuff[/b] -- for showing that a wallet built from a hero's own
-gold leaves most of the map unable to buy anything, which is why there is a clan
-purse here.
+[*][b]NoblesBuyStuff[/b] -- for showing that a wallet of a hero's own gold
+leaves most of the map unable to buy anything, hence the clan purse here.
 [*][b]Mod Configuration Menu[/b] -- for an options screen worth writing against.
 [/list]
 
