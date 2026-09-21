@@ -170,6 +170,13 @@ namespace HeroesEvolve
         {
             if (Campaign.Current == null) return "hev: no campaign is running.";
 
+            // No name: one lord of every culture, which is the test this was
+            // written for. The case that decided the rag tiers is Nord, whose
+            // boots exist at tier 1 and not at tier 2, and asking a player to
+            // go and find a Nord lord by name to prove it is how a check stops
+            // being run.
+            if (args == null || args.Count == 0) return SweepCultures();
+
             Hero hero = FindHero(args);
             if (hero == null) return Usage("hev.test_robbery", args);
             if (hero.BattleEquipment == null) return "hev: " + hero.Name + " has no battle equipment.";
@@ -211,6 +218,89 @@ namespace HeroesEvolve
             report.AppendLine("(the spoils went into " + bin.Name + "; full detail in hev.log)");
 
             return report.ToString();
+        }
+
+        /// <summary>
+        /// Robs one lord of each culture and reports what each was left in.
+        ///
+        /// The figure worth reading is the last column. A slot a robbery empties
+        /// and this cannot refill stays bare for that hero's life, because a
+        /// lord only ever buys a better version of what he already carries and
+        /// can never fill an empty slot. Anything but nought there names a
+        /// culture that sells nothing for that slot even at the bottom of the
+        /// scale.
+        /// </summary>
+        private static string SweepCultures()
+        {
+            Dictionary<string, Hero> pick = new Dictionary<string, Hero>();
+
+            foreach (Hero hero in Hero.AllAliveHeroes)
+            {
+                try
+                {
+                    if (hero == null || hero.Culture == null) continue;
+                    if (hero.IsPrisoner || hero == Hero.MainHero) continue;
+                    if (!PlunderService.CanBeStripped(hero)) continue;
+                    if (!PlunderService.HasAnythingToTake(hero)) continue;
+                    if (hero.PartyBelongedTo == null) continue;
+
+                    string culture = hero.Culture.StringId;
+                    if (pick.ContainsKey(culture)) continue;
+
+                    pick[culture] = hero;
+                }
+                catch
+                {
+                    // One unreadable hero must not cost the sweep.
+                }
+            }
+
+            if (pick.Count == 0) return "hev: found nobody to rob.";
+
+            StringBuilder report = new StringBuilder();
+            report.AppendLine("hev: THIS MODIFIED " + pick.Count + " LORDS. Do not save over a campaign you care about.");
+            report.AppendLine("culture        lord                 took  rags  bare");
+
+            int bareTotal = 0;
+
+            foreach (KeyValuePair<string, Hero> pair in pick)
+            {
+                Hero hero = pair.Value;
+                int rags = Rags.HandedOut;
+                int bare = Rags.SlotsLeftEmpty;
+
+                ModLog.Info("TESTROBBERY hero=" + hero.Name + " culture=" + pair.Key
+                            + " before=" + Describe(hero));
+
+                int value;
+                int taken = PlunderService.Take(hero.PartyBelongedTo.Party, hero, out value);
+
+                rags = Rags.HandedOut - rags;
+                bare = Rags.SlotsLeftEmpty - bare;
+                bareTotal += bare;
+
+                ModLog.Info("TESTROBBERY hero=" + hero.Name + " taken=" + taken
+                            + " rags=" + rags + " bare=" + bare
+                            + " after=" + Describe(hero));
+
+                report.AppendLine(Pad(pair.Key, 14) + Pad(hero.Name.ToString(), 20)
+                                  + Pad(taken.ToString(), 6) + Pad(rags.ToString(), 6)
+                                  + bare + (bare > 0 ? "  <-- bare for life" : ""));
+            }
+
+            report.AppendLine(bareTotal == 0
+                              ? "every slot refilled."
+                              : bareTotal + " slots could not be refilled. See hev.log.");
+            report.AppendLine("(weapon kinds should match before and after; full detail in hev.log)");
+
+            return report.ToString();
+        }
+
+        private static string Pad(string text, int width)
+        {
+            if (text == null) text = "";
+            if (text.Length >= width) return text.Substring(0, width - 1) + " ";
+            return text.PadRight(width);
         }
 
         private static void Strip(Hero hero)
