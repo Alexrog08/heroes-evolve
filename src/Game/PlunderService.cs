@@ -6,6 +6,8 @@ using TaleWorlds.CampaignSystem.Party;
 using TaleWorlds.CampaignSystem.Roster;
 using TaleWorlds.CampaignSystem.Settlements;
 using TaleWorlds.Core;
+using TaleWorlds.Library;
+using TaleWorlds.Localization;
 using HeroesEvolve.Core;
 
 namespace HeroesEvolve
@@ -142,6 +144,8 @@ namespace HeroesEvolve
             int value;
             int taken = Take(spoils, prisoner, out value);
             if (taken == 0) return 0;
+
+            Announce(captor, bandit, prisoner);
 
             // Doing the robbing costs the robber standing with the man he
             // robbed. Being robbed costs the victim nothing, because it is not
@@ -332,6 +336,51 @@ namespace HeroesEvolve
                               Settings.ClanWeight, Settings.SkillWeight, Settings.MinimumTier);
 
             return robbed;
+        }
+
+        /// <summary>
+        /// Tells the player when one of his own is stripped, and nobody else.
+        ///
+        /// The game already says "X has been taken prisoner by Y" for a hero of
+        /// the player's clan and says nothing for anyone else's, because the
+        /// rest of the map's captures are not his business. Losing a man's gear
+        /// is the same kind of news and arrives in the same instant, so it goes
+        /// in the same place, directly under the line that announced the
+        /// capture.
+        ///
+        /// Restricting it to his clan is not the mod treating the player as a
+        /// special case. It decides who is told, not what happens: every lord
+        /// in Calradia is robbed by the same rules whether or not anybody reads
+        /// about it. Announcing the other four hundred would be noise, and the
+        /// game's own log draws exactly this line.
+        ///
+        /// The message never says what was taken. A player who wants the detail
+        /// opens the hero and looks, and a list of eleven items in a floating
+        /// notification is not read by anybody.
+        /// </summary>
+        private static void Announce(Hero captor, bool bandit, Hero prisoner)
+        {
+            if (prisoner == null || prisoner.Clan != Clan.PlayerClan) return;
+
+            try
+            {
+                TextObject line = bandit || captor == null
+                    ? new TextObject("{=hev_robbed_by_bandits}{VICTIM} has been stripped of arms and armour by his captors.")
+                    : new TextObject("{=hev_robbed_by_lord}{CAPTOR} has stripped {VICTIM} of arms and armour.");
+
+                line.SetTextVariable("VICTIM", prisoner.Name);
+                if (captor != null) line.SetTextVariable("CAPTOR", captor.Name);
+
+                // The colour the game uses for a loss rather than a warning, so
+                // it reads as part of the same run of messages the capture
+                // itself printed.
+                InformationManager.DisplayMessage(
+                    new InformationMessage(line.ToString(), Colors.Red));
+            }
+            catch
+            {
+                // A message that cannot be shown must not cost the robbery.
+            }
         }
 
         /// <summary>

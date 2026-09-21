@@ -10,5 +10,7 @@
     <string id="hev_strip_reprisal_reply" text="Háblame de honor cuando termines de robarme. Tómalo, pues, tómalo todo: tendré mejor antes de un mes, y al próximo que deje en camisa puede que lleve tu apellido." />
     <string id="hev_strip_friend" text="No te lo tomes como algo personal. Entrégame tus armas y tu armadura." />
     <string id="hev_strip_friend_reply" text="Esperaba esto de cualquiera menos de ti. Tómalas, pues. No tengo nada más que decirte." />
+    <string id="hev_robbed_by_lord" text="{CAPTOR} ha despojado a {VICTIM} de sus armas y su armadura." />
+    <string id="hev_robbed_by_bandits" text="{VICTIM} ha sido despojado de sus armas y su armadura por sus captores." />
   </strings>
 </base>
