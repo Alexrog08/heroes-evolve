@@ -341,18 +341,25 @@ namespace HeroesEvolve
         /// <summary>
         /// Tells the player when one of his own is stripped, and nobody else.
         ///
-        /// The game already says "X has been taken prisoner by Y" for a hero of
-        /// the player's clan and says nothing for anyone else's, because the
-        /// rest of the map's captures are not his business. Losing a man's gear
-        /// is the same kind of news and arrives in the same instant, so it goes
-        /// in the same place, directly under the line that announced the
-        /// capture.
+        /// It goes directly under the game's own "X has been taken prisoner by
+        /// Y", which is where the news belongs: same event, same instant.
         ///
-        /// Restricting it to his clan is not the mod treating the player as a
-        /// special case. It decides who is told, not what happens: every lord
-        /// in Calradia is robbed by the same rules whether or not anybody reads
-        /// about it. Announcing the other four hundred would be noise, and the
-        /// game's own log draws exactly this line.
+        /// Narrower than vanilla, deliberately, and the first version of this
+        /// comment claimed the opposite. Read off the assembly:
+        /// TakePrisonerLogEntry.IsVisibleNotification returns a hardcoded true
+        /// and GetNotificationText never mentions Hero.MainHero, PlayerClan or
+        /// any kingdom -- its six wordings differ only in whether a faction is
+        /// named. The game announces every capture on the map to everybody.
+        ///
+        /// Copying that is not a virtue. A capture takes a lord off the board
+        /// and is worth knowing about wherever it happens; a stranger losing
+        /// his boots is not something the player can act on, and robberies are
+        /// frequent enough that announcing all of them would bury the ones that
+        /// matter. His own clan is the line worth drawing even though vanilla
+        /// does not draw it.
+        ///
+        /// It decides who is told, not what happens: every lord in Calradia is
+        /// robbed by the same rules whether or not anybody reads about it.
         ///
         /// The message never says what was taken. A player who wants the detail
         /// opens the hero and looks, and a list of eleven items in a floating
