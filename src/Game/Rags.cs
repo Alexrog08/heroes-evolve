@@ -123,7 +123,23 @@ namespace HeroesEvolve
 
             ItemObject.ItemTypeEnum type = taken.ItemType;
             bool body = type == ItemObject.ItemTypeEnum.BodyArmor;
-            int ceiling = RagTier.For(body);
+
+            // The floor is the dress rule; the ceiling is what he just lost.
+            //
+            // These were the same number in the first version and four lords in
+            // seven came out of a test robbery with a bare slot: passing the
+            // floor as the ceiling too asks for "exactly tier 1", not "the
+            // cheapest there is", and Aserai sells no boots at tier 1 while
+            // Sturgia sells no gloves below tier 3. A slot left bare is bare for
+            // life, so the search has to reach as far up as it must and the loop
+            // below takes the lowest it finds.
+            //
+            // Never above what was taken, so rags cannot be an upgrade. A man
+            // robbed of plated boots does not walk away in better ones because
+            // his people make nothing cheap.
+            int floor = RagTier.For(body);
+            int ceiling = (int)taken.Tier + 1;
+            if (ceiling < floor) ceiling = floor;
 
             bool mount = type == ItemObject.ItemTypeEnum.Horse;
             WeaponCategory wanted = ItemClassifier.Classify(taken);
@@ -145,7 +161,7 @@ namespace HeroesEvolve
                 if (wanted != WeaponCategory.None
                     && ItemClassifier.Classify(item) != wanted) continue;
 
-                if (!ItemCatalog.PassesCommonFilters(item, culture, ceiling, ceiling)) continue;
+                if (!ItemCatalog.PassesCommonFilters(item, culture, ceiling, floor)) continue;
 
                 int tier = (int)item.Tier + 1;
                 if (tier >= bestTier) continue;
