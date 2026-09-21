@@ -121,8 +121,7 @@ namespace HeroesEvolve
             CultureObject culture = hero.Culture;
             if (culture == null && hero.Clan != null) culture = hero.Clan.Culture;
 
-            ItemObject.ItemTypeEnum type = taken.ItemType;
-            bool body = type == ItemObject.ItemTypeEnum.BodyArmor;
+            bool body = taken.ItemType == ItemObject.ItemTypeEnum.BodyArmor;
 
             // The floor is the dress rule; the ceiling is what he just lost.
             //
@@ -141,6 +140,35 @@ namespace HeroesEvolve
             int ceiling = (int)taken.Tier + 1;
             if (ceiling < floor) ceiling = floor;
 
+            // His own people first, at the rag tier and no higher.
+            ItemObject own = Search(taken, culture, floor, floor);
+            if (own != null) return own;
+
+            // Then anyone's, still at the rag tier. Some cultures simply make
+            // nothing cheap: Sturgia's cheapest gloves are tier 3 and Aserai
+            // sells no boots at tier 1 at all, so insisting on his own colours
+            // here means handing a robbed man gloves barely worse than the ones
+            // just taken off him. Foreign rags are the better answer and the
+            // truer one -- what he is standing in was scavenged out of the
+            // baggage of the army that held him, and none of that was his.
+            ItemObject foreign = Search(taken, null, floor, floor);
+            if (foreign != null) return foreign;
+
+            // And if the world sells nothing that cheap in this slot, his own
+            // people at whatever it costs, up to what was taken. Last because
+            // it is the one that can hand back something nearly as good; still
+            // better than a slot left bare, which stays bare for life.
+            return Search(taken, culture, ceiling, floor);
+        }
+
+        /// <summary>
+        /// The cheapest item of the same kind within one tier band. A null
+        /// culture means anybody's.
+        /// </summary>
+        private static ItemObject Search(ItemObject taken, CultureObject culture,
+                                         int ceiling, int floor)
+        {
+            ItemObject.ItemTypeEnum type = taken.ItemType;
             bool mount = type == ItemObject.ItemTypeEnum.Horse;
             WeaponCategory wanted = ItemClassifier.Classify(taken);
 
