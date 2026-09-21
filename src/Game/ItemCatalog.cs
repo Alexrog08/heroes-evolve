@@ -320,6 +320,20 @@ namespace HeroesEvolve
         /// </summary>
         public static bool PassesCommonFilters(ItemObject item, CultureObject culture, int maxTier)
         {
+            return PassesCommonFilters(item, culture, maxTier, KitTier.Lowest);
+        }
+
+        /// <summary>
+        /// The same, with the armour floor named rather than assumed.
+        ///
+        /// Only the rags a robbery leaves behind pass anything but
+        /// KitTier.Lowest, and they pass it for the slots that hold no gowns.
+        /// See RagTier for why the chest is the exception and why the rest of
+        /// the man has to be allowed below the usual floor at all.
+        /// </summary>
+        public static bool PassesCommonFilters(ItemObject item, CultureObject culture,
+                                               int maxTier, int minArmorTier)
+        {
             // Provenance, and only the free grant asks about it. Conjuring a
             // hero a crown out of the catalogue invents something the game never
             // put in circulation. Finding one on a shelf does not.
@@ -329,7 +343,7 @@ namespace HeroesEvolve
             if (item.IsUniqueItem) return false;
             if (!IsOwnOrNeutral(item, culture)) return false;
 
-            return PassesMarketFilters(item, culture, maxTier);
+            return PassesMarketFilters(item, culture, maxTier, minArmorTier);
         }
 
         /// <summary>
@@ -353,13 +367,22 @@ namespace HeroesEvolve
         /// </summary>
         public static bool PassesMarketFilters(ItemObject item, CultureObject culture, int maxTier)
         {
+            return PassesMarketFilters(item, culture, maxTier, KitTier.Lowest);
+        }
+
+        /// <summary>
+        /// The same, with the armour floor named. See RagTier.
+        /// </summary>
+        public static bool PassesMarketFilters(ItemObject item, CultureObject culture,
+                                               int maxTier, int minArmorTier)
+        {
             if (item == null) return false;
 
             // Clothing is not kit, whoever is selling it. See KitTier: the rack
             // below tier 2 is where every dress in the game lives, and a lord
             // has no business in one whether he was handed it, bought it or
             // stripped it off a prisoner.
-            if (IsArmorSlot(item.ItemType) && KitTier.IsClothing((int)item.Tier + 1)) return false;
+            if (IsArmorSlot(item.ItemType) && (int)item.Tier + 1 < minArmorTier) return false;
 
             // TierCeiling speaks 1-based tiers (1..6); ItemObject.Tier is the 0-based
             // ItemTiers enum (Tier1 = 0 .. Tier6 = 5). Convert rather than letting the

@@ -436,6 +436,13 @@ namespace HeroesEvolve
 
             prisoner.BattleEquipment[slot] = EquipmentElement.Invalid;
             loot.AddToCounts(worn, 1);
+
+            // And he is dressed again in the same breath, in the cheapest thing
+            // of the same kind his people make. Here rather than in the repair
+            // because here is the only place the shape is known for certain:
+            // the piece that made it is in hand. See Rags.
+            Rags.Replace(prisoner, slot, worn.Item);
+
             return 1;
         }
 
@@ -453,7 +460,12 @@ namespace HeroesEvolve
         /// </summary>
         private static bool Takeable(EquipmentElement worn)
         {
-            return worn.Item != null && !worn.IsQuestItem;
+            if (worn.Item == null || worn.IsQuestItem) return false;
+
+            // And nothing already at the bottom of the world. See Rags.IsRag:
+            // without this a man robbed once is robbed again for the rags the
+            // last robbery handed him.
+            return !Rags.IsRag(worn.Item);
         }
 
         /// <summary>

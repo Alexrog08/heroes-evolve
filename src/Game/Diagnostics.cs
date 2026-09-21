@@ -197,6 +197,17 @@ namespace HeroesEvolve
             ModLog.Info("PLUNDERCHANCE tutorial locksTheMap=" + TutorialLock.LocksTheMap()
                         + " playerCanBeStripped=" + PlunderService.CanBeStripped(Hero.MainHero));
 
+            // What the robbery handed back. slotsLeftEmpty is the number to
+            // watch and should be nought: a lord only ever buys a better
+            // version of what he already carries and can never fill an empty
+            // slot, so anything counted here is a slot that stays bare for the
+            // rest of that hero's life. A non-zero count means some culture
+            // sells nothing at all for that slot at the rag tier.
+            ModLog.Info("RAGS handedOut=" + Rags.HandedOut
+                        + " slotsLeftEmpty=" + Rags.SlotsLeftEmpty
+                        + " (body tier " + Core.RagTier.Body
+                        + ", everything else " + Core.RagTier.Everything + ")");
+
             for (int i = 0; i < dishonourable.Count; i++)
             {
                 ModLog.Info("TRAITS dishonourable " + dishonourable[i]);

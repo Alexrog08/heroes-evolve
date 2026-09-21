@@ -74,6 +74,7 @@ namespace HeroesEvolve
             CaravanWatch.ResetSession();
             CaravanPurse.ResetSession();
             PurchaseWatch.ResetSession();
+            Rags.ResetSession();
             ItemCatalog.ResetSession();
             HeroTalent.ResetSession();
             WrittenSkills.ResetSession();

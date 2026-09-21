@@ -1,0 +1,160 @@
+using System.Collections.Generic;
+using TaleWorlds.CampaignSystem;
+using TaleWorlds.Core;
+using TaleWorlds.Library;
+using TaleWorlds.ObjectSystem;
+using HeroesEvolve.Core;
+
+namespace HeroesEvolve
+{
+    /// <summary>
+    /// What a man is left standing in when he is robbed.
+    ///
+    /// The rule and the reasoning are in RagTier. This is the half that needs
+    /// the game: for one slot the robbery has just emptied, find the cheapest
+    /// thing of the same kind his own people make, and put it there.
+    ///
+    /// Called from inside the strip itself, with the piece that was taken still
+    /// in hand. That is the whole trick and the reason no loadout has to be
+    /// remembered anywhere: the shape is not recalled, it is read off the thing
+    /// being removed, one slot at a time.
+    ///
+    /// Deliberately not the repair. GrantService answers "this man has nothing
+    /// and never did, what should he be?" by reading his skills and inventing a
+    /// loadout, which is right for a lord whose gear never generated and wrong
+    /// for one who had a loadout until a moment ago. Two different questions,
+    /// two different answers; the repair is left alone.
+    ///
+    /// Items are conjured rather than moved, exactly as the repair conjures
+    /// them. The captor keeps every real piece -- that is the point of robbing
+    /// him -- and can be beaten to get it back.
+    /// </summary>
+    public static class Rags
+    {
+        private static int _handedOut;
+        private static int _slotsLeftEmpty;
+
+        /// <summary>Counts since the session began, for the census.</summary>
+        public static int HandedOut { get { return _handedOut; } }
+
+        /// <summary>
+        /// Slots a robbery emptied and this could not refill, which matter more
+        /// than they look: a lord only ever buys a better version of what he
+        /// already carries, so a slot left empty here is empty for good.
+        /// </summary>
+        public static int SlotsLeftEmpty { get { return _slotsLeftEmpty; } }
+
+        public static void ResetSession()
+        {
+            _handedOut = 0;
+            _slotsLeftEmpty = 0;
+        }
+
+        /// <summary>
+        /// Whether this piece is already the bottom of the world and not worth
+        /// a captor's trouble.
+        ///
+        /// Closes a mill the rags would otherwise turn. A man robbed once now
+        /// stands in tier-1 boots and a tier-2 coat; rob him again and he loses
+        /// those and is handed the same thing back, which is motion without
+        /// consequence -- a line in the log, a few denars, and a lord who keeps
+        /// being reported as robbed. Nothing worth taking is not taken.
+        ///
+        /// Shared with Takeable, so the conversation stops offering a demand
+        /// over a man who has nothing left of value, exactly as it already does
+        /// for one stripped bare.
+        ///
+        /// It spares the genuinely poor as well as the recently robbed, and
+        /// that is the right answer for both. Their gear is at the floor this
+        /// hands out, so taking it and replacing it changes nothing about them
+        /// either.
+        /// </summary>
+        public static bool IsRag(ItemObject item)
+        {
+            if (item == null) return false;
+            if (!ItemCatalog.IsArmorSlot(item.ItemType)) return false;
+
+            bool body = item.ItemType == ItemObject.ItemTypeEnum.BodyArmor;
+            return (int)item.Tier + 1 <= RagTier.For(body);
+        }
+
+        /// <summary>
+        /// Puts the cheapest equivalent of <paramref name="taken"/> back into
+        /// the slot it came out of. Returns true if something was found.
+        /// </summary>
+        public static bool Replace(Hero hero, EquipmentIndex slot, ItemObject taken)
+        {
+            if (hero == null || taken == null || hero.BattleEquipment == null) return false;
+
+            try
+            {
+                ItemObject rag = Cheapest(hero, taken);
+                if (rag == null)
+                {
+                    _slotsLeftEmpty++;
+                    return false;
+                }
+
+                hero.BattleEquipment[slot] = new EquipmentElement(rag, null, null, false);
+                _handedOut++;
+                return true;
+            }
+            catch
+            {
+                // A hero who cannot be dressed is left as the robbery found
+                // him. Better a bare slot than a throw inside a capture.
+                _slotsLeftEmpty++;
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// The cheapest item of the same kind, in his own colours.
+        ///
+        /// Same kind means the game's own ItemType, and for a weapon that is
+        /// not enough on its own -- OneHandedWeapon covers a sword and a mace
+        /// alike -- so weapons are matched on the mod's own category as well.
+        /// A man robbed of an axe is handed an axe.
+        /// </summary>
+        private static ItemObject Cheapest(Hero hero, ItemObject taken)
+        {
+            CultureObject culture = hero.Culture;
+            if (culture == null && hero.Clan != null) culture = hero.Clan.Culture;
+
+            ItemObject.ItemTypeEnum type = taken.ItemType;
+            bool body = type == ItemObject.ItemTypeEnum.BodyArmor;
+            int ceiling = RagTier.For(body);
+
+            bool mount = type == ItemObject.ItemTypeEnum.Horse;
+            WeaponCategory wanted = ItemClassifier.Classify(taken);
+
+            ItemObject best = null;
+            int bestTier = int.MaxValue;
+
+            MBReadOnlyList<ItemObject> all = MBObjectManager.Instance.GetObjectTypeList<ItemObject>();
+            for (int i = 0; i < all.Count; i++)
+            {
+                ItemObject item = all[i];
+                if (item == null || item.ItemType != type) continue;
+
+                // A war mount, never a mule: ItemTypeEnum.Horse covers both, and
+                // the pack animals are the only ones a hero with no riding can
+                // sit on. See ItemCatalog.IsWarMount.
+                if (mount && !ItemCatalog.IsWarMount(item)) continue;
+
+                if (wanted != WeaponCategory.None
+                    && ItemClassifier.Classify(item) != wanted) continue;
+
+                if (!ItemCatalog.PassesCommonFilters(item, culture, ceiling, ceiling)) continue;
+
+                int tier = (int)item.Tier + 1;
+                if (tier >= bestTier) continue;
+
+                bestTier = tier;
+                best = item;
+            }
+
+            return best;
+        }
+    }
+}
