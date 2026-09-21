@@ -72,8 +72,15 @@ namespace HeroesEvolve
         public static bool IsRag(ItemObject item)
         {
             if (item == null) return false;
-            if (!ItemCatalog.IsArmorSlot(item.ItemType)) return false;
 
+            // Every kind, not only armour. The first version asked this of the
+            // armour slots alone, and a test robbery showed what that left
+            // running: a lord already in rags kept his coat and boots, which
+            // were spared, and lost his pitchfork, his arrows and his horse
+            // every time. The log read empire_horse, then hunter, then hunter,
+            // and barbed_arrows, then default_arrows, then default_arrows. It
+            // settles once everything is at the bottom, but until then it is
+            // churn nobody asked for.
             bool body = item.ItemType == ItemObject.ItemTypeEnum.BodyArmor;
             return (int)item.Tier + 1 <= RagTier.For(body);
         }
