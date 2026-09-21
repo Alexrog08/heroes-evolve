@@ -24,6 +24,16 @@ namespace HeroesEvolve.Tests
             Check.Equal(1, RagTier.Everything, "the rest of the man takes the cheapest there is");
             Check.Equal(RagTier.Everything, RagTier.For(false), "and For says so for everything else");
 
+            // The line that keeps the two repairs apart. GrantService.NeedsGrant
+            // calls a man broken when his chest is clothing, so the chest rag
+            // must not be: otherwise a robbery would leave him looking broken,
+            // the next day's repair would dress him out of his skills, and the
+            // shape the robbery just preserved would be thrown away. The head
+            // rag is below that line on purpose, which is why NeedsGrant stopped
+            // reading the head at all.
+            Check.False(KitTier.IsClothing(RagTier.Body),
+                        "a robbed man is poor, not broken, so the repair leaves him alone");
+
             // The whole point is that these are worse than what a man loses.
             Check.True(RagTier.Everything < RagTier.Body, "rags are not evenly bad");
             Check.True(RagTier.Body < GrantTier.Maximum,

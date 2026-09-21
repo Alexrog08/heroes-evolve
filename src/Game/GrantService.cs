@@ -62,8 +62,24 @@ namespace HeroesEvolve
 
             if (weapons < MinimumWeapons) return true;
 
-            return IsCivilian(hero.BattleEquipment[EquipmentIndex.Body].Item)
-                   || IsCivilian(hero.BattleEquipment[EquipmentIndex.Head].Item);
+            // The chest alone, and the head deliberately not. This asks "did
+            // this man ever get a soldier's kit?", and the chest is where that
+            // is answered: every gown in the game is a tier-1 body armour, and
+            // a lord who came of age in civilian clothes is wearing one.
+            //
+            // The head used to count too, and that made these two repairs
+            // collide. A robbery now leaves a man in rags -- tier-2 chest,
+            // tier-1 everywhere else, see RagTier -- so his cloth cap read as
+            // civilian, this said he was broken, and the next day's repair
+            // dressed him out of his skills and threw away the shape the
+            // robbery had just preserved. The two answer different questions
+            // and must not answer each other's.
+            //
+            // Nothing is lost by dropping it. A man with weapons and a proper
+            // chest is equipped, however cheap his hat, and the heroes this was
+            // written for come of age civilian from the skin out -- the chest
+            // catches them on its own.
+            return IsCivilian(hero.BattleEquipment[EquipmentIndex.Body].Item);
         }
 
         /// <summary>

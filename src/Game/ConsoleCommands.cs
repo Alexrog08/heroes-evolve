@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Text;
 using TaleWorlds.CampaignSystem;
+using TaleWorlds.CampaignSystem.Party;
 using TaleWorlds.CampaignSystem.Settlements;
 using TaleWorlds.Core;
 using TaleWorlds.Library;
@@ -146,6 +147,72 @@ namespace HeroesEvolve
         /// vanilla's dummy fallback leaves behind -- the exact state a hero is
         /// in when the come-of-age bug hits.
         /// </summary>
+        /// <summary>
+        /// Robs a hero through the real robbery, so the rags it leaves can be
+        /// read rather than waited for.
+        ///
+        /// test_repair next door strips a hero by hand and calls the repair,
+        /// which is the other path entirely: it answers "this man never had
+        /// anything". This one goes through PlunderService.Take, which is where
+        /// Rags hangs, so what comes back is what a captured lord would really
+        /// be standing in.
+        ///
+        /// Needed because the thing worth checking is rare and slow in play. A
+        /// robbery wants a capture, a captor whose character rolls for it, and
+        /// a slot some culture sells nothing for at the rag tier. Waiting for
+        /// that combination to turn up by itself is not a test.
+        ///
+        /// The spoils go nowhere anybody keeps: a throwaway roster, so running
+        /// this does not quietly hand the player's party a lord's armour.
+        /// </summary>
+        [CommandLineFunctionality.CommandLineArgumentFunction("test_robbery", "hev")]
+        public static string TestRobbery(List<string> args)
+        {
+            if (Campaign.Current == null) return "hev: no campaign is running.";
+
+            Hero hero = FindHero(args);
+            if (hero == null) return Usage("hev.test_robbery", args);
+            if (hero.BattleEquipment == null) return "hev: " + hero.Name + " has no battle equipment.";
+
+            if (!PlunderService.CanBeStripped(hero))
+            {
+                return "hev: " + hero.Name + " is not someone this mod will strip. "
+                       + "Use hev.dry_run to inspect any hero without modifying it.";
+            }
+
+            StringBuilder report = new StringBuilder();
+            report.AppendLine("hev: THIS MODIFIED " + hero.Name + ". Do not save over a campaign you care about.");
+
+            int before = Rags.HandedOut;
+            int emptyBefore = Rags.SlotsLeftEmpty;
+
+            ModLog.Info("TESTROBBERY hero=" + hero.Name
+                        + " culture=" + (hero.Culture != null ? hero.Culture.StringId : "none")
+                        + " before=" + Describe(hero));
+            report.AppendLine("before: " + Describe(hero));
+
+            // Somewhere for the loot to go that nobody is carrying afterwards.
+            MobileParty bin = hero.PartyBelongedTo != null ? hero.PartyBelongedTo : MobileParty.MainParty;
+            if (bin == null) return "hev: no party to put the spoils in.";
+
+            int value;
+            int taken = PlunderService.Take(bin.Party, hero, out value);
+
+            ModLog.Info("TESTROBBERY hero=" + hero.Name + " taken=" + taken + " value=" + value
+                        + " after=" + Describe(hero)
+                        + " ragsHandedOut=" + (Rags.HandedOut - before)
+                        + " slotsLeftEmpty=" + (Rags.SlotsLeftEmpty - emptyBefore));
+
+            report.AppendLine("taken: " + taken + " pieces worth " + value);
+            report.AppendLine("rags handed back: " + (Rags.HandedOut - before));
+            report.AppendLine("slots left empty: " + (Rags.SlotsLeftEmpty - emptyBefore)
+                              + (Rags.SlotsLeftEmpty - emptyBefore > 0 ? "   <-- these stay bare for life" : ""));
+            report.AppendLine("after: " + Describe(hero));
+            report.AppendLine("(the spoils went into " + bin.Name + "; full detail in hev.log)");
+
+            return report.ToString();
+        }
+
         private static void Strip(Hero hero)
         {
             for (int i = 0; i < SlotSnapshot.WeaponSlotCount; i++)
