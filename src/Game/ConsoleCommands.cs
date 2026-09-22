@@ -88,10 +88,15 @@ namespace HeroesEvolve
             // same for a companion equipped over a whole campaign. Restricting
             // the command to the population the mod actually acts on is also
             // the only thing that makes the test meaningful.
-            if (!HeroFilter.IsEligible(hero))
+            //
+            // The repair's own filter, not the general one. The two parted when
+            // companions stopped getting the starting kit: asked with the
+            // general filter, this would strip a companion and then watch the
+            // real repair decline to dress him again.
+            if (!HeroFilter.IsEligibleForRepair(hero))
             {
-                return "hev: " + hero.Name + " is not a hero this mod touches "
-                       + "(player character, companion, child, or template). Refusing to strip. "
+                return "hev: " + hero.Name + " is not a hero the repair touches ("
+                       + HeroFilter.WhyNoRepair(hero) + "). Refusing to strip. "
                        + "Use hev.dry_run to inspect any hero without modifying it.";
             }
 

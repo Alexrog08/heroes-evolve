@@ -1497,7 +1497,10 @@ namespace HeroesEvolve
                                 + " age=" + (int)hero.Age
                                 + " where=" + place
                                 + " grown=" + HeroFilter.IsEligibleToGrow(hero)
-                                + " geared=" + HeroFilter.IsEligible(hero)
+                                // The repair's own answer, not the general
+                                // one: a companion can be robbed and still
+                                // never be handed the starting kit.
+                                + " geared=" + HeroFilter.IsEligibleForRepair(hero)
                                 // The third filter, and it was missing. A
                                 // census that reports two of the three answers
                                 // cannot show a hero the mod repairs and grows
@@ -1505,6 +1508,9 @@ namespace HeroesEvolve
                                 // every companion was.
                                 + " shops=" + HeroFilter.IsEligibleToShop(hero)
                                 + " why=" + (HeroFilter.WhyIneligible(hero) ?? "-")
+                                + (HeroFilter.WhyIneligible(hero) == null
+                                   && !HeroFilter.IsEligibleForRepair(hero)
+                                   ? " noKit=" + HeroFilter.WhyNoRepair(hero) : "")
                                 + " isLord=" + hero.IsLord
                                 + " companionOf=" + (hero.CompanionOf != null
                                                      ? hero.CompanionOf.Name.ToString() : "none")
