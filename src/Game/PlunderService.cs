@@ -145,7 +145,7 @@ namespace HeroesEvolve
             int taken = Take(spoils, prisoner, out value);
             if (taken == 0) return 0;
 
-            Announce(captor, bandit, prisoner);
+            Announce(captor, bandit, prisoner, false);
 
             // Doing the robbing costs the robber standing with the man he
             // robbed. Being robbed costs the victim nothing, because it is not
@@ -365,7 +365,7 @@ namespace HeroesEvolve
         /// opens the hero and looks, and a list of eleven items in a floating
         /// notification is not read by anybody.
         /// </summary>
-        private static void Announce(Hero captor, bool bandit, Hero prisoner)
+        internal static void Announce(Hero captor, bool bandit, Hero prisoner, bool force)
         {
             if (prisoner == null || Hero.MainHero == null) return;
 
@@ -381,7 +381,7 @@ namespace HeroesEvolve
             // to be worth having, rare enough that it never buries anything.
             // The whole map would be 71, which is the register of vanilla's
             // capture spam and the thing worth not copying.
-            if (prisoner.MapFaction != Hero.MainHero.MapFaction) return;
+            if (!force && prisoner.MapFaction != Hero.MainHero.MapFaction) return;
 
             try
             {

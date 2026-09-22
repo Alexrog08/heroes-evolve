@@ -210,6 +210,17 @@ namespace HeroesEvolve
                         + " ragsHandedOut=" + (Rags.HandedOut - before)
                         + " slotsLeftEmpty=" + (Rags.SlotsLeftEmpty - emptyBefore));
 
+            // Both notices, on demand. The message is the one part of a
+            // robbery a player actually reads, and the one part no unit test
+            // can prove: a text variable whose name does not match renders as
+            // the literal {CAPTOR}. Forced past the faction check, because the
+            // thing being checked here is the wording, not who gets told.
+            Hero witness = bin.LeaderHero != null && bin.LeaderHero != hero
+                           ? bin.LeaderHero : Hero.MainHero;
+            PlunderService.Announce(witness, false, hero, true);
+            PlunderService.Announce(null, true, hero, true);
+            report.AppendLine("two notices sent to the log -- read them, they are the point.");
+
             report.AppendLine("taken: " + taken + " pieces worth " + value);
             report.AppendLine("rags handed back: " + (Rags.HandedOut - before));
             report.AppendLine("slots left empty: " + (Rags.SlotsLeftEmpty - emptyBefore)
