@@ -92,13 +92,14 @@ namespace HeroesEvolve
         {
             if (item == null) return false;
 
-            // Asked once and held, because ExcludedModuleIds hands out a fresh
-            // copy on every call and this runs per item per shelf. Two calls
-            // here were two arrays per item.
-            string[] excluded = Settings.ExcludedModuleIds();
-            if (!ModuleRules.Any(excluded)) return false;
+            // Answered without a copy first. ExcludedModuleIds hands out a
+            // fresh array on every call and this runs per item per shelf, so
+            // asking it whether the list was empty allocated some thousands of
+            // arrays per market scan to learn that nothing was excluded --
+            // which is the answer for nearly every player.
+            if (!Settings.AnyModuleExcluded()) return false;
 
-            return ModuleRules.Refuses(ModuleOf(item.StringId), excluded);
+            return ModuleRules.Refuses(ModuleOf(item.StringId), Settings.ExcludedModuleIds());
         }
 
         /// <summary>The module that declared this item id, or null if none did.</summary>

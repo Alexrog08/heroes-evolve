@@ -280,6 +280,20 @@ namespace HeroesEvolve
         /// The excluded modules as entered. A copy, for the same reason
         /// ExcludedIds hands one out.
         /// </summary>
+        /// <summary>
+        /// Whether anything is excluded at all, without handing out a copy.
+        ///
+        /// ItemModules.Refuses asks this per item per shelf -- some thousands
+        /// of times in one market scan -- and the answer is no for nearly
+        /// every player. Reading the count through the same pure rule costs
+        /// nothing; taking a defensive copy of an empty array to ask it cost
+        /// an allocation every time.
+        /// </summary>
+        public static bool AnyModuleExcluded()
+        {
+            return Core.ModuleRules.Any(_excludedModules);
+        }
+
         public static string[] ExcludedModuleIds()
         {
             string[] copy = new string[_excludedModules.Length];
