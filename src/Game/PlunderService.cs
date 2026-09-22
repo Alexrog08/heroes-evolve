@@ -545,13 +545,21 @@ namespace HeroesEvolve
         /// </summary>
         public static bool AnnounceRelease(Hero prisoner, EndCaptivityDetail detail)
         {
-            if (prisoner == null || prisoner != Hero.MainHero) return false;
+            if (prisoner == null) return false;
 
-            // A dead man is not told what he is wearing. The ledger entry goes
-            // either way, so his death cannot leave one behind.
-            bool dead = detail == EndCaptivityDetail.Death;
+            // Cleared for everybody, read by one. Only the player is told, but
+            // every hero on the map is robbed by the same rules, and an entry
+            // that is never consumed is never released either: asking about
+            // the player first left one behind for every AI lord robbed in the
+            // session. Consuming here keeps the ledger to the heroes currently
+            // held and robbed, which is what its own comment promises.
+            bool robbed = CaptivityRobberies.Consume(prisoner);
 
-            if (!CaptivityRobberies.Consume(prisoner) || dead) return false;
+            if (prisoner != Hero.MainHero) return false;
+
+            // A dead man is not told what he is wearing. His entry is gone
+            // either way, by the line above.
+            if (!robbed || detail == EndCaptivityDetail.Death) return false;
 
             try
             {

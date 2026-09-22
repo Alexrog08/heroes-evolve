@@ -277,7 +277,17 @@ namespace HeroesEvolve
 
         private void OnTick(float dt)
         {
-            PendingNotices.Flush();
+            // Guarded without logging, unlike the other handlers here. A throw
+            // on the tick would otherwise write a line every frame, and the
+            // queue clears itself before printing, so a failure costs one
+            // sentence rather than repeating for ever.
+            try
+            {
+                PendingNotices.Flush();
+            }
+            catch
+            {
+            }
         }
 
         private void OnDailyTickHero(Hero hero)
