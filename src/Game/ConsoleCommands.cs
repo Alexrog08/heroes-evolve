@@ -219,7 +219,8 @@ namespace HeroesEvolve
                            ? bin.LeaderHero : Hero.MainHero;
             if (witness != null)
             {
-                PlunderService.Announce(witness.MapFaction, witness.Name, hero, true);
+                PlunderService.Announce(witness.MapFaction,
+                                        PlunderService.NameOf(witness), hero, true);
             }
             report.AppendLine("notice sent to the log -- read it, it is the point.");
 

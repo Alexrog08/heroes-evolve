@@ -150,7 +150,7 @@ namespace HeroesEvolve
             // settlements took the early return above -- so a looter gang is
             // named as readily as a lord.
             Announce(captorParty.MapFaction,
-                     captor != null ? captor.Name : captorParty.Name, prisoner, false);
+                     captor != null ? NameOf(captor) : captorParty.Name, prisoner, false);
 
             // Doing the robbing costs the robber standing with the man he
             // robbed. Being robbed costs the victim nothing, because it is not
@@ -339,7 +339,7 @@ namespace HeroesEvolve
                 // than under a capture notice, because his capture was days
                 // ago, but withholding it would mean the message depended on
                 // where the robbery happened instead of whom it happened to.
-                Announce(visitor.MapFaction, visitor.Name, prisoner, false);
+                Announce(visitor.MapFaction, NameOf(visitor), prisoner, false);
             }
 
             if (robbed == 0) return 0;
@@ -409,6 +409,36 @@ namespace HeroesEvolve
         /// TaleWorlds uses one line above -- "X has been taken prisoner by Y"
         /// -- so the pair reads as one piece of news rather than two.
         /// </summary>
+        /// <summary>
+        /// How this man is named in a notice: with his people behind him when
+        /// he has any worth naming.
+        ///
+        /// Vanilla's own shape, read off TakePrisonerLogEntry.
+        /// GetNotificationText -- "{PRISONER_LORD.LINK} of the
+        /// {PRISONER_FACTION_LINK} has been taken prisoner by ..." -- down to
+        /// the test that decides who gets placed. It reads Clan.IsMinorFaction
+        /// and leaves those men bare, which is right: a mercenary company or a
+        /// bandit clan is not a people to be "of", and the notice reads worse
+        /// for pretending otherwise.
+        ///
+        /// EncyclopediaLinkWithName rather than Name, again as vanilla does,
+        /// so the faction is the same clickable name the rest of the log
+        /// carries rather than a flat word beside it.
+        /// </summary>
+        internal static TextObject NameOf(Hero hero)
+        {
+            if (hero == null) return null;
+            if (hero.Clan == null || hero.Clan.IsMinorFaction || hero.MapFaction == null)
+            {
+                return hero.Name;
+            }
+
+            TextObject placed = new TextObject("{=hev_of_faction}{NAME} of the {FACTION}");
+            placed.SetTextVariable("NAME", hero.Name);
+            placed.SetTextVariable("FACTION", hero.MapFaction.EncyclopediaLinkWithName);
+            return placed;
+        }
+
         internal static void Announce(IFaction captorFaction, TextObject captor,
                                       Hero prisoner, bool force)
         {
@@ -435,7 +465,7 @@ namespace HeroesEvolve
                 TextObject line = new TextObject(
                     "{=hev_robbed}{VICTIM} has been stripped of arms and armour by {CAPTOR}.");
 
-                line.SetTextVariable("VICTIM", prisoner.Name);
+                line.SetTextVariable("VICTIM", NameOf(prisoner));
                 line.SetTextVariable("CAPTOR", captor);
 
                 // The colour the game uses for a loss rather than a warning, so
@@ -494,8 +524,11 @@ namespace HeroesEvolve
                 TextObject line = new TextObject(
                     "{=hev_released_scavenged}You scavenged plain gear from your captors' baggage, of the same kinds you carried.");
 
+                // Grey, not the red the robberies use. Nothing is being
+                // lost at this moment -- the loss happened days ago and was
+                // reported then. This is the man telling you how he got home.
                 InformationManager.DisplayMessage(
-                    new InformationMessage(line.ToString(), Colors.Red));
+                    new InformationMessage(line.ToString(), Colors.Gray));
                 return true;
             }
             catch

@@ -12,5 +12,6 @@
     <string id="hev_strip_friend_reply" text="De n’importe qui j’aurais attendu cela, mais pas de vous. Prenez-les, donc. Je n’ai plus rien à vous dire." />
     <string id="hev_robbed" text="{VICTIM} a été dépouillé de ses armes et de son armure par {CAPTOR}." />
     <string id="hev_released_scavenged" text="Vous avez récupéré de l'équipement sommaire dans les bagages de vos geôliers, des mêmes sortes que ce que vous portiez." />
+    <string id="hev_of_faction" text="{NAME} de {FACTION}" />
   </strings>
 </base>
