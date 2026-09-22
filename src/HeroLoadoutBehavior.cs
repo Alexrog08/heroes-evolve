@@ -77,6 +77,7 @@ namespace HeroesEvolve
             PurchaseWatch.ResetSession();
             Rags.ResetSession();
             CaptivityRobberies.ResetSession();
+            PendingNotices.ResetSession();
             ItemCatalog.ResetSession();
             HeroTalent.ResetSession();
             WrittenSkills.ResetSession();
@@ -103,6 +104,12 @@ namespace HeroesEvolve
             // the dead subscription is removed rather than fought.
             ModLog.Info("SETTINGS in force: " + Settings.Describe());
             ItemCatalog.ReportUnknownExclusions();
+
+            // One branch a tick, and nothing else unless a line is waiting.
+            // The robbery notice has to print after the game's own capture
+            // line, and no ordering of listeners can achieve that -- see
+            // PendingNotices. It waits a frame instead.
+            CampaignEvents.TickEvent.AddNonSerializedListener(this, OnTick);
 
             CampaignEvents.DailyTickHeroEvent.AddNonSerializedListener(this, OnDailyTickHero);
 
@@ -266,6 +273,11 @@ namespace HeroesEvolve
         private static string IdOf(Hero hero)
         {
             return hero.StringId;
+        }
+
+        private void OnTick(float dt)
+        {
+            PendingNotices.Flush();
         }
 
         private void OnDailyTickHero(Hero hero)

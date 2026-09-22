@@ -356,14 +356,19 @@ namespace HeroesEvolve
         /// and says nothing otherwise.
         ///
         /// After a capture it goes directly under the game's own "X has been
-        /// taken prisoner by Y", which is where the news belongs. That
-        /// ordering is structural rather than lucky. Both lines are listeners
-        /// on HeroPrisonerTaken -- TakePrisonerAction.ApplyInternal raises it
-        /// once at the end, and DefaultLogsCampaignBehavior.OnPrisonerTaken is
-        /// what builds the vanilla entry -- and the dispatcher calls listeners
-        /// in the order they registered. SubModule.xml depends on Sandbox, so
-        /// that behaviour is always in before this one, and the mod's line is
-        /// always the second of the two.
+        /// taken prisoner by Y", which is where the news belongs -- but not
+        /// for the reason an earlier version of this comment gave. It claimed
+        /// the ordering was structural because listeners run in the order they
+        /// registered. They run in the reverse of it: MbEvent prepends, so the
+        /// last listener registered is the first to run, and a module that
+        /// declares its dependencies honestly always registers last. This
+        /// mod's line was printing ABOVE the capture that caused it.
+        ///
+        /// Both are listeners on the same HeroPrisonerTaken, raised once at
+        /// the end of TakePrisonerAction.ApplyInternal, with the vanilla entry
+        /// built by DefaultLogsCampaignBehavior.OnPrisonerTaken. Nothing on
+        /// this side of the event can get behind that, so the line waits a
+        /// frame instead. See PendingNotices.
         ///
         /// Both ends, because the banner is what decides and a banner does not
         /// only lose. One of your lords going through a prisoner's kit is news
@@ -489,11 +494,14 @@ namespace HeroesEvolve
                 line.SetTextVariable("VICTIM", NameOf(prisoner));
                 line.SetTextVariable("CAPTOR", captor);
 
-                // The colour the game uses for a loss rather than a warning, so
-                // it reads as part of the same run of messages the capture
-                // itself printed.
-                InformationManager.DisplayMessage(
-                    new InformationMessage(line.ToString(), Colors.Red));
+                // Held one frame, so it prints under the game's own capture
+                // line instead of over it. See PendingNotices -- listeners run
+                // newest-registered first, which put this mod ahead of the
+                // news it was meant to follow.
+                //
+                // Red is the colour the game uses for a loss rather than a
+                // warning, so the pair reads as one run of messages.
+                PendingNotices.Queue(line.ToString(), Colors.Red);
             }
             catch
             {
