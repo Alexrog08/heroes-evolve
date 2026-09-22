@@ -1499,7 +1499,9 @@ namespace HeroesEvolve
                                 + " grown=" + HeroFilter.IsEligibleToGrow(hero)
                                 // The repair's own answer, not the general
                                 // one: a companion can be robbed and still
-                                // never be handed the starting kit.
+                                // never be handed the starting kit. The kit
+                                // also needs its moment -- once, when the game
+                                // makes his gear -- which this cannot show.
                                 + " geared=" + HeroFilter.IsEligibleForRepair(hero)
                                 // The third filter, and it was missing. A
                                 // census that reports two of the three answers

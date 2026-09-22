@@ -85,23 +85,21 @@ namespace HeroesEvolve
             CultureArchetypes.Reset();
             WeaponPerks.Reset();
 
-            // Deliberately NOT subscribed to CampaignEvents.HeroComesOfAgeEvent.
+            // Coming of age, noted and nothing more. See _freshlyMade.
             //
-            // Verified from the game's IL: MbEvent<T>.AddNonSerializedListener
-            // PREPENDS to the listener chain, and InvokeList walks head -> Next,
-            // so the LAST listener registered runs FIRST. Our SubModule.xml
-            // correctly declares dependencies on Native/SandBoxCore/Sandbox/
-            // StoryMode, which means those modules' listeners are registered
-            // after ours and therefore always run before ours on this event --
-            // a module that plays by the dependency-declaration rules can never
-            // win a race against vanilla here. AgingCampaignBehavior is itself a
-            // listener on HeroComesOfAgeEvent, and its handler calls
+            // The repair cannot happen here. AgingCampaignBehavior is another
+            // listener on this event, and its handler calls
             // EquipmentHelper.AssignHeroEquipmentFromEquipment twice, copying
-            // every slot from the dummy set over whatever we had just granted.
-            // There is no ordering trick from this side of the event that
-            // fixes it. The DailyTickHeroEvent path below repairs the same
-            // heroes one in-game day later instead, which actually works, so
-            // the dead subscription is removed rather than fought.
+            // every slot of the dummy set over whatever it finds. It runs AFTER
+            // this mod: MbEvent.AddNonSerializedListener prepends and
+            // InvokeList walks from the head, so the last listener registered
+            // runs first, and a module that declares its dependencies honestly
+            // always registers last. (An earlier version of this note said the
+            // opposite, and its own symptom -- the grant being overwritten --
+            // disproved it.) So the event only records who turned 18, and the
+            // daily tick judges him once the game has finished dressing him.
+            CampaignEvents.HeroComesOfAgeEvent.AddNonSerializedListener(this, OnHeroComesOfAge);
+
             ModLog.Info("SETTINGS in force: " + Settings.Describe());
             ItemCatalog.ReportUnknownExclusions();
 
@@ -191,10 +189,24 @@ namespace HeroesEvolve
         /// the whole roster a moment later; curving each of them twice would
         /// log four hundred lines to reach the same answer.
         /// </summary>
+        /// <summary>
+        /// A lord turning 18, noted for one look tomorrow. See _freshlyMade.
+        /// </summary>
+        private void OnHeroComesOfAge(Hero hero)
+        {
+            NoteFreshlyMade(hero, "cameOfAge");
+        }
+
         private void OnHeroCreated(Hero hero, bool isBornNaturally)
         {
             try
             {
+                // Before the curve's own guards: the kit looks at every hero the
+                // game makes, and HeroCreated fires at the very end of
+                // InitializeHeroFromSettings, after his gear is assigned.
+                // Children are skipped in NoteFreshlyMade and seen at 18.
+                NoteFreshlyMade(hero, _newCampaign ? "newCampaign" : "generated");
+
                 if (_newCampaign) return;
                 if (!Settings.EnableSkillGrowth || !Settings.StartLordsOnCurve) return;
                 if (hero == null || hero.IsChild) return;
@@ -217,6 +229,14 @@ namespace HeroesEvolve
         {
             if (!_newCampaign) return;
             _newCampaign = false;
+
+            // Every lord the world was built with, for one look on his first
+            // day -- whatever the curve is set to. See _freshlyMade.
+            foreach (Hero lord in Hero.AllAliveHeroes)
+            {
+                if (lord != null && lord.IsLord) NoteFreshlyMade(lord, "newCampaign");
+            }
+            ModLog.Info("KIT newCampaign noted=" + _freshlyMade.Count);
 
             if (!Settings.StartLordsOnCurve) return;
 
@@ -244,26 +264,68 @@ namespace HeroesEvolve
         public override void SyncData(IDataStore dataStore) { }
 
         /// <summary>
-        /// Heroes a repair could not help. NeedsGrant asks whether a hero looks
-        /// wrong; it cannot know whether anything can be done about it, and the
-        /// two disagree in real cases. A lord whose ceiling is tier 1 and whose
-        /// body armour is tier 1 is reported broken -- tier 1 is the civilian
-        /// clothing the bug leaves -- while the armour pass refuses to swap one
-        /// tier-1 robe for another, so nothing changes. Likewise a hero whose
-        /// culture and tier leave the catalogue with nothing to offer.
+        /// Lords whose gear TaleWorlds has just made, waiting to be looked at
+        /// once -- keyed by id, with the moment that put them here.
         ///
-        /// Without this, such a hero is re-resolved every single in-game day for
-        /// the rest of the campaign: thirteen full sweeps of a 3500-item
-        /// catalogue, daily, to achieve nothing, and a REPAIR line in the log
-        /// each time. Recording the failure and not trying again is the general
-        /// fix; special-casing the armour tier would leave every other
-        /// unsatisfiable combination looping.
+        /// The starting kit repairs one thing only: a lord whose equipment the
+        /// game generated broken. So it looks at the moments the game generates
+        /// it, and at nothing else.
+        ///   newCampaign -- every lord, as the world is built. TaleWorlds ships
+        ///     some of its own hand-written lords broken (Anidha, Sira and Maraa,
+        ///     in every campaign), and they will never turn 18 inside it.
+        ///   cameOfAge -- a lord turning 18, when the game hands him the gear of
+        ///     an adult. This is where the bug usually shows.
+        ///   generated -- an adult lord the game makes mid-campaign: a rebel
+        ///     leader (RebellionsCampaignBehavior), a minor-faction lord
+        ///     (HeroSpawnCampaignBehavior), a new clan's family when a companion
+        ///     is raised to lead one (CompanionRolesCampaignBehavior). All come
+        ///     out of HeroCreator.CreateSpecialHero, from a template.
+        /// Every time, what is judged is gear TaleWorlds has just produced, and
+        /// never anything the player chose.
         ///
-        /// Not serialised: a fresh attempt on the next load is harmless and
-        /// costs one resolve, and the alternative is save data this mod has so
-        /// far avoided entirely.
+        /// Judged on the hero's next daily tick, not inside the event.
+        /// AgingCampaignBehavior also listens to HeroComesOfAgeEvent, runs after
+        /// this mod, and copies the dummy set over anything granted in it. A day
+        /// later the game is finished with him.
+        ///
+        /// Once. The entry goes the moment it is read, so no hero is looked at
+        /// twice -- which is also what ends the double repair of a young lord
+        /// whose first kit came up a weapon short.
+        ///
+        /// It used to be the opposite: every hero, every day, repaired whenever
+        /// he looked broken. That reached what it never should. A companion
+        /// sent on an errand came home re-dressed, because the game lifts him
+        /// out of the party for it and the rule read that as a man out on his
+        /// own.
+        ///
+        /// Not serialised. A save made between the moment and the next day loses
+        /// the entry and that hero is not looked at; this mod keeps nothing in
+        /// the save.
         /// </summary>
-        private readonly HashSet<string> _beyondRepair = new HashSet<string>();
+        private readonly Dictionary<string, string> _freshlyMade = new Dictionary<string, string>();
+
+        /// <summary>
+        /// Queues a hero for his one look. Noting is deliberately dumb -- anyone
+        /// the game has just made is noted -- and the judging is done once, by
+        /// HeroFilter.IsEligibleForRepair. The first moment wins, so a lord
+        /// noted twice while the world is being built is still one look.
+        /// </summary>
+        private void NoteFreshlyMade(Hero hero, string moment)
+        {
+            if (hero == null || hero.IsChild) return;
+            string id = IdOf(hero);
+            if (id == null || _freshlyMade.ContainsKey(id)) return;
+            _freshlyMade.Add(id, moment);
+
+            // Logged for lords outside world creation, where there are a few a
+            // year and each is worth seeing. The world's own five hundred are
+            // counted in one KIT line instead.
+            if (moment != "newCampaign" && hero.IsLord)
+            {
+                ModLog.Info("KIT noted hero=" + hero.Name + " moment=" + moment
+                            + " age=" + (int)hero.Age);
+            }
+        }
 
         /// <summary>
         /// The hero's own object id. Not the CharacterObject's: that is unique
@@ -292,7 +354,7 @@ namespace HeroesEvolve
 
         private void OnDailyTickHero(Hero hero)
         {
-            TryRepair(hero, "daily_tick");
+            TryRepair(hero);
         }
 
         /// <summary>
@@ -479,21 +541,6 @@ namespace HeroesEvolve
 
         private void OnWeeklyTick()
         {
-            // A hero on the give-up list was unrepairable at the ceiling he had
-            // then. Ceilings rise with skill, and skill is exactly what this
-            // tick moves, so the list is cleared here rather than held for the
-            // session: a lord who could not be helped a year ago may be
-            // helpable now, and the daily saving costs only one re-examination
-            // a week to keep honest.
-            //
-            // Cleared before the growth switch is read, not after. Repair has
-            // its own switch and keeps running with growth off, so the list
-            // keeps filling either way; gating the clear on growth left a lord
-            // written off for the rest of the session over a ceiling that a
-            // changed setting -- a gear mod let back in, a raised tier cap --
-            // had already lifted.
-            _beyondRepair.Clear();
-
             if (!Settings.EnableSkillGrowth) return;
 
             int grown = 0;
@@ -539,33 +586,39 @@ namespace HeroesEvolve
                         + " cyclesPerYear=" + (int)SkillGrowthService.CyclesPerYear());
         }
 
-        private void TryRepair(Hero hero, string reason)
+        /// <summary>
+        /// The starting kit.
+        ///
+        /// When: once per lord, on the day after TaleWorlds made his gear -- at
+        /// a new campaign, when he turns 18, or when the game creates him later.
+        /// See _freshlyMade; nothing else ever reaches this.
+        ///
+        /// Under what conditions: he is a lord and the player's switch lets the
+        /// mod near his clan (HeroFilter.IsEligibleForRepair), and he looks
+        /// broken (GrantService.NeedsGrant: fewer than two weapons, or clothing
+        /// on his chest).
+        ///
+        /// A robbed man is not this. He is re-dressed by the rags, in the
+        /// instant he is stripped; see Rags.
+        /// </summary>
+        private void TryRepair(Hero hero)
         {
             try
             {
-                if (!Settings.EnableRepair) return;
-
-                // The repair's own filter: lords only, nobody off the map, and
-                // the player's clan on his switch. See IsEligibleForRepair.
-                if (!HeroFilter.IsEligibleForRepair(hero)) return;
-
-                // Not while he is somebody's prisoner. Re-equipping a man in a
-                // dungeon would undo a capture within a day of it happening,
-                // and a lord who has just been stripped is exactly the hero
-                // NeedsGrant is loudest about. He is repaired when he gets out.
-                if (hero.IsPrisoner) return;
-
-                // Asked before NeedsGrant, not after. A hero on this list is one
-                // nothing can be done for, and he is looked at again every day
-                // for the rest of the campaign -- reading his whole equipment
-                // first, only to consult the set that says not to bother, gave
-                // back most of what the set was added to save.
+                if (hero == null) return;
                 string id = IdOf(hero);
-                if (id != null && _beyondRepair.Contains(id)) return;
+                if (id == null) return;
 
+                // The one trigger, read once and forgotten.
+                string moment;
+                if (!_freshlyMade.TryGetValue(id, out moment)) return;
+                _freshlyMade.Remove(id);
+
+                if (!Settings.EnableRepair) return;
+                if (!HeroFilter.IsEligibleForRepair(hero)) return;
                 if (!GrantService.NeedsGrant(hero)) return;
 
-                ModLog.Info("REPAIR hero=" + hero.Name + " reason=" + reason);
+                ModLog.Info("REPAIR hero=" + hero.Name + " moment=" + moment);
                 int granted = GrantService.Grant(hero, ClanWeight, SkillWeight,
                                                  MinimumTier, DominanceMargin);
 
@@ -587,12 +640,10 @@ namespace HeroesEvolve
                                     + " talent=" + (int)(HeroTalent.For(hero) * 100));
                     }
                 }
-
-                if (granted == 0 && id != null)
+                else
                 {
-                    _beyondRepair.Add(id);
                     ModLog.Info("GIVEUP hero=" + hero.Name + " id=" + id
-                                + " (nothing could be granted; not retried this session)");
+                                + " (nothing could be granted)");
                 }
             }
             catch (System.Exception ex)

@@ -24,26 +24,21 @@ namespace HeroesEvolve
         /// worse than no copy at all, so anything added there is added here.
         /// </summary>
         /// <summary>
-        /// Whether the starting kit may be given to this hero.
+        /// Whether the starting kit may be given to this hero, once the moment
+        /// for it has come. The moment is the behaviour's business -- once, the
+        /// day after TaleWorlds made his gear -- and this is the whole of the
+        /// rest.
         ///
-        /// Narrower than IsEligible, which also decides who can be robbed --
-        /// and every companion can be robbed, the player's included. The kit is
-        /// something else: the store page promises it "only for lords who never
-        /// had a loadout", because it exists for TaleWorlds' come-of-age bug,
-        /// and a lord is the only kind of hero who comes of age into it.
+        /// A lord, because the kit exists for TaleWorlds' come-of-age bug and a
+        /// lord is who it strikes. A hired companion walked out of the tavern in
+        /// what the game meant him to wear, civilian or not, and whatever he has
+        /// since is the player's choice. Not a child: his gear is judged when he
+        /// turns 18. The player's clan follows his own switch, as it does at the
+        /// market.
         ///
-        /// A hired companion never qualifies. He walked out of the tavern with
-        /// a kit, and whatever he carries since was the player's choice -- the
-        /// market already respects that, improving a companion's loadout only
-        /// while he leads a party of his own and never replacing it. The
-        /// repair did the opposite: it read a companion with a tier-1 piece as
-        /// broken and swapped the piece out, which is a player's choice
-        /// overwritten by a rule written for a bug. Companions were let in for
-        /// one real reason, dressing a caravan master again after bandits took
-        /// everything; the rags have answered that since v1.3.5, in the same
-        /// instant and in the same shape.
-        ///
-        /// The player's own clan follows his switch, as it does at the market.
+        /// Nothing about parties, errands or prisoners. Those filters belonged
+        /// to a repair that looked at everyone every day; one that only looks at
+        /// freshly made lords has no need of them.
         /// </summary>
         public static bool IsEligibleForRepair(Hero hero)
         {
@@ -53,9 +48,10 @@ namespace HeroesEvolve
         /// <summary>Why the starting kit is refused this hero, or null when it is not.</summary>
         public static string WhyNoRepair(Hero hero)
         {
-            string why = WhyIneligible(hero);
-            if (why != null) return why;
-            if (!hero.IsLord) return "companion";
+            if (hero == null) return "null";
+            if (hero.IsDead) return "dead";
+            if (hero.IsChild) return "child";
+            if (!hero.IsLord) return "notLord";
             if (!Settings.ManageOwnClan && hero.Clan == Clan.PlayerClan) return "ownClanOff";
             return null;
         }
@@ -68,7 +64,6 @@ namespace HeroesEvolve
             if (hero == Hero.MainHero) return "isMainHero";
             if (hero.IsChild) return "isChild";
             if (!hero.IsLord && hero.CompanionOf == null) return "notLordAndNotCompanion";
-            if (hero.IsDisabled) return "disabled";
             if (hero.PartyBelongedTo != null && hero.PartyBelongedTo == MobileParty.MainParty)
             {
                 return "inMainParty";
@@ -187,19 +182,6 @@ namespace HeroesEvolve
             // no kit to maintain -- and from notables, who are not fighters at
             // all.
             if (!hero.IsLord && hero.CompanionOf == null) return false;
-
-            // Off the map. TaleWorlds disables a hero it has sent away: a
-            // companion on an issue's alternative solution
-            // (IssueBase.StartIssueWithAlternativeSolution -> DisableHeroAction,
-            // which also lifts him out of his party), or a candidate set aside
-            // during heir selection. Riding with nobody, he would read to the
-            // party line below as a man out on his own, and the mod would take
-            // him in hand. He is on the player's errand instead, and must come
-            // back exactly as he left.
-            //
-            // Found in play: a companion who never left the player's side except
-            // for one such errand came home in a new helmet and new bracers.
-            if (hero.IsDisabled) return false;
 
             // The line is the party, not the clan. Anyone riding inside the
             // player's own party is under his hand: he outfits them out of his
