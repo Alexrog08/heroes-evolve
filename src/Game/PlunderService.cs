@@ -355,7 +355,7 @@ namespace HeroesEvolve
         /// and is worth knowing about wherever it happens; a stranger losing
         /// his boots is not something the player can act on, and robberies are
         /// frequent enough that announcing all of them would bury the ones that
-        /// matter. His own clan is the line worth drawing even though vanilla
+        /// matter. His own banner is the line worth drawing even though vanilla
         /// does not draw it.
         ///
         /// It decides who is told, not what happens: every lord in Calradia is
@@ -367,7 +367,21 @@ namespace HeroesEvolve
         /// </summary>
         private static void Announce(Hero captor, bool bandit, Hero prisoner)
         {
-            if (prisoner == null || prisoner.Clan != Clan.PlayerClan) return;
+            if (prisoner == null || Hero.MainHero == null) return;
+
+            // Everyone under the player's own banner, which MapFaction settles
+            // without a special case: his clan while he is independent, his
+            // kingdom once he has sworn to one or founded it.
+            //
+            // His clan alone was the first cut and it was too narrow to be a
+            // feature. Worked out from the census -- 83 robberies among 405
+            // lords in seven months at full strength, so about 41 at the
+            // default rate -- a clan of eight heroes sees this message 1.4
+            // times a year. A kingdom of fifty sees it nine times: often enough
+            // to be worth having, rare enough that it never buries anything.
+            // The whole map would be 71, which is the register of vanilla's
+            // capture spam and the thing worth not copying.
+            if (prisoner.MapFaction != Hero.MainHero.MapFaction) return;
 
             try
             {
