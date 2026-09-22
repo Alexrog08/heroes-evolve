@@ -95,7 +95,12 @@ namespace HeroesEvolve
 
             try
             {
-                ItemObject rag = Cheapest(hero, taken);
+                // Hero and slot, so the same man robbed of the same piece
+                // always scavenges the same thing and a test can be re-run.
+                // See RagChoice.
+                string seed = hero.StringId + ":" + (int)slot;
+
+                ItemObject rag = Cheapest(hero, taken, seed);
                 if (rag == null)
                 {
                     _slotsLeftEmpty++;
@@ -123,7 +128,7 @@ namespace HeroesEvolve
         /// alike -- so weapons are matched on the mod's own category as well.
         /// A man robbed of an axe is handed an axe.
         /// </summary>
-        private static ItemObject Cheapest(Hero hero, ItemObject taken)
+        private static ItemObject Cheapest(Hero hero, ItemObject taken, string seed)
         {
             CultureObject culture = hero.Culture;
             if (culture == null && hero.Clan != null) culture = hero.Clan.Culture;
@@ -148,7 +153,7 @@ namespace HeroesEvolve
             if (ceiling < floor) ceiling = floor;
 
             // His own people first, at the rag tier and no higher.
-            ItemObject own = Search(taken, culture, floor, floor);
+            ItemObject own = Search(taken, culture, floor, floor, seed);
             if (own != null) return own;
 
             // Then anyone's, still at the rag tier. Some cultures simply make
@@ -158,14 +163,14 @@ namespace HeroesEvolve
             // just taken off him. Foreign rags are the better answer and the
             // truer one -- what he is standing in was scavenged out of the
             // baggage of the army that held him, and none of that was his.
-            ItemObject foreign = Search(taken, null, floor, floor);
+            ItemObject foreign = Search(taken, null, floor, floor, seed);
             if (foreign != null) return foreign;
 
             // And if the world sells nothing that cheap in this slot, his own
             // people at whatever it costs, up to what was taken. Last because
             // it is the one that can hand back something nearly as good; still
             // better than a slot left bare, which stays bare for life.
-            return Search(taken, culture, ceiling, floor);
+            return Search(taken, culture, ceiling, floor, seed);
         }
 
         /// <summary>
@@ -173,13 +178,17 @@ namespace HeroesEvolve
         /// culture means anybody's.
         /// </summary>
         private static ItemObject Search(ItemObject taken, CultureObject culture,
-                                         int ceiling, int floor)
+                                         int ceiling, int floor, string seed)
         {
             ItemObject.ItemTypeEnum type = taken.ItemType;
             bool mount = type == ItemObject.ItemTypeEnum.Horse;
             WeaponCategory wanted = ItemClassifier.Classify(taken);
 
-            ItemObject best = null;
+            // Every item tied at the cheapest tier, not the first one found.
+            // The object manager lists them in a fixed order, so taking the
+            // first handed every robbed lord in the world the same pitchfork.
+            // See RagChoice.
+            List<ItemObject> cheapest = new List<ItemObject>();
             int bestTier = int.MaxValue;
 
             MBReadOnlyList<ItemObject> all = MBObjectManager.Instance.GetObjectTypeList<ItemObject>();
@@ -199,13 +208,19 @@ namespace HeroesEvolve
                 if (!ItemCatalog.PassesCommonFilters(item, culture, ceiling, floor)) continue;
 
                 int tier = (int)item.Tier + 1;
-                if (tier >= bestTier) continue;
+                if (tier > bestTier) continue;
 
-                bestTier = tier;
-                best = item;
+                if (tier < bestTier)
+                {
+                    bestTier = tier;
+                    cheapest.Clear();
+                }
+
+                cheapest.Add(item);
             }
 
-            return best;
+            int pick = RagChoice.Pick(cheapest.Count, seed);
+            return pick < 0 ? null : cheapest[pick];
         }
     }
 }
