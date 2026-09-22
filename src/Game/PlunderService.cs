@@ -483,7 +483,12 @@ namespace HeroesEvolve
             // to be worth having, rare enough that it never buries anything.
             // The whole map would be 71, which is the register of vanilla's
             // capture spam and the thing worth not copying.
+            // A banner nobody holds matches nobody. Without this, a player
+            // whose MapFaction is momentarily null would be told about every
+            // factionless hero on the map, because null == null passes the
+            // test below twice over.
             IFaction mine = Hero.MainHero.MapFaction;
+            if (!force && mine == null) return;
             if (!force && prisoner.MapFaction != mine && captorFaction != mine) return;
 
             try

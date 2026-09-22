@@ -52,6 +52,7 @@ namespace HeroesEvolve
             public int PerksRestored;
             public int SkillsLeftWhole;
             public int Unarmed;
+            public int OwnClan;
             public int Failed;
             public readonly List<int> LevelBefore = new List<int>();
             public readonly List<int> LevelAfter = new List<int>();
@@ -94,6 +95,16 @@ namespace HeroesEvolve
             {
                 try
                 {
+                    // Counted before the filter, so the census can say why
+                    // a clan the player keeps is missing from the figures
+                    // rather than leaving him to wonder.
+                    if (!Settings.ManageOwnClan && hero.Clan == Clan.PlayerClan
+                        && HeroFilter.IsEligibleToGrow(hero))
+                    {
+                        tally.OwnClan++;
+                        continue;
+                    }
+
                     if (!Eligible(hero)) continue;
                     if (hero.HeroDeveloper == null || hero.BattleEquipment == null) continue;
 
@@ -138,6 +149,7 @@ namespace HeroesEvolve
                         + " perksRestored=" + tally.PerksRestored
                         + " skillsLeftWhole=" + tally.SkillsLeftWhole
                         + " skippedUnarmed=" + tally.Unarmed
+                        + " skippedOwnClan=" + tally.OwnClan
                         + " failed=" + tally.Failed);
             ModLog.Info("STARTCURVE level before " + Diagnostics.Percentiles(tally.LevelBefore));
             ModLog.Info("STARTCURVE level after  " + Diagnostics.Percentiles(tally.LevelAfter));
