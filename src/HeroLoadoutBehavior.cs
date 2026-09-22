@@ -288,7 +288,7 @@ namespace HeroesEvolve
                 // quiet too, rather than leaving a line with nothing above it.
                 if (!showNotification) return;
 
-                PlunderService.AnnounceRelease(prisoner);
+                PlunderService.AnnounceRelease(prisoner, detail);
             }
             catch (System.Exception ex)
             {

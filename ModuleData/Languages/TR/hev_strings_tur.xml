@@ -11,7 +11,8 @@
     <string id="hev_strip_friend" text="Bunu kişisel algılama. Silahlarını ve zırhını teslim et." />
     <string id="hev_strip_friend_reply" text="Bunu senden başka herkesten beklerdim. Al öyleyse. Sana söyleyecek başka sözüm yok." />
     <string id="hev_robbed" text="{VICTIM} adlı kişinin silahları ve zırhı {CAPTOR} tarafından alındı." />
-    <string id="hev_released_scavenged" text="Seni esir alanların ağırlıklarından, önceden taşıdığın türden basit teçhizat topladın." />
+    <string id="hev_released_scavenged" text="Çıkarken, seni esir alanların ağırlıklarından önceden taşıdığın türden basit teçhizat topladın." />
     <string id="hev_of_faction" text="{NAME} ({FACTION})" />
+    <string id="hev_released_given" text="Seni esir alanlar, yol için önceden taşıdığın türden basit teçhizatla uğurladı." />
   </strings>
 </base>

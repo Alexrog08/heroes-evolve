@@ -11,7 +11,8 @@
     <string id="hev_strip_friend" text="Nehmt es nicht persönlich. Gebt mir Eure Waffen und Eure Rüstung." />
     <string id="hev_strip_friend_reply" text="Von jedem hätte ich das erwartet, nur nicht von Euch. Nehmt sie also. Ich habe Euch nichts mehr zu sagen." />
     <string id="hev_robbed" text="{VICTIM} wurden von {CAPTOR} Waffen und Rüstung abgenommen." />
-    <string id="hev_released_scavenged" text="Du hast im Tross deiner Häscher einfache Ausrüstung zusammengesucht, von derselben Art wie zuvor." />
+    <string id="hev_released_scavenged" text="Auf dem Weg hinaus hast du im Tross deiner Häscher einfache Ausrüstung zusammengesucht, von derselben Art wie zuvor." />
     <string id="hev_of_faction" text="{NAME} von {FACTION}" />
+    <string id="hev_released_given" text="Deine Häscher gaben dir einfache Ausrüstung für den Weg mit, von derselben Art wie zuvor." />
   </strings>
 </base>

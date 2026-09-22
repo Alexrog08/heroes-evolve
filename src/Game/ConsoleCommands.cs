@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Text;
 using TaleWorlds.CampaignSystem;
+using TaleWorlds.CampaignSystem.Actions;
 using TaleWorlds.CampaignSystem.Party;
 using TaleWorlds.CampaignSystem.Settlements;
 using TaleWorlds.Core;
@@ -256,17 +257,33 @@ namespace HeroesEvolve
             if (Campaign.Current == null) return "hev: no campaign is running.";
             if (Hero.MainHero == null) return "hev: there is no player hero.";
 
+            // Both wordings, because which one a player sees depends on how
+            // he got out and neither is reachable on demand.
             CaptivityRobberies.Record(Hero.MainHero);
-            bool sent = PlunderService.AnnounceRelease(Hero.MainHero);
+            bool escaped = PlunderService.AnnounceRelease(
+                Hero.MainHero, EndCaptivityDetail.ReleasedAfterEscape);
 
-            // Consumed by the call above, so a second ask is a silent one --
+            CaptivityRobberies.Record(Hero.MainHero);
+            bool freed = PlunderService.AnnounceRelease(
+                Hero.MainHero, EndCaptivityDetail.Ransom);
+
+            // Consumed by the calls above, so a third ask is a silent one --
             // which is the guarantee that one release cannot speak twice.
             bool cleared = !CaptivityRobberies.Consume(Hero.MainHero);
 
-            if (!sent) return "hev: FAILED -- nothing was sent. The ledger key did not match.";
-            if (!cleared) return "hev: FAILED -- the notice fired but the ledger did not clear.";
+            // And a dead man hears nothing, though his entry still clears.
+            CaptivityRobberies.Record(Hero.MainHero);
+            bool silent = !PlunderService.AnnounceRelease(
+                Hero.MainHero, EndCaptivityDetail.Death);
+            bool deadCleared = !CaptivityRobberies.Consume(Hero.MainHero);
 
-            return "hev: notice sent and ledger cleared. Look at the message feed, bottom left.";
+            if (!escaped || !freed) return "hev: FAILED -- nothing was sent. The ledger key did not match.";
+            if (!cleared) return "hev: FAILED -- a notice fired but the ledger did not clear.";
+            if (!silent) return "hev: FAILED -- a dead man was told what he was wearing.";
+            if (!deadCleared) return "hev: FAILED -- death left an entry on the books.";
+
+            return "hev: two notices sent, escape first, then release. "
+                   + "Ledger clear. Look at the message feed, bottom left.";
         }
 
         /// <summary>

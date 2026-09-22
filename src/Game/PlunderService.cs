@@ -410,6 +410,27 @@ namespace HeroesEvolve
         /// -- so the pair reads as one piece of news rather than two.
         /// </summary>
         /// <summary>
+        /// Whether he let himself out, which is the difference between the two
+        /// wordings.
+        ///
+        /// A man who slips away takes what he can carry out of the baggage on
+        /// his way past it. A man who is handed back -- ransomed, freed in a
+        /// peace, let go, compensated for -- is fitted out by the people
+        /// releasing him, because sending a naked lord onto the road is not
+        /// something anyone does deliberately. Same gear either way; only the
+        /// story of how he came by it changes.
+        ///
+        /// ReleasedAfterBattle sits with escape rather than with release: his
+        /// captors have just been beaten, and nobody in that camp is handing
+        /// out boots.
+        /// </summary>
+        private static bool Escaped(EndCaptivityDetail detail)
+        {
+            return detail == EndCaptivityDetail.ReleasedAfterEscape
+                || detail == EndCaptivityDetail.ReleasedAfterBattle;
+        }
+
+        /// <summary>
         /// How this man is named in a notice: with his people behind him when
         /// he has any worth naming.
         ///
@@ -514,15 +535,21 @@ namespace HeroesEvolve
         /// in a feed he is already reading, still there when he looks, and no
         /// new window at all.
         /// </summary>
-        public static bool AnnounceRelease(Hero prisoner)
+        public static bool AnnounceRelease(Hero prisoner, EndCaptivityDetail detail)
         {
             if (prisoner == null || prisoner != Hero.MainHero) return false;
-            if (!CaptivityRobberies.Consume(prisoner)) return false;
+
+            // A dead man is not told what he is wearing. The ledger entry goes
+            // either way, so his death cannot leave one behind.
+            bool dead = detail == EndCaptivityDetail.Death;
+
+            if (!CaptivityRobberies.Consume(prisoner) || dead) return false;
 
             try
             {
-                TextObject line = new TextObject(
-                    "{=hev_released_scavenged}You scavenged plain gear from your captors' baggage, of the same kinds you carried.");
+                TextObject line = Escaped(detail)
+                    ? new TextObject("{=hev_released_scavenged}You scavenged plain gear from your captors' baggage on the way out, of the same kinds you carried.")
+                    : new TextObject("{=hev_released_given}Your captors sent you off with plain gear for the road, of the same kinds you carried.");
 
                 // Grey, not the red the robberies use. Nothing is being
                 // lost at this moment -- the loss happened days ago and was
