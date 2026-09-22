@@ -167,7 +167,7 @@ namespace HeroesEvolve
             // hundred full sweeps of a 3500-item catalogue -- and it changes
             // nothing in the game. Half a second of freeze on the first day of
             // every load, to write a log file nobody is reading at the time, is
-            // not a trade worth making. "hlf.census" runs it on demand.
+            // not a trade worth making. "hev.census" runs it on demand.
         }
 
         /// <summary>

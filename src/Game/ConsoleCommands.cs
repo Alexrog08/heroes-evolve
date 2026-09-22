@@ -37,7 +37,7 @@ namespace HeroesEvolve
             if (Campaign.Current == null) return "hev: no campaign is running.";
 
             Hero hero = FindHero(args);
-            if (hero == null) return Usage("hlf.dry_run", args);
+            if (hero == null) return Usage("hev.dry_run", args);
 
             return Diagnostics.DryRun(hero, HeroLoadoutBehavior.ClanWeight, HeroLoadoutBehavior.SkillWeight,
                                       HeroLoadoutBehavior.MinimumTier, HeroLoadoutBehavior.DominanceMargin);
@@ -57,7 +57,7 @@ namespace HeroesEvolve
             if (!settlement.IsTown) return "hev: " + settlement.Name + " is not a town.";
 
             Hero hero = FindHero(args);
-            if (hero == null) return Usage("hlf.market", args);
+            if (hero == null) return Usage("hev.market", args);
 
             return Diagnostics.MarketDryRun(hero, settlement, HeroLoadoutBehavior.ClanWeight,
                                             HeroLoadoutBehavior.SkillWeight, HeroLoadoutBehavior.MinimumTier);
@@ -77,13 +77,13 @@ namespace HeroesEvolve
             if (Campaign.Current == null) return "hev: no campaign is running.";
 
             Hero hero = FindHero(args);
-            if (hero == null) return Usage("hlf.test_repair", args);
+            if (hero == null) return Usage("hev.test_repair", args);
             if (hero.BattleEquipment == null) return "hev: " + hero.Name + " has no battle equipment.";
 
             // Strip() destroys equipment in place -- items are overwritten, not
             // returned to any inventory -- and GrantService.Grant has no
             // eligibility check of its own (that guard lives in the behaviour's
-            // TryRepair). Without this, "hlf.test_repair <your own name>" would
+            // TryRepair). Without this, "hev.test_repair <your own name>" would
             // permanently delete the player's crafted and unique gear, and the
             // same for a companion equipped over a whole campaign. Restricting
             // the command to the population the mod actually acts on is also
@@ -92,7 +92,7 @@ namespace HeroesEvolve
             {
                 return "hev: " + hero.Name + " is not a hero this mod touches "
                        + "(player character, companion, child, or template). Refusing to strip. "
-                       + "Use hlf.dry_run to inspect any hero without modifying it.";
+                       + "Use hev.dry_run to inspect any hero without modifying it.";
             }
 
             StringBuilder report = new StringBuilder();
