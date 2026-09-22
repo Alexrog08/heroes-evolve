@@ -462,10 +462,19 @@ namespace HeroesEvolve
         /// release as well would be saying a thing twice to somebody who read
         /// it the first time.
         ///
-        /// Quick information rather than the message feed, because that is
-        /// where EndCaptivityAction.ApplyInternal puts the game's own release
-        /// line -- and it puts it there before raising HeroPrisonerReleased,
-        /// so this lands immediately after it.
+        /// Sent twice, to two different places, and neither is redundant. An
+        /// earlier version of this comment said the banner would land under
+        /// the game's own release line; it will not, because there is no such
+        /// line. The AddQuickInformation inside EndCaptivityAction.
+        /// ApplyInternal sits behind two guards -- a facilitator and a detail
+        /// of Death -- so it announces a prisoner dying in the cells and
+        /// nothing else. An ordinary release passes it by.
+        ///
+        /// So the banner arrives alone, and it arrives while the captivity
+        /// menu is closing, which is the one moment a transient notification
+        /// is easiest to miss. The feed keeps a copy that is still there when
+        /// the player looks, in the same place his people's robberies are
+        /// reported. The banner is the nudge; the line is the record.
         /// </summary>
         public static void AnnounceRelease(Hero prisoner)
         {
@@ -474,8 +483,12 @@ namespace HeroesEvolve
 
             try
             {
-                MBInformationManager.AddQuickInformation(new TextObject(
-                    "{=hev_released_scavenged}You scavenged plain gear from your captors' baggage, of the same kinds you carried."));
+                TextObject line = new TextObject(
+                    "{=hev_released_scavenged}You scavenged plain gear from your captors' baggage, of the same kinds you carried.");
+
+                MBInformationManager.AddQuickInformation(line);
+                InformationManager.DisplayMessage(
+                    new InformationMessage(line.ToString(), Colors.Red));
             }
             catch
             {
