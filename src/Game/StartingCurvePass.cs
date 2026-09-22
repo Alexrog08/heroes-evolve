@@ -59,6 +59,33 @@ namespace HeroesEvolve
             public readonly List<int> BestAfter = new List<int>();
         }
 
+        /// <summary>
+        /// Who the curve may touch. The growth filter, plus the player's own
+        /// clan when he has asked to keep it.
+        ///
+        /// Growth can share a filter with almost everything because it only
+        /// ever raises -- HeroFilter.IsEligibleToGrow says so in as many
+        /// words, and that is why it ignores ManageOwnClan. The curve is the
+        /// one pass in the mod that takes something away: it settles a hero on
+        /// the line his age and talent put him on, which for a well-written
+        /// sheet means cutting it.
+        ///
+        /// So the switch that means "my clan is mine" has to hold here, as it
+        /// already does for the repair and the market. It is not an exception
+        /// for the player -- it is the same question of who decides that those
+        /// two ask -- and the case is real rather than theoretical: the
+        /// brother or sister a player starts beside is an adult, armed and in
+        /// his clan from the first minute, so without this the curve trims him
+        /// before the campaign has drawn its first frame.
+        /// </summary>
+        private static bool Eligible(Hero hero)
+        {
+            if (hero == null) return false;
+            if (!HeroFilter.IsEligibleToGrow(hero)) return false;
+            if (!Settings.ManageOwnClan && hero.Clan == Clan.PlayerClan) return false;
+            return true;
+        }
+
         public static void Apply()
         {
             Tally tally = new Tally();
@@ -67,7 +94,7 @@ namespace HeroesEvolve
             {
                 try
                 {
-                    if (!HeroFilter.IsEligibleToGrow(hero)) continue;
+                    if (!Eligible(hero)) continue;
                     if (hero.HeroDeveloper == null || hero.BattleEquipment == null) continue;
 
                     // Without a real weapon the curve cannot tell what he fights
@@ -152,8 +179,7 @@ namespace HeroesEvolve
         /// </summary>
         public static bool ApplyToLatecomer(Hero hero)
         {
-            if (hero == null) return false;
-            if (!HeroFilter.IsEligibleToGrow(hero)) return false;
+            if (!Eligible(hero)) return false;
 
             Tally tally = new Tally();
             ApplyTo(hero, tally);

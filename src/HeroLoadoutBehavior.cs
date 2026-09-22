@@ -469,15 +469,22 @@ namespace HeroesEvolve
 
         private void OnWeeklyTick()
         {
-            if (!Settings.EnableSkillGrowth) return;
-
             // A hero on the give-up list was unrepairable at the ceiling he had
             // then. Ceilings rise with skill, and skill is exactly what this
             // tick moves, so the list is cleared here rather than held for the
             // session: a lord who could not be helped a year ago may be
             // helpable now, and the daily saving costs only one re-examination
             // a week to keep honest.
+            //
+            // Cleared before the growth switch is read, not after. Repair has
+            // its own switch and keeps running with growth off, so the list
+            // keeps filling either way; gating the clear on growth left a lord
+            // written off for the rest of the session over a ceiling that a
+            // changed setting -- a gear mod let back in, a raised tier cap --
+            // had already lifted.
             _beyondRepair.Clear();
+
+            if (!Settings.EnableSkillGrowth) return;
 
             int grown = 0;
 
