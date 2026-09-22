@@ -1,7 +1,13 @@
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
-$csc  = "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\MSBuild\Current\Bin\Roslyn\csc.exe"
-$game = "D:\SteamLibrary\steamapps\common\Mount & Blade II Bannerlord"
+# The C# compiler. Set CSC_PATH if yours is not the default VS 2022 Build
+# Tools install (Community and Professional keep it under their own folder).
+$csc  = if ($env:CSC_PATH) { $env:CSC_PATH }
+        else { "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\MSBuild\Current\Bin\Roslyn\csc.exe" }
+# The game install. Set BANNERLORD_PATH to build against your own copy;
+# unset, it falls back to the path this project was developed on.
+$game = if ($env:BANNERLORD_PATH) { $env:BANNERLORD_PATH }
+        else { "D:\SteamLibrary\steamapps\common\Mount & Blade II Bannerlord" }
 $bin  = Join-Path $game "bin\Win64_Shipping_Client"
 $fw   = "C:\Windows\Microsoft.NET\Framework64\v4.0.30319"
 $out  = Join-Path $root "build\out"

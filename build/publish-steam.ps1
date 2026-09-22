@@ -67,7 +67,10 @@ param(
 $ErrorActionPreference = "Stop"
 
 $root = Split-Path -Parent $PSScriptRoot
-$game = "D:\SteamLibrary\steamapps\common\Mount & Blade II Bannerlord"
+# The game install. Set BANNERLORD_PATH to build against your own copy;
+# unset, it falls back to the path this project was developed on.
+$game = if ($env:BANNERLORD_PATH) { $env:BANNERLORD_PATH }
+        else { "D:\SteamLibrary\steamapps\common\Mount & Blade II Bannerlord" }
 $module = Join-Path $game "Modules\HeroesEvolve"
 $publisher = Join-Path $game "bin\Win64_Shipping_Client\TaleWorlds.MountAndBlade.SteamWorkshop.exe"
 $descriptionFile = Join-Path $root "docs\store-description.bbcode"

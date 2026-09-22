@@ -1,6 +1,9 @@
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
-$csc  = "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\MSBuild\Current\Bin\Roslyn\csc.exe"
+# The C# compiler. Set CSC_PATH if yours is not the default VS 2022 Build
+# Tools install (Community and Professional keep it under their own folder).
+$csc  = if ($env:CSC_PATH) { $env:CSC_PATH }
+        else { "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\MSBuild\Current\Bin\Roslyn\csc.exe" }
 $out  = Join-Path $root "build\out"
 New-Item -ItemType Directory -Force -Path $out | Out-Null
 
