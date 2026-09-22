@@ -10,7 +10,6 @@
     <string id="hev_strip_reprisal_reply" text="Beni soymayı bitirdiğinde bana onurdan bahset. Al öyleyse, hepsini al — bir ay geçmeden daha iyisine sahip olacağım ve üstünde gömleğinden başka bir şey bırakmayacağım bir sonraki adam pekâlâ senin soyadını taşıyor olabilir." />
     <string id="hev_strip_friend" text="Bunu kişisel algılama. Silahlarını ve zırhını teslim et." />
     <string id="hev_strip_friend_reply" text="Bunu senden başka herkesten beklerdim. Al öyleyse. Sana söyleyecek başka sözüm yok." />
-    <string id="hev_robbed_by_lord" text="{CAPTOR}, {VICTIM} adlı kişinin silahlarını ve zırhını aldı." />
-    <string id="hev_robbed_by_bandits" text="{VICTIM} adlı kişinin silahları ve zırhı, onu esir alanlarca alındı." />
+    <string id="hev_robbed" text="{VICTIM} adlı kişinin silahları ve zırhı {CAPTOR} tarafından alındı." />
   </strings>
 </base>

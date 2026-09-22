@@ -145,7 +145,11 @@ namespace HeroesEvolve
             int taken = Take(spoils, prisoner, out value);
             if (taken == 0) return 0;
 
-            Announce(captor, bandit, prisoner, false);
+            // A person if there is one, the band itself if there is not.
+            // PartyBase.Name carries the mobile party's own name here --
+            // settlements took the early return above -- so a looter gang is
+            // named as readily as a lord.
+            Announce(captor != null ? captor.Name : captorParty.Name, prisoner, false);
 
             // Doing the robbing costs the robber standing with the man he
             // robbed. Being robbed costs the victim nothing, because it is not
@@ -327,6 +331,14 @@ namespace HeroesEvolve
                             + " pieces=" + taken
                             + " worth=" + value
                             + " at=" + settlement.Name);
+
+                // Same news, other route. A man robbed in a cell is robbed
+                // exactly as a man robbed on the field, so the player hears
+                // about it on the same terms -- this one stands alone rather
+                // than under a capture notice, because his capture was days
+                // ago, but withholding it would mean the message depended on
+                // where the robbery happened instead of whom it happened to.
+                Announce(visitor.Name, prisoner, false);
             }
 
             if (robbed == 0) return 0;
@@ -341,8 +353,8 @@ namespace HeroesEvolve
         /// <summary>
         /// Tells the player when one of his own is stripped, and nobody else.
         ///
-        /// It goes directly under the game's own "X has been taken prisoner by
-        /// Y", which is where the news belongs: same event, same instant. That
+        /// After a capture it goes directly under the game's own "X has been
+        /// taken prisoner by Y", which is where the news belongs. That
         /// ordering is structural rather than lucky. Both lines are listeners
         /// on HeroPrisonerTaken -- TakePrisonerAction.ApplyInternal raises it
         /// once at the end, and DefaultLogsCampaignBehavior.OnPrisonerTaken is
@@ -371,10 +383,20 @@ namespace HeroesEvolve
         /// The message never says what was taken. A player who wants the detail
         /// opens the hero and looks, and a list of eleven items in a floating
         /// notification is not read by anybody.
+        ///
+        /// One wording, shaped like the line it sits under. There were two at
+        /// first -- an active one naming a lord, and a vague one for bandits,
+        /// who have no hero to name -- which meant two sentences to read for
+        /// one event and a robber who sometimes went unnamed. The passive form
+        /// covers both, because a party has a name even when nobody in it
+        /// does: "by Monchug" and "by Forest Bandits" are both grammatical,
+        /// where "Forest Bandits has stripped" is not. It is also the shape
+        /// TaleWorlds uses one line above -- "X has been taken prisoner by Y"
+        /// -- so the pair reads as one piece of news rather than two.
         /// </summary>
-        internal static void Announce(Hero captor, bool bandit, Hero prisoner, bool force)
+        internal static void Announce(TextObject captor, Hero prisoner, bool force)
         {
-            if (prisoner == null || Hero.MainHero == null) return;
+            if (prisoner == null || captor == null || Hero.MainHero == null) return;
 
             // Everyone under the player's own banner, which MapFaction settles
             // without a special case: his clan while he is independent, his
@@ -392,12 +414,11 @@ namespace HeroesEvolve
 
             try
             {
-                TextObject line = bandit || captor == null
-                    ? new TextObject("{=hev_robbed_by_bandits}{VICTIM} has been stripped of arms and armour by his captors.")
-                    : new TextObject("{=hev_robbed_by_lord}{CAPTOR} has stripped {VICTIM} of arms and armour.");
+                TextObject line = new TextObject(
+                    "{=hev_robbed}{VICTIM} has been stripped of arms and armour by {CAPTOR}.");
 
                 line.SetTextVariable("VICTIM", prisoner.Name);
-                if (captor != null) line.SetTextVariable("CAPTOR", captor.Name);
+                line.SetTextVariable("CAPTOR", captor);
 
                 // The colour the game uses for a loss rather than a warning, so
                 // it reads as part of the same run of messages the capture

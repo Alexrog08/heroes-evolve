@@ -10,7 +10,6 @@
     <string id="hev_strip_reprisal_reply" text="Sprecht mir von Ehre, wenn Ihr mich ausgeraubt habt. Nehmt es also, nehmt alles — binnen eines Monats habe ich Besseres, und der Nächste, den ich im Hemd zurücklasse, trägt vielleicht Euren Namen." />
     <string id="hev_strip_friend" text="Nehmt es nicht persönlich. Gebt mir Eure Waffen und Eure Rüstung." />
     <string id="hev_strip_friend_reply" text="Von jedem hätte ich das erwartet, nur nicht von Euch. Nehmt sie also. Ich habe Euch nichts mehr zu sagen." />
-    <string id="hev_robbed_by_lord" text="{CAPTOR} hat {VICTIM} Waffen und Rüstung abgenommen." />
-    <string id="hev_robbed_by_bandits" text="{VICTIM} wurden von den Häschern Waffen und Rüstung abgenommen." />
+    <string id="hev_robbed" text="{VICTIM} wurden von {CAPTOR} Waffen und Rüstung abgenommen." />
   </strings>
 </base>

@@ -10,7 +10,6 @@
     <string id="hev_strip_reprisal_reply" text="Parlez-moi d’honneur quand vous aurez fini de me dépouiller. Prenez donc tout — j’en aurai de meilleures avant un mois, et le prochain que je laisserai en chemise portera peut-être votre nom." />
     <string id="hev_strip_friend" text="Ne le prenez pas personnellement. Rendez-moi vos armes et votre armure." />
     <string id="hev_strip_friend_reply" text="De n’importe qui j’aurais attendu cela, mais pas de vous. Prenez-les, donc. Je n’ai plus rien à vous dire." />
-    <string id="hev_robbed_by_lord" text="{CAPTOR} a dépouillé {VICTIM} de ses armes et de son armure." />
-    <string id="hev_robbed_by_bandits" text="{VICTIM} a été dépouillé de ses armes et de son armure par ses geôliers." />
+    <string id="hev_robbed" text="{VICTIM} a été dépouillé de ses armes et de son armure par {CAPTOR}." />
   </strings>
 </base>
