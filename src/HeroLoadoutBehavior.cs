@@ -142,6 +142,13 @@ namespace HeroesEvolve
             // launched the game has finished building every lord it will start
             // with. See StartingCurvePass.
             CampaignEvents.OnNewGameCreatedEvent.AddNonSerializedListener(this, OnNewGameCreated);
+
+            // Latecomers. The starting curve runs once at world creation, so
+            // anybody made afterwards kept whatever he was made with -- and
+            // growth only ever raises, so nothing was going to correct it. See
+            // StartingCurvePass.ApplyToLatecomer for who that actually reaches
+            // and why it has to happen exactly once.
+            CampaignEvents.HeroCreated.AddNonSerializedListener(this, OnHeroCreated);
             CampaignEvents.OnAfterSessionLaunchedEvent.AddNonSerializedListener(this, OnAfterSessionLaunched);
 
             // The daily tick above carries the ledger reset and nothing else.
@@ -158,6 +165,38 @@ namespace HeroesEvolve
         /// cleared once the starting curve has had its one chance to run.
         /// </summary>
         private bool _newCampaign;
+
+        /// <summary>
+        /// Puts a hero made after the campaign began on the same curve the rest
+        /// of the world was put on at its start.
+        ///
+        /// Children are skipped and do not need this: the game normalises what
+        /// they inherit, and their skills are not written until they come of
+        /// age anyway. It is the parentless heroes -- tavern wanderers, lords
+        /// generated to fill a clan -- who arrive carrying a template's grown
+        /// figures.
+        ///
+        /// Silent during world creation. HeroCreated fires for every lord in
+        /// Calradia while the map is being built, and Apply is about to walk
+        /// the whole roster a moment later; curving each of them twice would
+        /// log four hundred lines to reach the same answer.
+        /// </summary>
+        private void OnHeroCreated(Hero hero, bool isBornNaturally)
+        {
+            try
+            {
+                if (_newCampaign) return;
+                if (!Settings.EnableSkillGrowth || !Settings.StartLordsOnCurve) return;
+                if (hero == null || hero.IsChild) return;
+
+                StartingCurvePass.ApplyToLatecomer(hero);
+            }
+            catch (System.Exception error)
+            {
+                ModLog.Error("STARTCURVE latecomer failed: "
+                             + error.GetType().Name + " " + error.Message);
+            }
+        }
 
         private void OnNewGameCreated(CampaignGameStarter starter)
         {

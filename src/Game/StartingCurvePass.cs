@@ -118,6 +118,53 @@ namespace HeroesEvolve
             ModLog.Info("STARTCURVE bestWeapon after  " + Diagnostics.Percentiles(tally.BestAfter));
         }
 
+        /// <summary>
+        /// The same curve, for one hero who arrived after the campaign began.
+        ///
+        /// Apply above runs once, at world creation, and nothing has put a
+        /// latecomer on the curve since: a hero created in year ten keeps
+        /// whatever he was made with for the rest of the campaign, because
+        /// growth only ever raises and never lowers.
+        ///
+        /// Who that reaches is narrower than it sounds, and the game's own
+        /// arithmetic is why. A child of two lords does not inherit their
+        /// figures: DefaultHeroCreationModel.GetInheritedSkillsForHero keeps
+        /// his best 28% of skills and then rescales the set so it totals 112 a
+        /// skill, whatever the parents grew to. Six skills averaging 112 is
+        /// already inside the band -- TaleWorlds writes his own 18-to-24 lords
+        /// at a median of 110 and this mod's curve leaves them at 123 -- so
+        /// children need nothing.
+        ///
+        /// It is the parentless ones that arrive wrong. The same method falls
+        /// back to GetDefaultCharacterSkills for a hero with no father and no
+        /// mother, and a template carries the figures of a grown man. Every
+        /// wanderer a tavern spawns and every lord generated to fill a clan
+        /// comes of age holding them.
+        ///
+        /// Once, at creation, and never again -- which is what makes it safe.
+        /// Running the curve repeatedly would do one of two harmful things: it
+        /// settles a developed skill exactly ON its target, so a daily pass
+        /// would teleport every hero who is merely behind straight to where
+        /// growth was walking him; and lowering on a schedule would strip a
+        /// lord who changed weapons, whose old primary becomes an unused skill
+        /// with an unused skill's cap. Neither happens to a man it touches once
+        /// on the day he is made.
+        /// </summary>
+        public static bool ApplyToLatecomer(Hero hero)
+        {
+            if (hero == null) return false;
+            if (!HeroFilter.IsEligibleToGrow(hero)) return false;
+
+            Tally tally = new Tally();
+            ApplyTo(hero, tally);
+
+            ModLog.Info("STARTCURVE latecomer=" + hero.Name
+                        + " age=" + (int)hero.Age
+                        + " raised=" + tally.Raised
+                        + " lowered=" + tally.Lowered);
+            return true;
+        }
+
         private static void ApplyTo(Hero hero, Tally tally)
         {
             HeroDeveloper developer = hero.HeroDeveloper;
