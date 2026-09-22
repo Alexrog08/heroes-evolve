@@ -462,19 +462,27 @@ namespace HeroesEvolve
         /// release as well would be saying a thing twice to somebody who read
         /// it the first time.
         ///
-        /// Sent twice, to two different places, and neither is redundant. An
-        /// earlier version of this comment said the banner would land under
-        /// the game's own release line; it will not, because there is no such
-        /// line. The AddQuickInformation inside EndCaptivityAction.
-        /// ApplyInternal sits behind two guards -- a facilitator and a detail
-        /// of Death -- so it announces a prisoner dying in the cells and
-        /// nothing else. An ordinary release passes it by.
+        /// The message feed, and nothing else. Two earlier attempts were
+        /// wrong for the same reason: a release deserves one line, not a
+        /// window of its own.
         ///
-        /// So the banner arrives alone, and it arrives while the captivity
-        /// menu is closing, which is the one moment a transient notification
-        /// is easiest to miss. The feed keeps a copy that is still there when
-        /// the player looks, in the same place his people's robberies are
-        /// reported. The banner is the nudge; the line is the record.
+        /// A floating banner was the first, on the belief it would land under
+        /// the game's own release line. There is no such line. The
+        /// AddQuickInformation inside EndCaptivityAction.ApplyInternal sits
+        /// behind two guards -- a facilitator, and a detail of Death -- so it
+        /// announces a prisoner dying in the cells and nothing else. Ours
+        /// would have arrived alone, as a whole popup for one sentence, and
+        /// arrived while the captivity menu was closing, which is the one
+        /// moment a transient notification is easiest to miss.
+        ///
+        /// The captivity menu itself would be the natural host and cannot be
+        /// reached: GameMenu exposes GetText and no setter, and the body text
+        /// is fixed when AddGameMenu registers it. Nothing short of Harmony
+        /// puts a line inside it.
+        ///
+        /// So it goes where his people's robberies already go. One red line
+        /// in a feed he is already reading, still there when he looks, and no
+        /// new window at all.
         /// </summary>
         public static void AnnounceRelease(Hero prisoner)
         {
@@ -486,7 +494,6 @@ namespace HeroesEvolve
                 TextObject line = new TextObject(
                     "{=hev_released_scavenged}You scavenged plain gear from your captors' baggage, of the same kinds you carried.");
 
-                MBInformationManager.AddQuickInformation(line);
                 InformationManager.DisplayMessage(
                     new InformationMessage(line.ToString(), Colors.Red));
             }

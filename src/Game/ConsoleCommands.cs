@@ -263,7 +263,7 @@ namespace HeroesEvolve
             bool spent = !CaptivityRobberies.Consume(Hero.MainHero);
 
             return "hev: release notice sent" + (spent ? "" : " -- BUT THE LEDGER DID NOT CLEAR")
-                   + ". Look at the floating banner, not the log.";
+                   + ". Look at the message feed, bottom left.";
         }
 
         /// <summary>
