@@ -149,7 +149,8 @@ namespace HeroesEvolve
             // PartyBase.Name carries the mobile party's own name here --
             // settlements took the early return above -- so a looter gang is
             // named as readily as a lord.
-            Announce(captor != null ? captor.Name : captorParty.Name, prisoner, false);
+            Announce(captorParty.MapFaction,
+                     captor != null ? captor.Name : captorParty.Name, prisoner, false);
 
             // Doing the robbing costs the robber standing with the man he
             // robbed. Being robbed costs the victim nothing, because it is not
@@ -338,7 +339,7 @@ namespace HeroesEvolve
                 // than under a capture notice, because his capture was days
                 // ago, but withholding it would mean the message depended on
                 // where the robbery happened instead of whom it happened to.
-                Announce(visitor.Name, prisoner, false);
+                Announce(visitor.MapFaction, visitor.Name, prisoner, false);
             }
 
             if (robbed == 0) return 0;
@@ -351,7 +352,8 @@ namespace HeroesEvolve
         }
 
         /// <summary>
-        /// Tells the player when one of his own is stripped, and nobody else.
+        /// Tells the player when his own banner is on either end of a robbery,
+        /// and says nothing otherwise.
         ///
         /// After a capture it goes directly under the game's own "X has been
         /// taken prisoner by Y", which is where the news belongs. That
@@ -362,6 +364,13 @@ namespace HeroesEvolve
         /// in the order they registered. SubModule.xml depends on Sandbox, so
         /// that behaviour is always in before this one, and the mod's line is
         /// always the second of the two.
+        ///
+        /// Both ends, because the banner is what decides and a banner does not
+        /// only lose. One of your lords going through a prisoner's kit is news
+        /// about your own people's conduct in exactly the way one of your own
+        /// being stripped is news about their treatment, and telling you only
+        /// the half where you are the victim would make the rule about
+        /// grievance rather than about who is yours.
         ///
         /// Narrower than vanilla, deliberately, and the first version of this
         /// comment claimed the opposite. Read off the assembly:
@@ -376,6 +385,12 @@ namespace HeroesEvolve
         /// frequent enough that announcing all of them would bury the ones that
         /// matter. His own banner is the line worth drawing even though vanilla
         /// does not draw it.
+        ///
+        /// Counted rather than guessed, off the census: 106 robberies, 29 of
+        /// them by bandits, so a lord is the captor 73% of the time. A kingdom
+        /// of fifty is an eighth of Calradia's lords, which puts it at about
+        /// six messages a year from the robbing end on top of the nine it
+        /// already saw from the robbed end. One every three weeks or so.
         ///
         /// It decides who is told, not what happens: every lord in Calradia is
         /// robbed by the same rules whether or not anybody reads about it.
@@ -394,13 +409,15 @@ namespace HeroesEvolve
         /// TaleWorlds uses one line above -- "X has been taken prisoner by Y"
         /// -- so the pair reads as one piece of news rather than two.
         /// </summary>
-        internal static void Announce(TextObject captor, Hero prisoner, bool force)
+        internal static void Announce(IFaction captorFaction, TextObject captor,
+                                      Hero prisoner, bool force)
         {
             if (prisoner == null || captor == null || Hero.MainHero == null) return;
 
-            // Everyone under the player's own banner, which MapFaction settles
-            // without a special case: his clan while he is independent, his
-            // kingdom once he has sworn to one or founded it.
+            // Everyone under the player's own banner, on either end of it.
+            // MapFaction settles what that means without a special case: his
+            // clan while he is independent, his kingdom once he has sworn to
+            // one or founded it.
             //
             // His clan alone was the first cut and it was too narrow to be a
             // feature. Worked out from the census -- 83 robberies among 405
@@ -410,7 +427,8 @@ namespace HeroesEvolve
             // to be worth having, rare enough that it never buries anything.
             // The whole map would be 71, which is the register of vanilla's
             // capture spam and the thing worth not copying.
-            if (!force && prisoner.MapFaction != Hero.MainHero.MapFaction) return;
+            IFaction mine = Hero.MainHero.MapFaction;
+            if (!force && prisoner.MapFaction != mine && captorFaction != mine) return;
 
             try
             {

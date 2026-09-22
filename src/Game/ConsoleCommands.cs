@@ -217,7 +217,10 @@ namespace HeroesEvolve
             // checked here is the wording, not who gets told.
             Hero witness = bin.LeaderHero != null && bin.LeaderHero != hero
                            ? bin.LeaderHero : Hero.MainHero;
-            if (witness != null) PlunderService.Announce(witness.Name, hero, true);
+            if (witness != null)
+            {
+                PlunderService.Announce(witness.MapFaction, witness.Name, hero, true);
+            }
             report.AppendLine("notice sent to the log -- read it, it is the point.");
 
             report.AppendLine("taken: " + taken + " pieces worth " + value);
