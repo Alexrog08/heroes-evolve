@@ -6,3 +6,7 @@ obj/
 build/out/
 .tmp/
 .superpowers/
+
+# Written by the TaleWorlds Workshop uploader on every publish -- a progress
+# log, not source. It kept riding into release commits.
+steam_workshop_uploader.txt
