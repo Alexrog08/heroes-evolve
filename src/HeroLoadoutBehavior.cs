@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using TaleWorlds.CampaignSystem;
+using TaleWorlds.CampaignSystem.Actions;
 using TaleWorlds.CampaignSystem.Party;
 using TaleWorlds.CampaignSystem.Roster;
 using TaleWorlds.CampaignSystem.Settlements;
@@ -75,6 +76,7 @@ namespace HeroesEvolve
             CaravanPurse.ResetSession();
             PurchaseWatch.ResetSession();
             Rags.ResetSession();
+            CaptivityRobberies.ResetSession();
             ItemCatalog.ResetSession();
             HeroTalent.ResetSession();
             WrittenSkills.ResetSession();
@@ -121,6 +123,7 @@ namespace HeroesEvolve
             // Losing gear. Off unless the player asks for it, so the listener
             // costs one branch per capture when it is not wanted.
             CampaignEvents.HeroPrisonerTaken.AddNonSerializedListener(this, OnHeroPrisonerTaken);
+            CampaignEvents.HeroPrisonerReleased.AddNonSerializedListener(this, OnHeroPrisonerReleased);
 
             // Measurement only, and it changes nothing in the campaign. A
             // caravan that dies is the numerator of the rate CaravanWatch
@@ -268,6 +271,31 @@ namespace HeroesEvolve
         private void OnDailyTickHero(Hero hero)
         {
             TryRepair(hero, "daily_tick");
+        }
+
+        /// <summary>
+        /// A man walking out of the cells, told what he walked out in. Guarded
+        /// like every other per-hero path.
+        /// </summary>
+        private void OnHeroPrisonerReleased(Hero prisoner, PartyBase party,
+                                            IFaction capturerFaction, EndCaptivityDetail detail,
+                                            bool showNotification)
+        {
+            try
+            {
+                // The game's own flag for whether this release is worth
+                // announcing. A release it chose to keep quiet keeps ours
+                // quiet too, rather than leaving a line with nothing above it.
+                if (!showNotification) return;
+
+                PlunderService.AnnounceRelease(prisoner);
+            }
+            catch (System.Exception ex)
+            {
+                ModLog.Error("release notice failed for "
+                             + (prisoner != null ? prisoner.Name : null)
+                             + ": " + ex.GetType().Name + " " + ex.Message);
+            }
         }
 
         private void OnMobilePartyDestroyed(MobileParty party, PartyBase destroyer)

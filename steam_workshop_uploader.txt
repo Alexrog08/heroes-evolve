@@ -1,0 +1,63 @@
+Starting...
+LoadWithFullPath  subModulePath = D:\SteamLibrary\steamapps\common\Mount & Blade II Bannerlord\Modules\HeroesEvolve/SubModule.xml
+Status: k_EItemUpdateStatusPreparingConfig 0 / 0
+Status: k_EItemUpdateStatusPreparingConfig 0 / 0
+Status: k_EItemUpdateStatusPreparingConfig 0 / 0
+Status: k_EItemUpdateStatusPreparingContent 0 / 0
+Status: k_EItemUpdateStatusPreparingContent 0 / 0
+Status: k_EItemUpdateStatusPreparingContent 0 / 0
+Status: k_EItemUpdateStatusPreparingContent 0 / 0
+Status: k_EItemUpdateStatusPreparingContent 0 / 0
+Status: k_EItemUpdateStatusPreparingContent 0 / 0
+Status: k_EItemUpdateStatusPreparingContent 0 / 0
+Status: k_EItemUpdateStatusPreparingContent 0 / 0
+Status: k_EItemUpdateStatusPreparingContent 0 / 0
+Status: k_EItemUpdateStatusPreparingContent 0 / 0
+Status: k_EItemUpdateStatusUploadingContent 0 / 0
+Status: k_EItemUpdateStatusUploadingContent 0 / 0
+Status: k_EItemUpdateStatusUploadingContent 0 / 0
+Status: k_EItemUpdateStatusUploadingContent 0 / 0
+Status: k_EItemUpdateStatusUploadingContent 0 / 0
+Status: k_EItemUpdateStatusUploadingContent 0 / 0
+Status: k_EItemUpdateStatusUploadingContent 0 / 0
+Status: k_EItemUpdateStatusUploadingContent 0 / 0
+Status: k_EItemUpdateStatusUploadingContent 0 / 0
+Status: k_EItemUpdateStatusUploadingContent 0 / 0
+Status: k_EItemUpdateStatusUploadingContent 0 / 0
+Status: k_EItemUpdateStatusUploadingContent 0 / 0
+Status: k_EItemUpdateStatusUploadingContent 0 / 0
+Status: k_EItemUpdateStatusUploadingContent 0 / 203208
+Status: k_EItemUpdateStatusUploadingContent 0 / 203208
+Status: k_EItemUpdateStatusUploadingContent 0 / 203208
+Status: k_EItemUpdateStatusUploadingContent 0 / 203208
+Status: k_EItemUpdateStatusUploadingContent 1444 / 203208
+Status: k_EItemUpdateStatusUploadingContent 1444 / 203208
+Status: k_EItemUpdateStatusUploadingContent 1444 / 203208
+Status: k_EItemUpdateStatusUploadingContent 1444 / 203208
+Status: k_EItemUpdateStatusUploadingContent 1444 / 203208
+Status: k_EItemUpdateStatusUploadingContent 8136 / 203208
+Status: k_EItemUpdateStatusUploadingContent 8136 / 203208
+Status: k_EItemUpdateStatusUploadingContent 8136 / 203208
+Status: k_EItemUpdateStatusUploadingContent 8136 / 203208
+Status: k_EItemUpdateStatusUploadingContent 203208 / 203208
+Status: k_EItemUpdateStatusUploadingContent 203208 / 203208
+Status: k_EItemUpdateStatusUploadingContent 203208 / 203208
+Status: k_EItemUpdateStatusUploadingContent 203208 / 203208
+Status: k_EItemUpdateStatusUploadingContent 203208 / 203208
+Status: k_EItemUpdateStatusUploadingContent 203208 / 203208
+Status: k_EItemUpdateStatusUploadingContent 203208 / 203208
+Status: k_EItemUpdateStatusUploadingContent 203208 / 203208
+Status: k_EItemUpdateStatusUploadingPreviewFile 0 / 0
+Status: k_EItemUpdateStatusUploadingPreviewFile 0 / 0
+Status: k_EItemUpdateStatusUploadingPreviewFile 0 / 0
+Status: k_EItemUpdateStatusCommittingChanges 0 / 0
+Status: k_EItemUpdateStatusCommittingChanges 0 / 0
+Status: k_EItemUpdateStatusCommittingChanges 0 / 0
+Status: k_EItemUpdateStatusInvalid 0 / 0
+Uploading done!
+Finished...
+Application crashed with exception: System.InvalidOperationException: Cannot read keys when either application does not have a console or when console input has been redirected from a file. Try Console.Read.
+   at System.Console.ReadKey(Boolean intercept)
+   at TaleWorlds.MountAndBlade.SteamWorkshop.Program.ExitProgram(Int32 exitCode)
+   at TaleWorlds.MountAndBlade.SteamWorkshop.Program.Main(String[] args)
+Finished...

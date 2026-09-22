@@ -451,6 +451,39 @@ namespace HeroesEvolve
         }
 
         /// <summary>
+        /// Tells a released hero what he walked out in, if he was robbed on
+        /// the way in.
+        ///
+        /// Only the player is told, and that is not an exception to any rule
+        /// -- the robbery itself ran on him exactly as it runs on everybody,
+        /// and every other hero's robbery was announced the moment it
+        /// happened. This is the same message repeated for the one man whose
+        /// screen was gone when it was first sent. Announcing an AI lord's
+        /// release as well would be saying a thing twice to somebody who read
+        /// it the first time.
+        ///
+        /// Quick information rather than the message feed, because that is
+        /// where EndCaptivityAction.ApplyInternal puts the game's own release
+        /// line -- and it puts it there before raising HeroPrisonerReleased,
+        /// so this lands immediately after it.
+        /// </summary>
+        public static void AnnounceRelease(Hero prisoner)
+        {
+            if (prisoner == null || prisoner != Hero.MainHero) return;
+            if (!CaptivityRobberies.Consume(prisoner)) return;
+
+            try
+            {
+                MBInformationManager.AddQuickInformation(new TextObject(
+                    "{=hev_released_scavenged}You scavenged plain gear from your captors' baggage, of the same kinds you carried."));
+            }
+            catch
+            {
+                // A message that cannot be shown must not cost the release.
+            }
+        }
+
+        /// <summary>
         /// Whether this prisoner is someone we may leave with nothing.
         ///
         /// Only heroes the repair will look after, and the player, who can
@@ -536,6 +569,11 @@ namespace HeroesEvolve
             }
             taken += TakeSlot(loot, prisoner, EquipmentIndex.Horse, ref value);
             taken += TakeSlot(loot, prisoner, EquipmentIndex.HorseHarness, ref value);
+
+            // Every robbery in the mod comes through here -- field, cells and
+            // the player's own conversation alike -- so this is the one place
+            // that can note it happened. See CaptivityRobberies.
+            if (taken > 0) CaptivityRobberies.Record(prisoner);
 
             return taken;
         }
