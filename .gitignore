@@ -10,3 +10,7 @@ build/out/
 # Written by the TaleWorlds Workshop uploader on every publish -- a progress
 # log, not source. It kept riding into release commits.
 steam_workshop_uploader.txt
+
+# Written by the Steamworks API into the uploader's working directory on every
+# publish. Left on disk in case the uploader wants it; kept out of git.
+steam_appid.txt
