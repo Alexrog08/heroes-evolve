@@ -342,7 +342,14 @@ namespace HeroesEvolve
         /// Tells the player when one of his own is stripped, and nobody else.
         ///
         /// It goes directly under the game's own "X has been taken prisoner by
-        /// Y", which is where the news belongs: same event, same instant.
+        /// Y", which is where the news belongs: same event, same instant. That
+        /// ordering is structural rather than lucky. Both lines are listeners
+        /// on HeroPrisonerTaken -- TakePrisonerAction.ApplyInternal raises it
+        /// once at the end, and DefaultLogsCampaignBehavior.OnPrisonerTaken is
+        /// what builds the vanilla entry -- and the dispatcher calls listeners
+        /// in the order they registered. SubModule.xml depends on Sandbox, so
+        /// that behaviour is always in before this one, and the mod's line is
+        /// always the second of the two.
         ///
         /// Narrower than vanilla, deliberately, and the first version of this
         /// comment claimed the opposite. Read off the assembly:
