@@ -234,6 +234,39 @@ namespace HeroesEvolve
         }
 
         /// <summary>
+        /// Shows the notice a freed man gets, without waiting to be captured.
+        ///
+        /// There is no cheat that takes the player prisoner, and losing a
+        /// battle on purpose to read one line is not a test anybody runs. This
+        /// walks the real path bar the event itself: it notes a robbery
+        /// against the player's current captivity and then asks for the
+        /// release notice, so the ledger key, the lookup and the wording are
+        /// all exercised with the game's own figures.
+        ///
+        /// What it cannot reach is HeroPrisonerReleased firing, and that part
+        /// needs no test: every one of the eight EndCaptivityAction routes
+        /// passes showNotification as a hardcoded true, and
+        /// TakePrisonerAction.ApplyInternal is the only writer of
+        /// CaptivityStartTime, so the key cannot drift between the two ends.
+        /// </summary>
+        [CommandLineFunctionality.CommandLineArgumentFunction("test_release", "hev")]
+        public static string TestRelease(List<string> args)
+        {
+            if (Campaign.Current == null) return "hev: no campaign is running.";
+            if (Hero.MainHero == null) return "hev: there is no player hero.";
+
+            CaptivityRobberies.Record(Hero.MainHero);
+            PlunderService.AnnounceRelease(Hero.MainHero);
+
+            // Consumed by the call above, so a second ask is a silent one --
+            // which is the guarantee that one release cannot speak twice.
+            bool spent = !CaptivityRobberies.Consume(Hero.MainHero);
+
+            return "hev: release notice sent" + (spent ? "" : " -- BUT THE LEDGER DID NOT CLEAR")
+                   + ". Look at the floating banner, not the log.";
+        }
+
+        /// <summary>
         /// Robs one lord of each culture and reports what each was left in.
         ///
         /// The figure worth reading is the last column. A slot a robbery empties
