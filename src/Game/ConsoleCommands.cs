@@ -256,14 +256,16 @@ namespace HeroesEvolve
             if (Hero.MainHero == null) return "hev: there is no player hero.";
 
             CaptivityRobberies.Record(Hero.MainHero);
-            PlunderService.AnnounceRelease(Hero.MainHero);
+            bool sent = PlunderService.AnnounceRelease(Hero.MainHero);
 
             // Consumed by the call above, so a second ask is a silent one --
             // which is the guarantee that one release cannot speak twice.
-            bool spent = !CaptivityRobberies.Consume(Hero.MainHero);
+            bool cleared = !CaptivityRobberies.Consume(Hero.MainHero);
 
-            return "hev: release notice sent" + (spent ? "" : " -- BUT THE LEDGER DID NOT CLEAR")
-                   + ". Look at the message feed, bottom left.";
+            if (!sent) return "hev: FAILED -- nothing was sent. The ledger key did not match.";
+            if (!cleared) return "hev: FAILED -- the notice fired but the ledger did not clear.";
+
+            return "hev: notice sent and ledger cleared. Look at the message feed, bottom left.";
         }
 
         /// <summary>

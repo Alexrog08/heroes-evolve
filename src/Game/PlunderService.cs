@@ -484,10 +484,10 @@ namespace HeroesEvolve
         /// in a feed he is already reading, still there when he looks, and no
         /// new window at all.
         /// </summary>
-        public static void AnnounceRelease(Hero prisoner)
+        public static bool AnnounceRelease(Hero prisoner)
         {
-            if (prisoner == null || prisoner != Hero.MainHero) return;
-            if (!CaptivityRobberies.Consume(prisoner)) return;
+            if (prisoner == null || prisoner != Hero.MainHero) return false;
+            if (!CaptivityRobberies.Consume(prisoner)) return false;
 
             try
             {
@@ -496,10 +496,12 @@ namespace HeroesEvolve
 
                 InformationManager.DisplayMessage(
                     new InformationMessage(line.ToString(), Colors.Red));
+                return true;
             }
             catch
             {
                 // A message that cannot be shown must not cost the release.
+                return false;
             }
         }
 
