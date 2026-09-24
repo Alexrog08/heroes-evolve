@@ -268,8 +268,13 @@ namespace HeroesEvolve
         /// game generated broken. So it looks at the moments the game generates
         /// it, and at nothing else.
         ///   newCampaign -- every lord, as the world is built. TaleWorlds ships
-        ///     some of its own hand-written lords broken (Anidha, Sira and Maraa,
-        ///     in every campaign), and they will never turn 18 inside it.
+        ///     some of its own hand-written lords broken, and they will never
+        ///     turn 18 inside it. Which ones is a draw: the Aserai ladies all
+        ///     wear ase_bat_template_lady, whose three variants are sword and
+        ///     shield, sword alone, and sword alone -- two in three come up a
+        ///     weapon short, and a different two in three each campaign. A
+        ///     first test repaired 27 lords on day one, Anidha and Sira among
+        ///     them; Maraa drew the good variant and was left alone.
         ///   cameOfAge -- a lord turning 18, when the game hands him the gear of
         ///     an adult. This is where the bug usually shows.
         ///   generated -- an adult lord the game makes mid-campaign: a rebel
