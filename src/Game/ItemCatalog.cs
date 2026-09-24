@@ -494,13 +494,29 @@ namespace HeroesEvolve
             }
         }
 
+        /// <summary>
+        /// Fire, which no lord should be buying or be handed.
+        ///
+        /// Two markings, because the game uses two. Vanilla's fire weapons
+        /// carry it in the physics material ("burning..."). The NavalDLC's do
+        /// not: burning_arrows and burning_bolts have the plain "missile"
+        /// material of any arrow, and say what they are in a separate
+        /// fire_damage stat (16). Asked only about the material, this let them
+        /// straight through -- lords were buying fire arrows, nineteen in one
+        /// evening's log, and a robbed archer could have drawn them as rags.
+        /// Both are read now, and neither is a name.
+        /// </summary>
         public static bool IsIncendiary(ItemObject item)
         {
             if (item == null || !item.HasWeaponComponent) return false;
 
             for (int i = 0; i < item.Weapons.Count; i++)
             {
-                string material = item.Weapons[i].PhysicsMaterial;
+                WeaponComponentData weapon = item.Weapons[i];
+                if (weapon == null) continue;
+                if (weapon.FireDamage > 0) return true;
+
+                string material = weapon.PhysicsMaterial;
                 if (string.IsNullOrEmpty(material)) continue;
                 if (material.IndexOf("burning", System.StringComparison.OrdinalIgnoreCase) >= 0)
                 {
