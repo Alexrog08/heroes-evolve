@@ -262,6 +262,7 @@ namespace HeroesEvolve
         public static void ResetSession()
         {
             _bestBuyable = null;
+            _ordinaryMissileSpeed = null;
         }
 
         private static Dictionary<ItemObject.ItemTypeEnum, int> _bestBuyable;
@@ -495,6 +496,96 @@ namespace HeroesEvolve
         }
 
         /// <summary>
+        /// Stealth ammunition, which is no use in a battle. See MissileRules:
+        /// an arrow or bolt at half the speed of the rest of its kind or slower.
+        /// </summary>
+        public static bool IsSlowMissile(ItemObject item)
+        {
+            if (item == null || !item.HasWeaponComponent) return false;
+            if (item.ItemType != ItemObject.ItemTypeEnum.Arrows
+                && item.ItemType != ItemObject.ItemTypeEnum.Bolts) return false;
+
+            int ordinary = OrdinaryMissileSpeed(item.ItemType);
+
+            for (int i = 0; i < item.Weapons.Count; i++)
+            {
+                WeaponComponentData weapon = item.Weapons[i];
+                if (weapon != null && MissileRules.IsSlow(weapon.MissileSpeed, ordinary)) return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// How fast arrows, or bolts, ordinarily fly in this installation --
+        /// the median of every one of that kind the game has loaded. Measured
+        /// once a session and logged, so a census shows the line and what fell
+        /// below it.
+        /// </summary>
+        private static Dictionary<ItemObject.ItemTypeEnum, int> _ordinaryMissileSpeed;
+
+        private static int OrdinaryMissileSpeed(ItemObject.ItemTypeEnum kind)
+        {
+            if (_ordinaryMissileSpeed == null)
+            {
+                // No item list yet is not a catalogue with no ammunition in it.
+                // Left unmeasured, so the first question asked in a campaign
+                // measures it.
+                MBReadOnlyList<ItemObject> all = MBObjectManager.Instance != null
+                    ? MBObjectManager.Instance.GetObjectTypeList<ItemObject>() : null;
+                if (all == null || all.Count == 0) return 0;
+
+                Dictionary<ItemObject.ItemTypeEnum, List<int>> speeds =
+                    new Dictionary<ItemObject.ItemTypeEnum, List<int>>();
+                speeds[ItemObject.ItemTypeEnum.Arrows] = new List<int>();
+                speeds[ItemObject.ItemTypeEnum.Bolts] = new List<int>();
+
+                for (int i = 0; i < all.Count; i++)
+                {
+                    ItemObject item = all[i];
+                    if (item == null || !item.HasWeaponComponent) continue;
+                    List<int> bucket;
+                    if (!speeds.TryGetValue(item.ItemType, out bucket)) continue;
+                    for (int w = 0; w < item.Weapons.Count; w++)
+                    {
+                        if (item.Weapons[w] != null) bucket.Add(item.Weapons[w].MissileSpeed);
+                    }
+                }
+
+                _ordinaryMissileSpeed = new Dictionary<ItemObject.ItemTypeEnum, int>();
+                foreach (KeyValuePair<ItemObject.ItemTypeEnum, List<int>> pair in speeds)
+                {
+                    _ordinaryMissileSpeed[pair.Key] = MissileRules.Ordinary(pair.Value);
+                }
+
+                // What the line refuses, named, so it can be read back.
+                List<string> refused = new List<string>();
+                for (int i = 0; i < all.Count; i++)
+                {
+                    ItemObject item = all[i];
+                    if (item == null || !item.HasWeaponComponent) continue;
+                    int line;
+                    if (!_ordinaryMissileSpeed.TryGetValue(item.ItemType, out line)) continue;
+                    for (int w = 0; w < item.Weapons.Count; w++)
+                    {
+                        if (item.Weapons[w] != null && MissileRules.IsSlow(item.Weapons[w].MissileSpeed, line))
+                        {
+                            refused.Add(item.StringId);
+                            break;
+                        }
+                    }
+                }
+
+                ModLog.Info("CATALOG missiles ordinaryArrows=" + _ordinaryMissileSpeed[ItemObject.ItemTypeEnum.Arrows]
+                            + " ordinaryBolts=" + _ordinaryMissileSpeed[ItemObject.ItemTypeEnum.Bolts]
+                            + " refusedAsSlow=" + (refused.Count == 0 ? "none" : string.Join(",", refused.ToArray())));
+            }
+
+            int ordinary;
+            return _ordinaryMissileSpeed.TryGetValue(kind, out ordinary) ? ordinary : 0;
+        }
+
+        /// <summary>
         /// Fire, which no lord should be buying or be handed.
         ///
         /// Two markings, because the game uses two. Vanilla's fire weapons
@@ -546,6 +637,7 @@ namespace HeroesEvolve
         {
             if (item == null) return true;
             if (IsIncendiary(item)) return true;
+            if (IsSlowMissile(item)) return true;
             return Settings.IsExcluded(item.StringId);
         }
 

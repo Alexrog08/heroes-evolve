@@ -63,6 +63,7 @@ namespace HeroesEvolve.Tests
             RagTierTests.RunAll();
             RobberyLedgerTests.RunAll();
             RagChoiceTests.RunAll();
+            MissileRulesTests.RunAll();
             ItemGradeTests.RunAll();
             QualityValueTests.RunAll();
             CultureChoiceTests.RunAll();
