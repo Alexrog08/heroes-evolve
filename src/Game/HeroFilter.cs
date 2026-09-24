@@ -50,6 +50,18 @@ namespace HeroesEvolve
         {
             if (hero == null) return "null";
             if (hero.IsDead) return "dead";
+
+            // Never the player's own character. Not an exception to the rule
+            // that the player is not special -- it is the one asymmetry that
+            // rule allows, who decides: his gear is his to choose, or that of
+            // whatever mod is running it. The v1.3.9 rewrite of this filter
+            // dropped the line, and the world-creation pass notes every lord,
+            // the player among them. So on day one the kit judged him, and a
+            // start that looks broken -- a Serve As Soldier recruit in a tunic
+            // with one weapon -- was re-dressed over the other mod's gear. The
+            // census had it in plain sight: geared=True beside why=isPlayer.
+            if (hero.IsHumanPlayerCharacter || hero == Hero.MainHero) return "isPlayer";
+
             if (hero.IsChild) return "child";
             if (!hero.IsLord) return "notLord";
             if (!Settings.ManageOwnClan && hero.Clan == Clan.PlayerClan) return "ownClanOff";
