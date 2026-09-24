@@ -27,11 +27,22 @@ namespace HeroesEvolve.Core
     /// matching names breaks on the first mod. KitTier.Lowest already draws
     /// that line for the whole mod and this keeps it for the chest.
     ///
+    /// The weapons are held up too, and for the same reason. Tier 1 of the
+    /// weapon rack is the peasant's -- peasant_pitchfork_1_t1, pitchforks,
+    /// hammers, sickles -- and a lord robbed of his lance was coming back with
+    /// a pitchfork, which players noticed and reported. A man scavenging an
+    /// army's baggage takes soldiers' weapons, not farm tools. The starting kit
+    /// already refuses tier 1 for the same reason (GrantTier.Minimum), so this
+    /// is the one floor the mod uses for weapons everywhere.
+    ///
     /// Everywhere else takes tier 1, and that is coverage rather than flavour.
     /// Counted over what the game sells, Nord has four pairs of boots at tier 1
     /// and none at tier 2; Sturgia has six and one. A tier-2 floor would leave
     /// those men barefoot for ever, because a lord only ever buys a better
     /// version of what he already carries and can never fill an empty slot.
+    /// Weapons do not have that hole: the search falls back to anyone's rack
+    /// and then to his own people's up to the tier taken, and the
+    /// seven-culture robbery sweep is the check that it always finds one.
     /// </summary>
     public static class RagTier
     {
@@ -42,19 +53,27 @@ namespace HeroesEvolve.Core
         public const int Body = KitTier.Lowest;
 
         /// <summary>
-        /// Head, legs, hands, cape, weapons and mounts: the cheapest the world
-        /// has. Nothing in these slots is a gown, and some cultures sell
-        /// nothing above it.
+        /// Weapons, shields and ammunition: out of the peasant's rack. The same
+        /// floor the starting kit keeps.
+        /// </summary>
+        public const int Weapon = KitTier.Lowest;
+
+        /// <summary>
+        /// Head, legs, hands, cape and mounts: the cheapest the world has.
+        /// Nothing in these slots is a gown or a farm tool, and some cultures
+        /// sell nothing above it.
         /// </summary>
         public const int Everything = 1;
 
         /// <summary>
-        /// The ceiling for one slot. Body armour alone is held up; everything
-        /// else falls as far as the catalogue goes.
+        /// The floor for one slot. The chest and the weapons are held up;
+        /// everything else falls as far as the catalogue goes.
         /// </summary>
-        public static int For(bool isBodyArmour)
+        public static int For(bool isBodyArmour, bool isWeapon)
         {
-            return isBodyArmour ? Body : Everything;
+            if (isBodyArmour) return Body;
+            if (isWeapon) return Weapon;
+            return Everything;
         }
     }
 }

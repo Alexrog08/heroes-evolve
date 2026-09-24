@@ -51,6 +51,16 @@ namespace HeroesEvolve
         }
 
         /// <summary>
+        /// Anything that goes in a weapon slot: arms, shields, arrows and bolts.
+        /// Horses carry a HorseComponent and armour an ArmorComponent, so the
+        /// weapon component alone sorts them.
+        /// </summary>
+        private static bool IsWeapon(ItemObject item)
+        {
+            return item != null && item.WeaponComponent != null;
+        }
+
+        /// <summary>
         /// Whether this piece is already the bottom of the world and not worth
         /// a captor's trouble.
         ///
@@ -82,7 +92,7 @@ namespace HeroesEvolve
             // settles once everything is at the bottom, but until then it is
             // churn nobody asked for.
             bool body = item.ItemType == ItemObject.ItemTypeEnum.BodyArmor;
-            return (int)item.Tier + 1 <= RagTier.For(body);
+            return (int)item.Tier + 1 <= RagTier.For(body, IsWeapon(item));
         }
 
         /// <summary>
@@ -148,7 +158,7 @@ namespace HeroesEvolve
             // Never above what was taken, so rags cannot be an upgrade. A man
             // robbed of plated boots does not walk away in better ones because
             // his people make nothing cheap.
-            int floor = RagTier.For(body);
+            int floor = RagTier.For(body, IsWeapon(taken));
             int ceiling = (int)taken.Tier + 1;
             if (ceiling < floor) ceiling = floor;
 

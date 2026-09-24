@@ -13,7 +13,16 @@ namespace HeroesEvolve.Tests
             // gown in the game is a tier-1 body armour and nothing can tell
             // them from the tunics beside them.
             Check.Equal(KitTier.Lowest, RagTier.Body, "the chest keeps the clothing floor");
-            Check.Equal(RagTier.Body, RagTier.For(true), "and For says so for body armour");
+            Check.Equal(RagTier.Body, RagTier.For(true, false), "and For says so for body armour");
+
+            // The weapons keep the same floor. Tier 1 of the weapon rack is the
+            // peasant's -- pitchforks, hammers, sickles -- and a robbed lord was
+            // coming home with a pitchfork. One floor for weapons everywhere,
+            // the starting kit's own.
+            Check.Equal(KitTier.Lowest, RagTier.Weapon, "weapons keep the kit's floor");
+            Check.Equal(GrantTier.Minimum, RagTier.Weapon, "the same floor the starting kit keeps");
+            Check.Equal(RagTier.Weapon, RagTier.For(false, true), "and For says so for weapons");
+            Check.False(KitTier.IsClothing(RagTier.Weapon), "no weapon rag comes off the peasant's rack");
             Check.True(KitTier.IsClothing(RagTier.Everything),
                        "everything else is allowed below that floor, on purpose");
 
@@ -22,7 +31,7 @@ namespace HeroesEvolve.Tests
             // buy into an empty slot, so a tier-2 floor would strand him
             // barefoot for the rest of the campaign.
             Check.Equal(1, RagTier.Everything, "the rest of the man takes the cheapest there is");
-            Check.Equal(RagTier.Everything, RagTier.For(false), "and For says so for everything else");
+            Check.Equal(RagTier.Everything, RagTier.For(false, false), "and For says so for everything else");
 
             // The line that keeps the two repairs apart. GrantService.NeedsGrant
             // calls a man broken when his chest is clothing, so the chest rag
