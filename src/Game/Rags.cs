@@ -177,10 +177,35 @@ namespace HeroesEvolve
             if (foreign != null) return foreign;
 
             // And if the world sells nothing that cheap in this slot, his own
-            // people at whatever it costs, up to what was taken. Last because
+            // people at whatever it costs, up to what was taken. Late because
             // it is the one that can hand back something nearly as good; still
             // better than a slot left bare, which stays bare for life.
-            return Search(taken, culture, ceiling, floor, seed);
+            ItemObject dearer = Search(taken, culture, ceiling, floor, seed);
+            if (dearer != null) return dearer;
+
+            // Then anyone's, over the same band.
+            ItemObject dearerForeign = Search(taken, null, ceiling, floor, seed);
+            if (dearerForeign != null) return dearerForeign;
+
+            // Last of all, below the floor. The floor is a preference -- a lord
+            // should not scavenge a pitchfork -- and a bare slot is permanent,
+            // because a lord only ever buys a better version of what he carries
+            // and never fills an empty slot. So when nothing at or above the
+            // floor exists anywhere, the cheapest thing that does exist beats
+            // nothing, and it is logged, because it should be rare enough to
+            // look at.
+            if (floor > RagTier.Everything)
+            {
+                ItemObject lastResort = Search(taken, null, ceiling, RagTier.Everything, seed);
+                if (lastResort != null)
+                {
+                    ModLog.Info("RAGS belowFloor hero=" + hero.Name + " taken=" + taken.StringId
+                                + " gave=" + lastResort.StringId + " floor=" + floor);
+                    return lastResort;
+                }
+            }
+
+            return null;
         }
 
         /// <summary>
@@ -217,7 +242,14 @@ namespace HeroesEvolve
 
                 if (!ItemCatalog.PassesCommonFilters(item, culture, ceiling, floor)) continue;
 
+                // The floor, held here for every kind. PassesCommonFilters takes
+                // it as minArmorTier and applies it to armour slots only, so for
+                // weapons it was silently ignored: the search kept the cheapest
+                // it saw, and that was the peasant's rack. The first test of the
+                // tier-2 weapon floor came back with seven lords holding
+                // pitchforks and a hammer.
                 int tier = (int)item.Tier + 1;
+                if (tier < floor) continue;
                 if (tier > bestTier) continue;
 
                 if (tier < bestTier)
