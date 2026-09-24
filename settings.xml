@@ -140,12 +140,6 @@
        Zero removes the safety net. -->
   <ReserveMultiplier>1.0</ReserveMultiplier>
 
-  <!-- Chance a lord bothers with the market when he walks into a town. He
-       takes at most one shopping trip a day and buys what that town has for
-       him, so this decides how often he walks past a market rather than how
-       much he leaves with. At 1.0 he stops at every town he enters. -->
-  <ShopChancePerVisit>0.25</ShopChancePerVisit>
-
   <!-- Whose colours a lord favours when he buys: clan (his clan's culture),
        hero (his own culture) or none (no preference: the best piece wins,
        whoever made it). A piece in the favoured culture counts a quarter of

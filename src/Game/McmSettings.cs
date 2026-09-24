@@ -97,12 +97,6 @@ namespace HeroesEvolve
         [SettingPropertyGroup("Shopping", GroupOrder = 6)]
         public bool EnablePurchases { get; set; } = true;
 
-        [SettingPropertyFloatingInteger("Chance of shopping per town visit", 0f, 1f, "0.00",
-            RequireRestart = false, Order = 1,
-            HintText = "How often a lord bothers with the market. One trip a day at most. At 1.00 he stops at every town he enters.")]
-        [SettingPropertyGroup("Shopping", GroupOrder = 6)]
-        public float ShopChancePerVisit { get; set; } = 0.25f;
-
         [SettingPropertyFloatingInteger("Share of the purse per shopping trip", 0f, 1f, "0.00",
             RequireRestart = false, Order = 2,
             HintText = "What a lord may spend in one trip, split between the slots that town can improve. Lower means poorer lords and slower recovery after a robbery.")]

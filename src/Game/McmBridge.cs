@@ -262,7 +262,6 @@ namespace HeroesEvolve
             Settings.MinimumTier = settings.MinimumTier;
             Settings.DominanceMargin = settings.DominanceMargin;
 
-            Settings.ShopChancePerVisit = settings.ShopChancePerVisit;
             Settings.ShoppingCulture = Core.CultureChoices.FromIndex(
                 settings.ShoppingCulture != null ? settings.ShoppingCulture.SelectedIndex : -1,
                 Settings.ShoppingCulture);

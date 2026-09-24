@@ -25,17 +25,6 @@ namespace HeroesEvolve
         internal static int DominanceMargin { get { return Settings.DominanceMargin; } }
 
         /// <summary>
-        /// How likely a lord is to go shopping on any one town visit.
-        ///
-        /// A probability rather than a cooldown, so the spending of a clan's
-        /// lords spreads out on its own instead of all landing the day a timer
-        /// expires. At one purchase per trip it also sets the pace of the whole
-        /// engine: a lord converges on the gear he deserves over years, paying
-        /// for it, which is the point.
-        /// </summary>
-        internal static float ShopChancePerVisit { get { return Settings.ShopChancePerVisit; } }
-
-        /// <summary>
         /// The day's gear spending, per clan. Owned here because a behaviour
         /// instance is built fresh per campaign load, which is exactly the
         /// lifetime this ledger should have -- it holds no save data.
@@ -46,11 +35,19 @@ namespace HeroesEvolve
         /// <summary>
         /// Who has already been shopping today.
         ///
-        /// A lord crossing three towns in a day would otherwise get three rolls
-        /// and could buy three times. Lords Gear caps the same way -- it polls
-        /// hourly and clears a set of hero ids each morning -- and the cap is
-        /// what actually sets the pace, since the probability alone only decides
-        /// which visit counts.
+        /// A lord crossing three towns in a day would otherwise shop three
+        /// times. Lords Gear caps the same way -- it polls hourly and clears a
+        /// set of hero ids each morning.
+        ///
+        /// There used to be a roll as well, a 25% chance per visit, sized for
+        /// the days when a trip bought one piece and the roll therefore paced
+        /// the engine. A trip now buys every gap the town can fill, so the roll
+        /// paced nothing: it only decided which visit counted, and it cost the
+        /// man who needed the market most -- a lord just robbed, walking past
+        /// three towns in his rags. What paces spending is this cap, the clan's
+        /// daily share and reserve (BudgetService), the skill ceiling, the
+        /// minimum gain worth a swap, and what that one town has on its
+        /// shelves. A lord now stops at the first town he enters each day.
         ///
         /// Cleared with the budget ledger and, like it, never saved.
         /// </summary>
@@ -506,11 +503,9 @@ namespace HeroesEvolve
                 string id = shopper.StringId;
                 if (id != null && _shoppedToday.Contains(id)) return;
 
-                if (MBRandom.RandomFloat > ShopChancePerVisit) return;
-
-                // Marked whether or not anything is bought. The roll is the
-                // shopping trip; walking out empty-handed still used it up, and
-                // re-rolling at the next gate would quietly multiply the rate.
+                // Marked whether or not anything is bought. Walking out of the
+                // first town empty-handed still counts as the day's trip; trying
+                // again at every gate would turn the cap into no cap at all.
                 if (id != null) _shoppedToday.Add(id);
 
                 // The trip's total, not just its pieces. Every purchase already

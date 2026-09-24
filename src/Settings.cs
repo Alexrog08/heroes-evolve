@@ -130,9 +130,6 @@ namespace HeroesEvolve
         /// </summary>
         public static float ReserveMultiplier = 1.0f;
 
-        /// <summary>Chance a lord goes shopping when he enters a town.</summary>
-        public static float ShopChancePerVisit = 0.25f;
-
         // --- Losing gear ----------------------------------------------------
 
         /// <summary>
@@ -408,7 +405,6 @@ namespace HeroesEvolve
 
                 SpendingShare = Number(root, "SpendingShare", SpendingShare, 0f, 1f);
                 ReserveMultiplier = Number(root, "ReserveMultiplier", ReserveMultiplier, 0f, 10f);
-                ShopChancePerVisit = Number(root, "ShopChancePerVisit", ShopChancePerVisit, 0f, 1f);
                 ShoppingCulture = Core.CultureChoices.Parse(Text(root, "ShoppingCulture"), ShoppingCulture);
                 OwnCultureArmorOnly = Flag(root, "OwnCultureArmorOnly", OwnCultureArmorOnly);
                 OwnCultureWeaponsOnly = Flag(root, "OwnCultureWeaponsOnly", OwnCultureWeaponsOnly);
@@ -446,7 +442,6 @@ namespace HeroesEvolve
                    + " dominanceMargin=" + DominanceMargin
                    + " spendingShare=" + SpendingShare
                    + " reserveMultiplier=" + ReserveMultiplier
-                   + " shopChance=" + ShopChancePerVisit
                    + " shoppingCulture=" + Core.CultureChoices.NameOf(ShoppingCulture)
                    + " ownCultureArmorOnly=" + OwnCultureArmorOnly
                    + " ownCultureWeaponsOnly=" + OwnCultureWeaponsOnly
