@@ -581,9 +581,17 @@ namespace HeroesEvolve
             // working. If this number is 12 in a stock campaign and smaller
             // under FastMode, and asked-per-lord holds steady between them, it
             // is doing its job.
+            // And what focus did to the order of their weapons (WeaponRank),
+            // every figure against slot order, the rule before it. In a save
+            // grown under that rule the AI has spent years of focus following
+            // the slots, so primaryByFocus starts small there. Two readings
+            // would be a bug rather than a campaign: noFocus near multiWeapon
+            // means focus is not being read, and primaryByFocus at zero in a
+            // new campaign means it is not being used.
             ModLog.Info("GROWTH weekly pass grew " + grown + " lords"
                         + " asked=" + asked + " delivered=" + delivered
-                        + " cyclesPerYear=" + (int)SkillGrowthService.CyclesPerYear());
+                        + " cyclesPerYear=" + (int)SkillGrowthService.CyclesPerYear()
+                        + " weapons " + SkillGrowthService.TakeWeaponOrder().Describe());
         }
 
         /// <summary>

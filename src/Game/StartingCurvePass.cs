@@ -54,6 +54,7 @@ namespace HeroesEvolve
             public int Unarmed;
             public int OwnClan;
             public int Failed;
+            public readonly WeaponRank.Tally WeaponOrder = new WeaponRank.Tally();
             public readonly List<int> LevelBefore = new List<int>();
             public readonly List<int> LevelAfter = new List<int>();
             public readonly List<int> BestBefore = new List<int>();
@@ -155,6 +156,14 @@ namespace HeroesEvolve
             ModLog.Info("STARTCURVE level after  " + Diagnostics.Percentiles(tally.LevelAfter));
             ModLog.Info("STARTCURVE bestWeapon before " + Diagnostics.Percentiles(tally.BestBefore));
             ModLog.Info("STARTCURVE bestWeapon after  " + Diagnostics.Percentiles(tally.BestAfter));
+
+            // Which weapon each lord's day-one sheet was built around: the one
+            // he holds most focus in, against the one in his first slot. The
+            // curve settles every developed weapon exactly on its share, so
+            // primaryByFocus is how many lords start the campaign with a
+            // different weapon at the top than slot order would have given
+            // them. Zero here would mean focus is not being used.
+            ModLog.Info("STARTCURVE weapons " + tally.WeaponOrder.Describe());
         }
 
         /// <summary>
@@ -199,7 +208,8 @@ namespace HeroesEvolve
             ModLog.Info("STARTCURVE latecomer=" + hero.Name
                         + " age=" + (int)hero.Age
                         + " raised=" + tally.Raised
-                        + " lowered=" + tally.Lowered);
+                        + " lowered=" + tally.Lowered
+                        + " primaryByFocus=" + tally.WeaponOrder.PrimaryByFocus);
             return true;
         }
 
@@ -210,7 +220,7 @@ namespace HeroesEvolve
             // Where this mod will be taking him, computed exactly as the weekly
             // growth computes it, so the campaign's first week carries on from here.
             Dictionary<SkillObject, int> developed = new Dictionary<SkillObject, int>();
-            List<SkillGrowthService.SkillTarget> targets = SkillGrowthService.Targets(hero);
+            List<SkillGrowthService.SkillTarget> targets = SkillGrowthService.Targets(hero, tally.WeaponOrder);
             for (int i = 0; i < targets.Count; i++) developed[targets[i].Skill] = targets[i].Target;
 
             float age = hero.Age;

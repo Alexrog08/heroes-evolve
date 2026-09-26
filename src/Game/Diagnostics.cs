@@ -4186,6 +4186,10 @@ namespace HeroesEvolve
                 ModLog.Info(header);
                 echo.AppendLine(header);
 
+                string growth = "DRY   growth " + SkillGrowthService.DescribeWeaponOrder(hero);
+                ModLog.Info(growth);
+                echo.AppendLine(growth);
+
                 for (int i = 0; i < resolved.Slots.Count; i++)
                 {
                     ResolvedSlot slot = resolved.Slots[i];

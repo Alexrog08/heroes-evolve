@@ -1,5 +1,7 @@
 using System.Collections.Generic;
+using System.Text;
 using TaleWorlds.CampaignSystem;
+using TaleWorlds.CampaignSystem.CharacterDevelopment;
 using TaleWorlds.CampaignSystem.ComponentInterfaces;
 using TaleWorlds.Core;
 using HeroesEvolve.Core;
@@ -56,7 +58,7 @@ namespace HeroesEvolve
             if (!HeroFilter.IsEligibleToGrow(hero)) return false;
             if (hero.HeroDeveloper == null || hero.BattleEquipment == null) return false;
 
-            List<SkillTarget> targets = Targets(hero);
+            List<SkillTarget> targets = Targets(hero, _weeklyOrder);
             if (targets.Count == 0) return false;
 
             for (int i = 0; i < targets.Count; i++)
@@ -81,14 +83,12 @@ namespace HeroesEvolve
         /// Shared by the weekly growth and the campaign-start curve, so the two
         /// can never aim the same hero at different places.
         ///
-        /// Weapons first, ranked by slot, not by current value. The game itself
-        /// reads the lowest-numbered weapon slot to decide which skill a hero
-        /// trains in simulated combat (Helpers.CharacterHelper.GetDefaultWeapon
-        /// walks slots 0 to 4 and takes the first real weapon), so slot order is
-        /// already the game's own statement of what this lord fights with.
-        /// Ranking by current value instead would entrench whatever the generator
-        /// happened to give him and never let a repaired hero grow into the
-        /// loadout he was actually handed.
+        /// Weapons first, the one he has put the most focus into leading and
+        /// slot order wherever focus does not decide -- WeaponRank says why
+        /// focus, and why a tie is not grown alike. Never by current value: that
+        /// would entrench whatever the generator happened to give him and never
+        /// let a repaired hero grow into the loadout he was actually handed,
+        /// which is why a tie falls back to the slots and not to his figures.
         ///
         /// Then everything that is not a weapon -- stewardship, medicine,
         /// seamanship and the rest -- by where the game has already spent this
@@ -101,7 +101,7 @@ namespace HeroesEvolve
         /// and naval aptitude are drawn separately from combat, so a lord may be a
         /// prodigy with a lance and an indifferent quartermaster.
         /// </summary>
-        internal static List<SkillTarget> Targets(Hero hero)
+        internal static List<SkillTarget> Targets(Hero hero, WeaponRank.Tally weaponOrder)
         {
             List<SkillTarget> targets = new List<SkillTarget>();
 
@@ -109,7 +109,7 @@ namespace HeroesEvolve
             int primaryTarget = SkillGrowth.PrimaryTarget(hero.Age, talent);
             if (primaryTarget <= 0) return targets;
 
-            List<SkillObject> ranked = RankedWeaponSkills(hero);
+            List<SkillObject> ranked = RankedWeaponSkills(hero, weaponOrder);
             for (int rank = 0; rank < ranked.Count; rank++)
             {
                 Add(targets, hero, ranked[rank], SkillGrowth.TargetForRank(primaryTarget, rank), talent);
@@ -141,6 +141,12 @@ namespace HeroesEvolve
             }
 
             return targets;
+        }
+
+        /// <summary>As above, for a caller keeping no census.</summary>
+        internal static List<SkillTarget> Targets(Hero hero)
+        {
+            return Targets(hero, null);
         }
 
         /// <summary>
@@ -222,6 +228,20 @@ namespace HeroesEvolve
             _pointsAsked = 0f;
         }
 
+        /// <summary>
+        /// What focus did to the order of the weapons of the heroes grown since
+        /// the tally was last read. The weekly GROWTH line carries it.
+        /// </summary>
+        private static WeaponRank.Tally _weeklyOrder = new WeaponRank.Tally();
+
+        /// <summary>Reads the tally and starts a new one for the next pass.</summary>
+        public static WeaponRank.Tally TakeWeaponOrder()
+        {
+            WeaponRank.Tally taken = _weeklyOrder;
+            _weeklyOrder = new WeaponRank.Tally();
+            return taken;
+        }
+
         private static void Grant(Hero hero, SkillObject skill, int target, float talent)
         {
             if (skill == null || target <= 0) return;
@@ -296,14 +316,88 @@ namespace HeroesEvolve
         }
 
         /// <summary>
+        /// The distinct skills this hero's weapons call on, in the order they
+        /// take their shares of his growth: most focus first, slot order where
+        /// focus does not decide. See WeaponRank.
+        /// </summary>
+        internal static List<SkillObject> RankedWeaponSkills(Hero hero)
+        {
+            return RankedWeaponSkills(hero, null);
+        }
+
+        private static List<SkillObject> RankedWeaponSkills(Hero hero, WeaponRank.Tally tally)
+        {
+            List<SkillObject> bySlot = WeaponSkillsBySlot(hero);
+            List<int> focus = FocusIn(hero, bySlot);
+            if (tally != null) tally.Add(focus);
+
+            int[] order = WeaponRank.ByFocus(focus);
+            List<SkillObject> ranked = new List<SkillObject>(order.Length);
+            for (int i = 0; i < order.Length; i++) ranked.Add(bySlot[order[i]]);
+            return ranked;
+        }
+
+        /// <summary>
+        /// The focus he holds in each of these skills, in the same order. None
+        /// for a hero without a developer, which leaves him ranked by slot.
+        /// </summary>
+        private static List<int> FocusIn(Hero hero, List<SkillObject> skills)
+        {
+            List<int> focus = new List<int>(skills.Count);
+            HeroDeveloper developer = hero.HeroDeveloper;
+            for (int i = 0; i < skills.Count; i++)
+            {
+                focus.Add(developer != null ? developer.GetFocus(skills[i]) : 0);
+            }
+            return focus;
+        }
+
+        /// <summary>
+        /// One hero's weapons as growth ranks them, for hev.dry_run: each with
+        /// the focus he holds in it and where it is headed, then the slot order
+        /// focus replaced. Moving focus on a companion shows up here at once,
+        /// where growth itself would take years to show it.
+        /// </summary>
+        internal static string DescribeWeaponOrder(Hero hero)
+        {
+            if (hero == null || hero.HeroDeveloper == null || hero.BattleEquipment == null) return "n/a";
+
+            Dictionary<SkillObject, int> targetOf = new Dictionary<SkillObject, int>();
+            List<SkillTarget> targets = Targets(hero);
+            for (int i = 0; i < targets.Count; i++) targetOf[targets[i].Skill] = targets[i].Target;
+
+            StringBuilder text = new StringBuilder("grows=" + HeroFilter.IsEligibleToGrow(hero) + " weapons=");
+            List<SkillObject> ranked = RankedWeaponSkills(hero);
+            for (int i = 0; i < ranked.Count; i++)
+            {
+                int target;
+                targetOf.TryGetValue(ranked[i], out target);
+                if (i > 0) text.Append(' ');
+                text.Append(ranked[i].StringId)
+                    .Append("[focus ").Append(hero.HeroDeveloper.GetFocus(ranked[i]))
+                    .Append(" -> ").Append(target).Append(']');
+            }
+
+            List<SkillObject> bySlot = WeaponSkillsBySlot(hero);
+            text.Append(" bySlot=");
+            for (int i = 0; i < bySlot.Count; i++)
+            {
+                if (i > 0) text.Append(',');
+                text.Append(bySlot[i].StringId);
+            }
+
+            return text.ToString();
+        }
+
+        /// <summary>
         /// The distinct skills this hero's weapons call on, in slot order.
         /// Shields and ammunition contribute none and are skipped without
         /// consuming a rank -- a lord carrying bow, arrows, sword and shield
         /// trains two skills, not four.
         /// </summary>
-        internal static List<SkillObject> RankedWeaponSkills(Hero hero)
+        private static List<SkillObject> WeaponSkillsBySlot(Hero hero)
         {
-            List<SkillObject> ranked = new List<SkillObject>();
+            List<SkillObject> bySlot = new List<SkillObject>();
 
             for (int i = 0; i < SlotSnapshot.WeaponSlotCount; i++)
             {
@@ -318,12 +412,12 @@ namespace HeroesEvolve
                 WeaponCategory category = ItemClassifier.Classify(item);
                 SkillObject skill = SkillFor(category);
                 if (skill == null) continue;
-                if (ranked.Contains(skill)) continue;
+                if (bySlot.Contains(skill)) continue;
 
-                ranked.Add(skill);
+                bySlot.Add(skill);
             }
 
-            return ranked;
+            return bySlot;
         }
 
         /// <summary>
