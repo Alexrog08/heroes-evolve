@@ -198,10 +198,26 @@ namespace HeroesEvolve
                 if (harness != null && !ItemCatalog.IsIrreplaceable(harness))
                 {
                     int harnessFine = FineOf(hero.BattleEquipment[EquipmentIndex.HorseHarness]);
+                    int harnessTier = TierOf(harness);
+
+                    // A saddle cut for another beast is worth nothing on this
+                    // one, so it counts as the least a harness can be and the
+                    // first that fits his mount replaces it. The market no
+                    // longer makes these -- a lord keeps the beast he rides, see
+                    // MountFamilyRules -- but saves from before are full of
+                    // camels in horse harness, and TaleWorlds' own sheets may
+                    // hold a few.
+                    if (!MarketScanner.HarnessFits(harness, mount))
+                    {
+                        harnessFine = 1;
+                        harnessTier = 1;
+                    }
+
                     List<MarketOffer> harnesses = MarketScanner.Harnesses(stock, settlement, hero, mount,
                                                                           culture, ceiling, harnessFine,
                                                                           ItemCatalog.IsOwnCulture(harness, culture));
-                    Add(found, EquipmentIndex.HorseHarness, harnesses, harness, harnessFine, culture, limit);
+                    Add(found, EquipmentIndex.HorseHarness, harnesses, harness, harnessTier, harnessFine,
+                        culture, limit);
                 }
             }
 
@@ -631,6 +647,14 @@ namespace HeroesEvolve
                                 List<MarketOffer> offers, ItemObject worn, int wornFine,
                                 CultureObject culture, int limit)
         {
+            Add(found, slot, offers, worn, TierOf(worn), wornFine, culture, limit);
+        }
+
+        /// <summary>As above, with the worn piece's tier given rather than read.</summary>
+        private static void Add(List<Candidate> found, EquipmentIndex slot,
+                                List<MarketOffer> offers, ItemObject worn, int wornTier, int wornFine,
+                                CultureObject culture, int limit)
+        {
             if (offers == null || offers.Count == 0) return;
 
             // Offers arrive best-first, so this is the best he can afford here.
@@ -644,7 +668,6 @@ namespace HeroesEvolve
             }
             if (chosen < 0) return;
 
-            int wornTier = TierOf(worn);
             bool wornOwn = ItemCatalog.IsOwnCulture(worn, culture);
 
             MarketOffer offer = offers[chosen];

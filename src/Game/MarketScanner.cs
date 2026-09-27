@@ -227,6 +227,33 @@ namespace HeroesEvolve
         }
 
         /// <summary>
+        /// The beast a harness is cut for, on the same scale as FamilyOf: the
+        /// game writes one family_type on the saddle and one on the monster,
+        /// 1 for a horse and 2 for a camel. MountFamilyRules.NoFamily for
+        /// anything that does not say.
+        /// </summary>
+        internal static int HarnessFamilyOf(ItemObject harness)
+        {
+            if (harness == null || !harness.HasArmorComponent) return MountFamilyRules.NoFamily;
+
+            int family = harness.ArmorComponent.FamilyType;
+            return family > 0 ? family : MountFamilyRules.NoFamily;
+        }
+
+        /// <summary>
+        /// Whether a harness is cut for the beast it sits on. True whenever
+        /// either side is missing or says nothing, so only a real mismatch --
+        /// a camel saddle on a horse -- ever reads as one.
+        /// </summary>
+        internal static bool HarnessFits(ItemObject harness, ItemObject mount)
+        {
+            int cut = HarnessFamilyOf(harness);
+            int beast = FamilyOf(mount);
+            if (cut <= 0 || beast <= 0) return true;
+            return cut == beast;
+        }
+
+        /// <summary>
         /// Whether this lord may take up a mount of this one's family. The census
         /// asks it one mount at a time; Mounts works the same answer out once for
         /// a whole shelf.

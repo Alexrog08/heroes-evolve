@@ -3,7 +3,8 @@ using System.Collections.Generic;
 namespace HeroesEvolve.Core
 {
     /// <summary>
-    /// Which kind of beast a lord may take up: only one his own people ride.
+    /// Which kind of beast a lord may take up: the one he rides, if his people
+    /// ride it, and otherwise one of theirs.
     ///
     /// Mounts come in families -- horses, camels, whatever a mod adds -- and the
     /// market used to judge a mount by its tier alone, so a Vlandian lord with
@@ -15,12 +16,21 @@ namespace HeroesEvolve.Core
     /// fights with what, and it gets modded cultures right for free: in the base
     /// game only the Aserai field camel riders, alongside their horsemen.
     ///
+    /// A lord keeps the beast he rides. This was once "any beast his people
+    /// ride", and for the Aserai, who field both, that meant swapping camel for
+    /// horse and back whenever the other was a tier better. The saddle stayed
+    /// behind each time, because the harness is its own slot, bought on its own:
+    /// a subscriber reported Aserai on horses in camel saddles, and one lord in
+    /// the log fitted a horse harness and bought a war camel in the same trip.
+    /// A camel rider staying a camel rider is the same promise the rest of the
+    /// market keeps -- a foot archer is still a foot archer in forty years --
+    /// and it keeps the pair a pair.
+    ///
     /// His people or his house: a family either his own culture or his clan's
-    /// culture rides is open to him, so a lord married into a desert clan may
-    /// take to camels and an Aserai serving a Vlandian house need not give them
-    /// up. A lord already sitting on a beast his people do not ride is never
-    /// offered a better one of it, only one of theirs, so the odd Vlandian on a
-    /// camel from before this rule trades it for a horse in time.
+    /// culture rides is one he may keep, so an Aserai serving a Vlandian house
+    /// need not give up his camel. A lord sitting on a beast neither rides is
+    /// never offered a better one of it, only one of theirs, so the odd Vlandian
+    /// on a camel trades it for a horse in time.
     /// </summary>
     public static class MountFamilyRules
     {
@@ -40,8 +50,18 @@ namespace HeroesEvolve.Core
             bool known = (hisPeople != null && hisPeople.Count > 0) || (hisHouse != null && hisHouse.Count > 0);
             if (!known) return offered != NoFamily && offered == riding;
 
-            return (hisPeople != null && hisPeople.Contains(offered))
-                || (hisHouse != null && hisHouse.Contains(offered));
+            if (!Rides(offered, hisPeople, hisHouse)) return false;
+
+            // His own beast, when it is one of theirs, is the only one on offer.
+            // A lord on a foreign beast, or on none, may take any of theirs.
+            bool ridesTheirs = riding != NoFamily && Rides(riding, hisPeople, hisHouse);
+            return !ridesTheirs || offered == riding;
+        }
+
+        private static bool Rides(int family, ICollection<int> hisPeople, ICollection<int> hisHouse)
+        {
+            return (hisPeople != null && hisPeople.Contains(family))
+                || (hisHouse != null && hisHouse.Contains(family));
         }
     }
 }
