@@ -298,10 +298,10 @@ namespace HeroesEvolve
         /// this mod, and copies the dummy set over anything granted in it. A day
         /// later the game is finished with him.
         ///
-        /// Once. The entry goes the moment it is read -- for a prisoner, on his
-        /// first day free -- so no hero is looked at twice, which is also what
-        /// ends the double repair of a young lord whose first kit came up a
-        /// weapon short.
+        /// Once. The entry goes the moment it is read, so no hero is looked at
+        /// twice -- which is also what ends the double repair of a young lord
+        /// whose first kit came up a weapon short. And never later than his
+        /// next daily tick: a note kept longer is one a reload can lose.
         ///
         /// It used to be the opposite: every hero, every day, repaired whenever
         /// he looked broken. That reached what it never should. A companion
@@ -629,13 +629,16 @@ namespace HeroesEvolve
                 // The one trigger, read once and forgotten.
                 string moment;
                 if (!_freshlyMade.TryGetValue(id, out moment)) return;
-
-                // Held while he is somebody's prisoner. A kit handed out in a
-                // cell would undo the capture, and a lord robbed there already
-                // stands in his rags; he has his one look on his first day free.
-                if (hero.IsPrisoner) return;
-
                 _freshlyMade.Remove(id);
+
+                // No prisoner check, on purpose, and an audit that finds the old
+                // one missing should leave it out. A lord robbed in a cell stands
+                // in his rags, handed him in the instant of the robbery, so
+                // NeedsGrant leaves him alone. One TaleWorlds made broken is just
+                // as broken in a cell and is fixed there, which undoes no
+                // robbery. Holding the note until he walked free would keep it
+                // in memory for weeks, and a reload in between -- nothing here
+                // is saved -- would lose his one look for good.
 
                 if (!Settings.EnableRepair) return;
                 if (!HeroFilter.IsEligibleForRepair(hero)) return;

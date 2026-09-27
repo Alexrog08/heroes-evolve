@@ -24,10 +24,10 @@ namespace HeroesEvolve
         /// turns 18. The player's clan follows his own switch, as it does at the
         /// market.
         ///
-        /// Nothing about parties or errands. Those filters belonged to a repair
-        /// that looked at everyone every day; one that only looks at freshly
-        /// made lords has no need of them. A prisoner is a question of when, not
-        /// who, and the behaviour holds his look until he is free.
+        /// Nothing about parties, errands or prisoners. Those filters belonged
+        /// to a repair that looked at everyone every day; one that only looks at
+        /// freshly made lords has no need of them. TryRepair says why a
+        /// prisoner in particular needs no exception.
         /// </summary>
         public static bool IsEligibleForRepair(Hero hero)
         {
