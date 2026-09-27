@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace HeroesEvolve.Core
 {
     /// <summary>
@@ -51,6 +53,37 @@ namespace HeroesEvolve.Core
             highest = ceiling < Maximum ? ceiling : Maximum;
             if (highest < Minimum) highest = Minimum;
             lowest = Minimum;
+        }
+
+        /// <summary>
+        /// The tier to grant from when the band holds nothing: the cheapest tier
+        /// above it, or failing that the best below it. Zero when there is
+        /// neither.
+        ///
+        /// The fallback used to be FindBest -- the finest thing under the
+        /// hero's ceiling -- which is the purchase question, not this one. When
+        /// a culture made no throwing weapon at tier 2 or 3, the kit reached for
+        /// the top of the rack: the census found freshly repaired lords handed
+        /// eastern_javelin_3_t4 at tier 6, 28,237 denars of javelins, which is
+        /// exactly what Maximum exists to stop. The nearest tier above keeps a
+        /// kit a kit. Below the band comes last, as it does for the rags: tier 1
+        /// is the peasant's rack, and only a culture that offers nothing else is
+        /// dressed from it.
+        /// </summary>
+        public static int Fallback(IList<int> tiersOnOffer, int lowest, int highest)
+        {
+            if (tiersOnOffer == null) return 0;
+
+            int above = int.MaxValue;
+            int below = 0;
+            for (int i = 0; i < tiersOnOffer.Count; i++)
+            {
+                int tier = tiersOnOffer[i];
+                if (tier > highest && tier < above) above = tier;
+                else if (tier < lowest && tier > below) below = tier;
+            }
+
+            return above != int.MaxValue ? above : below;
         }
 
         /// <summary>

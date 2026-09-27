@@ -69,8 +69,9 @@ namespace HeroesEvolve
         /// engine nothing to sell, and issued every lord of a culture and tier
         /// the identical sword because the scan is deterministic.
         ///
-        /// Falls back to FindBest when the band is empty. A culture with nothing
-        /// at tier 2 or 3 should still dress its lords.
+        /// A culture with nothing at tier 2 or 3 should still dress its lords,
+        /// but with what is nearest a kit, not the finest thing on the rack --
+        /// see PickForGrant and GrantTier.Fallback.
         /// </summary>
         public static ItemObject FindForGrant(WeaponCategory category, CultureObject culture,
                                               int ceiling, SkillProfile skills, Hero hero, bool mounted,
@@ -80,27 +81,22 @@ namespace HeroesEvolve
 
             int lowest, highest;
             GrantTier.Band(ceiling, out lowest, out highest);
+            int reach = GrantReach(ceiling, highest);
 
-            List<ItemObject> candidates = new List<ItemObject>();
+            List<ItemObject> offered = new List<ItemObject>();
 
             MBReadOnlyList<ItemObject> all = MBObjectManager.Instance.GetObjectTypeList<ItemObject>();
             for (int i = 0; i < all.Count; i++)
             {
                 ItemObject item = all[i];
-                if (!IsEligible(item, category, culture, highest, skills, hero, mounted)) continue;
-                if ((int)item.Tier + 1 < lowest) continue;
+                if (!IsEligible(item, category, culture, reach, skills, hero, mounted)) continue;
                 if (avoidAlsoServing != WeaponCategory.None
                     && ItemClassifier.AlsoServesTwoHanded(item, avoidAlsoServing)) continue;
 
-                candidates.Add(item);
+                offered.Add(item);
             }
 
-            if (candidates.Count == 0)
-            {
-                return FindBest(category, culture, ceiling, skills, hero, mounted, avoidAlsoServing);
-            }
-
-            return candidates[GrantTier.Choose(HeroIdOf(hero), slotKey, candidates.Count)];
+            return PickForGrant(offered, lowest, highest, hero, slotKey);
         }
 
         /// <summary>Armour for the free repair, chosen the same way.</summary>
@@ -109,23 +105,21 @@ namespace HeroesEvolve
         {
             int lowest, highest;
             GrantTier.Band(ceiling, out lowest, out highest);
+            int reach = GrantReach(ceiling, highest);
 
-            List<ItemObject> candidates = new List<ItemObject>();
+            List<ItemObject> offered = new List<ItemObject>();
 
             MBReadOnlyList<ItemObject> all = MBObjectManager.Instance.GetObjectTypeList<ItemObject>();
             for (int i = 0; i < all.Count; i++)
             {
                 ItemObject item = all[i];
                 if (item == null || item.ItemType != wanted) continue;
-                if (!PassesCommonFilters(item, culture, highest)) continue;
-                if ((int)item.Tier + 1 < lowest) continue;
+                if (!PassesCommonFilters(item, culture, reach)) continue;
 
-                candidates.Add(item);
+                offered.Add(item);
             }
 
-            if (candidates.Count == 0) return FindBestArmor(wanted, culture, ceiling);
-
-            return candidates[GrantTier.Choose(HeroIdOf(hero), slotKey, candidates.Count)];
+            return PickForGrant(offered, lowest, highest, hero, slotKey);
         }
 
         /// <summary>
@@ -141,8 +135,9 @@ namespace HeroesEvolve
         {
             int lowest, highest;
             GrantTier.Band(ceiling, out lowest, out highest);
+            int reach = GrantReach(ceiling, highest);
 
-            List<ItemObject> candidates = new List<ItemObject>();
+            List<ItemObject> offered = new List<ItemObject>();
 
             MBReadOnlyList<ItemObject> all = MBObjectManager.Instance.GetObjectTypeList<ItemObject>();
             for (int i = 0; i < all.Count; i++)
@@ -150,16 +145,13 @@ namespace HeroesEvolve
                 ItemObject item = all[i];
                 if (item == null || item.ItemType != ItemObject.ItemTypeEnum.Horse) continue;
                 if (!IsWarMount(item)) continue;
-                if (!PassesCommonFilters(item, culture, highest)) continue;
-                if ((int)item.Tier + 1 < lowest) continue;
+                if (!PassesCommonFilters(item, culture, reach)) continue;
                 if (!ItemClassifier.MeetsDifficulty(item, skills)) continue;
 
-                candidates.Add(item);
+                offered.Add(item);
             }
 
-            if (candidates.Count == 0) return FindBestMount(culture, ceiling, skills);
-
-            return candidates[GrantTier.Choose(HeroIdOf(hero), slotKey, candidates.Count)];
+            return PickForGrant(offered, lowest, highest, hero, slotKey);
         }
 
         /// <summary>A harness for the free repair, matching the granted mount.</summary>
@@ -171,8 +163,9 @@ namespace HeroesEvolve
 
             int lowest, highest;
             GrantTier.Band(ceiling, out lowest, out highest);
+            int reach = GrantReach(ceiling, highest);
 
-            List<ItemObject> candidates = new List<ItemObject>();
+            List<ItemObject> offered = new List<ItemObject>();
 
             MBReadOnlyList<ItemObject> all = MBObjectManager.Instance.GetObjectTypeList<ItemObject>();
             for (int i = 0; i < all.Count; i++)
@@ -180,15 +173,56 @@ namespace HeroesEvolve
                 ItemObject item = all[i];
                 if (item == null || item.ItemType != ItemObject.ItemTypeEnum.HorseHarness) continue;
                 if (!item.HasArmorComponent || item.ArmorComponent.FamilyType != mountFamily) continue;
-                if (!PassesCommonFilters(item, culture, highest)) continue;
-                if ((int)item.Tier + 1 < lowest) continue;
+                if (!PassesCommonFilters(item, culture, reach)) continue;
 
-                candidates.Add(item);
+                offered.Add(item);
             }
 
-            if (candidates.Count == 0) return FindBestHarness(mount, culture, ceiling);
+            return PickForGrant(offered, lowest, highest, hero, slotKey);
+        }
 
-            return candidates[GrantTier.Choose(HeroIdOf(hero), slotKey, candidates.Count)];
+        /// <summary>
+        /// How far up the grant may look: the hero's own ceiling, or the top of
+        /// the band where the band already reaches past it -- a tier-1 ceiling
+        /// is still granted tier 2 (see GrantTier.Band).
+        /// </summary>
+        private static int GrantReach(int ceiling, int highest)
+        {
+            return ceiling > highest ? ceiling : highest;
+        }
+
+        /// <summary>
+        /// The grant's choice among everything a hero could be handed for one
+        /// slot: a piece inside the band when there is one, otherwise the
+        /// nearest tier outside it (GrantTier.Fallback). Among equals, the
+        /// hero's own draw, so two lords of one culture are not issued
+        /// identical kit -- the fallback included, which used to hand every one
+        /// of them the same single best item.
+        /// </summary>
+        private static ItemObject PickForGrant(List<ItemObject> offered, int lowest, int highest,
+                                               Hero hero, string slotKey)
+        {
+            List<ItemObject> chosen = new List<ItemObject>();
+            List<int> tiers = new List<int>(offered.Count);
+            for (int i = 0; i < offered.Count; i++)
+            {
+                int tier = (int)offered[i].Tier + 1;
+                tiers.Add(tier);
+                if (tier >= lowest && tier <= highest) chosen.Add(offered[i]);
+            }
+
+            if (chosen.Count == 0)
+            {
+                int fallback = GrantTier.Fallback(tiers, lowest, highest);
+                if (fallback <= 0) return null;
+
+                for (int i = 0; i < offered.Count; i++)
+                {
+                    if (tiers[i] == fallback) chosen.Add(offered[i]);
+                }
+            }
+
+            return chosen[GrantTier.Choose(HeroIdOf(hero), slotKey, chosen.Count)];
         }
 
         private static string HeroIdOf(Hero hero)
@@ -718,62 +752,6 @@ namespace HeroesEvolve
         }
 
         /// <summary>
-        /// The best armour of a given slot type within the ceiling. Armour has
-        /// no difficulty gate and no mounted restriction, so it needs only the
-        /// common filters.
-        /// </summary>
-        public static ItemObject FindBestArmor(ItemObject.ItemTypeEnum wanted, CultureObject culture, int maxTier)
-        {
-            ItemObject best = null;
-            int bestTier = -1;
-
-            MBReadOnlyList<ItemObject> all = MBObjectManager.Instance.GetObjectTypeList<ItemObject>();
-            for (int i = 0; i < all.Count; i++)
-            {
-                ItemObject item = all[i];
-                if (item == null || item.ItemType != wanted) continue;
-                if (!PassesCommonFilters(item, culture, maxTier)) continue;
-
-                int tier = (int)item.Tier;
-                if (tier > bestTier) { bestTier = tier; best = item; }
-            }
-
-            return best;
-        }
-
-        /// <summary>
-        /// The best mount the hero may have: within the tier ceiling,
-        /// culture-appropriate, and usable given their Riding skill. Mounts
-        /// do carry a difficulty, gated on Riding -- ItemClassifier.MeetsDifficulty
-        /// already special-cases ItemTypeEnum.Horse to route there instead of
-        /// the per-category skill map, so it is reused as-is rather than
-        /// duplicating that routing here. Returns null when nothing
-        /// qualifies; callers must tolerate that (an empty catalogue for
-        /// this hero's culture/tier/skill combination is a real outcome,
-        /// not a bug).
-        /// </summary>
-        public static ItemObject FindBestMount(CultureObject culture, int maxTier, SkillProfile skills)
-        {
-            ItemObject best = null;
-            int bestTier = -1;
-
-            MBReadOnlyList<ItemObject> all = MBObjectManager.Instance.GetObjectTypeList<ItemObject>();
-            for (int i = 0; i < all.Count; i++)
-            {
-                ItemObject item = all[i];
-                if (item == null || item.ItemType != ItemObject.ItemTypeEnum.Horse) continue;
-                if (!IsWarMount(item)) continue;
-                if (!PassesCommonFilters(item, culture, maxTier)) continue;
-                if (!ItemClassifier.MeetsDifficulty(item, skills)) continue;
-
-                int tier = (int)item.Tier;
-                if (tier > bestTier) { bestTier = tier; best = item; }
-            }
-
-            return best;
-        }
-
-        /// <summary>
         /// A mount fit to fight from, as opposed to a beast of burden.
         ///
         /// Mules, sumpter horses and pack camels are all ItemTypeEnum.Horse and
@@ -795,37 +773,6 @@ namespace HeroesEvolve
             if (horse == null) return false;
 
             return horse.IsMount && !horse.IsPackAnimal;
-        }
-
-        /// <summary>
-        /// The best harness compatible with a specific mount: within the tier
-        /// ceiling, culture-appropriate, and matching the mount's family (a
-        /// harness modelled for a horse cannot dress a camel). Like armour, a
-        /// harness has no difficulty gate, so only the common filters and the
-        /// family match apply. Returns null for a null mount or when nothing
-        /// qualifies; callers must tolerate that.
-        /// </summary>
-        public static ItemObject FindBestHarness(ItemObject mount, CultureObject culture, int maxTier)
-        {
-            if (mount == null || !mount.HasHorseComponent || mount.HorseComponent.Monster == null) return null;
-            int mountFamily = mount.HorseComponent.Monster.FamilyType;
-
-            ItemObject best = null;
-            int bestTier = -1;
-
-            MBReadOnlyList<ItemObject> all = MBObjectManager.Instance.GetObjectTypeList<ItemObject>();
-            for (int i = 0; i < all.Count; i++)
-            {
-                ItemObject item = all[i];
-                if (item == null || item.ItemType != ItemObject.ItemTypeEnum.HorseHarness) continue;
-                if (!item.HasArmorComponent || item.ArmorComponent.FamilyType != mountFamily) continue;
-                if (!PassesCommonFilters(item, culture, maxTier)) continue;
-
-                int tier = (int)item.Tier;
-                if (tier > bestTier) { bestTier = tier; best = item; }
-            }
-
-            return best;
         }
 
         /// <summary>

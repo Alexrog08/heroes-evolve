@@ -251,7 +251,7 @@ namespace HeroesEvolve
         /// not already have one -- an equipped mount or harness is never
         /// replaced. The harness lookup only ever runs once a mount was
         /// found, since compatibility is judged against that specific mount's
-        /// family (see ItemCatalog.FindBestHarness). Note the harness is
+        /// family (see ItemCatalog.FindHarnessForGrant). Note the harness is
         /// resolved against the mount we are about to grant, not against the
         /// (still empty) Horse slot, so the pairing holds at apply time.
         /// </summary>

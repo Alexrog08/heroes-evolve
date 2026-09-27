@@ -35,6 +35,23 @@ namespace HeroesEvolve.Tests
             Check.True(lowest >= KitTier.Lowest && highest >= KitTier.Lowest,
                        "a nonsensical ceiling still yields kit rather than clothing");
 
+            // An empty band falls to the nearest tier, never to the best. The
+            // old fallback took the finest thing under the hero's ceiling, and
+            // a census found freshly repaired lords handed tier-6 javelins
+            // worth 28,237 denars because their culture made none at 2 or 3.
+            Check.Equal(4, GrantTier.Fallback(new int[] { 1, 4, 5, 6 }, 2, 3),
+                        "the cheapest tier above the band, not the best");
+            Check.Equal(6, GrantTier.Fallback(new int[] { 6 }, 2, 3),
+                        "and the only one above when that is all there is");
+            Check.Equal(4, GrantTier.Fallback(new int[] { 1, 4 }, 2, 3),
+                        "above the band before below it, as the rags do");
+            Check.Equal(1, GrantTier.Fallback(new int[] { 1, 1 }, 2, 3),
+                        "below the band only when nothing sits above it");
+            Check.Equal(0, GrantTier.Fallback(new int[] { 2, 3 }, 2, 3),
+                        "the band itself is not a fallback");
+            Check.Equal(0, GrantTier.Fallback(new int[0], 2, 3), "nothing on offer, nothing granted");
+            Check.Equal(0, GrantTier.Fallback(null, 2, 3), "and nothing asked about");
+
             Check.True(KitTier.IsClothing(1), "tier 1 is clothing");
             Check.True(!KitTier.IsClothing(KitTier.Lowest), "tier 2 is kit");
             Check.True(!KitTier.IsClothing(0), "an item the value model had no opinion about is left alone");

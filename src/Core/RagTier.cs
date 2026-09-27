@@ -32,8 +32,9 @@ namespace HeroesEvolve.Core
     /// hammers, sickles -- and a lord robbed of his lance was coming back with
     /// a pitchfork, which players noticed and reported. A man scavenging an
     /// army's baggage takes soldiers' weapons, not farm tools. The starting kit
-    /// already refuses tier 1 for the same reason (GrantTier.Minimum), so this
-    /// is the one floor the mod uses for weapons everywhere.
+    /// keeps the same floor for the same reason (GrantTier.Minimum), and goes
+    /// below it only when a culture offers nothing else (GrantTier.Fallback),
+    /// so this is the one floor the mod uses for weapons everywhere.
     ///
     /// Everywhere else takes tier 1, and that is coverage rather than flavour.
     /// Counted over what the game sells, Nord has four pairs of boots at tier 1
