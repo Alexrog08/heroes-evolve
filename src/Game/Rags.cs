@@ -129,8 +129,41 @@ namespace HeroesEvolve
         /// not enough on its own -- OneHandedWeapon covers a sword and a mace
         /// alike -- so weapons are matched on the mod's own category as well.
         /// A man robbed of an axe is handed an axe.
+        ///
+        /// And a mount or a harness keeps its beast: a camel for a camel, a
+        /// camel saddle for a camel saddle. The two are separate slots,
+        /// scavenged one at a time, and ItemTypeEnum.Horse covers both beasts,
+        /// so without this a camel rider could come out on a horse in a camel
+        /// saddle. Each keeping its own beast keeps the pair a pair. Any beast
+        /// at all only when the world has none of his at any tier: a saddle
+        /// that does not fit is replaced at his first market (see
+        /// ShoppingTrip), and a bare slot never is.
         /// </summary>
         private static ItemObject Cheapest(Hero hero, ItemObject taken, string seed)
+        {
+            int family = FamilyOf(taken);
+            ItemObject rag = Cheapest(hero, taken, seed, family);
+            if (rag == null && family != MountFamilyRules.NoFamily)
+            {
+                rag = Cheapest(hero, taken, seed, MountFamilyRules.NoFamily);
+            }
+            return rag;
+        }
+
+        /// <summary>
+        /// The beast a mount is, or the beast a harness is cut for.
+        /// MountFamilyRules.NoFamily for everything else.
+        /// </summary>
+        private static int FamilyOf(ItemObject item)
+        {
+            if (item == null) return MountFamilyRules.NoFamily;
+            if (item.ItemType == ItemObject.ItemTypeEnum.Horse) return MarketScanner.FamilyOf(item);
+            if (item.ItemType == ItemObject.ItemTypeEnum.HorseHarness) return MarketScanner.HarnessFamilyOf(item);
+            return MountFamilyRules.NoFamily;
+        }
+
+        /// <summary>The passes, for one beast or, with NoFamily, for any.</summary>
+        private static ItemObject Cheapest(Hero hero, ItemObject taken, string seed, int family)
         {
             CultureObject culture = hero.Culture;
             if (culture == null && hero.Clan != null) culture = hero.Clan.Culture;
@@ -155,7 +188,7 @@ namespace HeroesEvolve
             if (ceiling < floor) ceiling = floor;
 
             // His own people first, at the rag tier and no higher.
-            ItemObject own = Search(taken, culture, floor, floor, seed);
+            ItemObject own = Search(taken, culture, floor, floor, seed, family);
             if (own != null) return own;
 
             // Then anyone's, still at the rag tier. Some cultures simply make
@@ -165,18 +198,18 @@ namespace HeroesEvolve
             // just taken off him. Foreign rags are the better answer and the
             // truer one -- what he is standing in was scavenged out of the
             // baggage of the army that held him, and none of that was his.
-            ItemObject foreign = Search(taken, null, floor, floor, seed);
+            ItemObject foreign = Search(taken, null, floor, floor, seed, family);
             if (foreign != null) return foreign;
 
             // And if the world sells nothing that cheap in this slot, his own
             // people at whatever it costs, up to what was taken. Late because
             // it is the one that can hand back something nearly as good; still
             // better than a slot left bare, which stays bare for life.
-            ItemObject dearer = Search(taken, culture, ceiling, floor, seed);
+            ItemObject dearer = Search(taken, culture, ceiling, floor, seed, family);
             if (dearer != null) return dearer;
 
             // Then anyone's, over the same band.
-            ItemObject dearerForeign = Search(taken, null, ceiling, floor, seed);
+            ItemObject dearerForeign = Search(taken, null, ceiling, floor, seed, family);
             if (dearerForeign != null) return dearerForeign;
 
             // Last of all, below the floor. The floor is a preference -- a lord
@@ -188,7 +221,7 @@ namespace HeroesEvolve
             // look at.
             if (floor > RagTier.Everything)
             {
-                ItemObject lastResort = Search(taken, null, ceiling, RagTier.Everything, seed);
+                ItemObject lastResort = Search(taken, null, ceiling, RagTier.Everything, seed, family);
                 if (lastResort != null)
                 {
                     ModLog.Info("RAGS belowFloor hero=" + hero.Name + " taken=" + taken.StringId
@@ -202,10 +235,10 @@ namespace HeroesEvolve
 
         /// <summary>
         /// The cheapest item of the same kind within one tier band. A null
-        /// culture means anybody's.
+        /// culture means anybody's, and NoFamily any beast.
         /// </summary>
         private static ItemObject Search(ItemObject taken, CultureObject culture,
-                                         int ceiling, int floor, string seed)
+                                         int ceiling, int floor, string seed, int family)
         {
             ItemObject.ItemTypeEnum type = taken.ItemType;
             bool mount = type == ItemObject.ItemTypeEnum.Horse;
@@ -228,6 +261,7 @@ namespace HeroesEvolve
                 // the pack animals are the only ones a hero with no riding can
                 // sit on. See ItemCatalog.IsWarMount.
                 if (mount && !ItemCatalog.IsWarMount(item)) continue;
+                if (family != MountFamilyRules.NoFamily && FamilyOf(item) != family) continue;
 
                 if (wanted != WeaponCategory.None
                     && ItemClassifier.Classify(item) != wanted) continue;
