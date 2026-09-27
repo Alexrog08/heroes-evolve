@@ -12,18 +12,6 @@ namespace HeroesEvolve
     public static class HeroFilter
     {
         /// <summary>
-        /// Which test IsEligible failed on, or null when it passed.
-        ///
-        /// Mirrors the order below and exists because "grown=False" in a census
-        /// is a fact without a cause, and the causes want opposite fixes: a
-        /// companion refused for riding in the player's party is a boundary
-        /// working as designed, and one refused for having no CompanionOf is a
-        /// hole. Guessing between them from names and ages wasted a round trip.
-        ///
-        /// Kept beside the real filter deliberately. A copy that drifts would be
-        /// worse than no copy at all, so anything added there is added here.
-        /// </summary>
-        /// <summary>
         /// Whether the starting kit may be given to this hero, once the moment
         /// for it has come. The moment is the behaviour's business -- once, the
         /// day after TaleWorlds made his gear -- and this is the whole of the
@@ -36,9 +24,10 @@ namespace HeroesEvolve
         /// turns 18. The player's clan follows his own switch, as it does at the
         /// market.
         ///
-        /// Nothing about parties, errands or prisoners. Those filters belonged
-        /// to a repair that looked at everyone every day; one that only looks at
-        /// freshly made lords has no need of them.
+        /// Nothing about parties or errands. Those filters belonged to a repair
+        /// that looked at everyone every day; one that only looks at freshly
+        /// made lords has no need of them. A prisoner is a question of when, not
+        /// who, and the behaviour holds his look until he is free.
         /// </summary>
         public static bool IsEligibleForRepair(Hero hero)
         {
@@ -68,6 +57,18 @@ namespace HeroesEvolve
             return null;
         }
 
+        /// <summary>
+        /// Which test IsEligible failed on, or null when it passed.
+        ///
+        /// Mirrors the order below and exists because "grown=False" in a census
+        /// is a fact without a cause, and the causes want opposite fixes: a
+        /// companion refused for riding in the player's party is a boundary
+        /// working as designed, and one refused for having no CompanionOf is a
+        /// hole. Guessing between them from names and ages wasted a round trip.
+        ///
+        /// Kept beside the real filter deliberately. A copy that drifts would be
+        /// worse than no copy at all, so anything added there is added here.
+        /// </summary>
         public static string WhyIneligible(Hero hero)
         {
             if (hero == null) return "null";

@@ -172,6 +172,14 @@ namespace HeroesEvolve
         private bool _newCampaign;
 
         /// <summary>
+        /// A lord turning 18, noted for one look tomorrow. See _freshlyMade.
+        /// </summary>
+        private void OnHeroComesOfAge(Hero hero)
+        {
+            NoteFreshlyMade(hero, "cameOfAge");
+        }
+
+        /// <summary>
         /// Puts a hero made after the campaign began on the same curve the rest
         /// of the world was put on at its start.
         ///
@@ -186,14 +194,6 @@ namespace HeroesEvolve
         /// the whole roster a moment later; curving each of them twice would
         /// log four hundred lines to reach the same answer.
         /// </summary>
-        /// <summary>
-        /// A lord turning 18, noted for one look tomorrow. See _freshlyMade.
-        /// </summary>
-        private void OnHeroComesOfAge(Hero hero)
-        {
-            NoteFreshlyMade(hero, "cameOfAge");
-        }
-
         private void OnHeroCreated(Hero hero, bool isBornNaturally)
         {
             try
@@ -229,11 +229,19 @@ namespace HeroesEvolve
 
             // Every lord the world was built with, for one look on his first
             // day -- whatever the curve is set to. See _freshlyMade.
+            int lords = 0;
             foreach (Hero lord in Hero.AllAliveHeroes)
             {
-                if (lord != null && lord.IsLord) NoteFreshlyMade(lord, "newCampaign");
+                if (lord == null || !lord.IsLord || lord.IsChild) continue;
+                NoteFreshlyMade(lord, "newCampaign");
+                lords++;
             }
-            ModLog.Info("KIT newCampaign noted=" + _freshlyMade.Count);
+
+            // Lords apart from everyone noted. HeroCreated notes every adult the
+            // world is built with, notables and wanderers too, and that total
+            // printed alone read as 1704 lords waiting on the kit when there
+            // were 497. Only a lord can be given one.
+            ModLog.Info("KIT newCampaign lords=" + lords + " noted=" + _freshlyMade.Count);
 
             if (!Settings.StartLordsOnCurve) return;
 
@@ -290,9 +298,10 @@ namespace HeroesEvolve
         /// this mod, and copies the dummy set over anything granted in it. A day
         /// later the game is finished with him.
         ///
-        /// Once. The entry goes the moment it is read, so no hero is looked at
-        /// twice -- which is also what ends the double repair of a young lord
-        /// whose first kit came up a weapon short.
+        /// Once. The entry goes the moment it is read -- for a prisoner, on his
+        /// first day free -- so no hero is looked at twice, which is also what
+        /// ends the double repair of a young lord whose first kit came up a
+        /// weapon short.
         ///
         /// It used to be the opposite: every hero, every day, repaired whenever
         /// he looked broken. That reached what it never should. A companion
@@ -620,6 +629,12 @@ namespace HeroesEvolve
                 // The one trigger, read once and forgotten.
                 string moment;
                 if (!_freshlyMade.TryGetValue(id, out moment)) return;
+
+                // Held while he is somebody's prisoner. A kit handed out in a
+                // cell would undo the capture, and a lord robbed there already
+                // stands in his rags; he has his one look on his first day free.
+                if (hero.IsPrisoner) return;
+
                 _freshlyMade.Remove(id);
 
                 if (!Settings.EnableRepair) return;
