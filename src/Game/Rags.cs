@@ -142,10 +142,32 @@ namespace HeroesEvolve
         private static ItemObject Cheapest(Hero hero, ItemObject taken, string seed)
         {
             int family = FamilyOf(taken);
-            ItemObject rag = Cheapest(hero, taken, seed, family);
+
+            // A rider scavenges what he can use from the saddle. The market has
+            // always asked this (ItemCatalog.IsEligible) and the rags did not,
+            // so a mounted caravan master robbed of his composite bow came away
+            // with a long bow he could not draw on horseback. Asked of the horse
+            // he has now: the robbery takes the weapons before the horse, and
+            // a horse taken is replaced by another, so a man who rode in rides
+            // out. Anything at all only when nothing he could use from the
+            // saddle exists: the market replaces a weapon he cannot use, and a
+            // bare slot is never filled.
+            Hero rider = taken.HasWeaponComponent && hero.BattleEquipment[EquipmentIndex.Horse].Item != null
+                ? hero : null;
+
+            ItemObject rag = Cheapest(hero, taken, seed, family, rider);
+            if (rag == null && rider != null)
+            {
+                rag = Cheapest(hero, taken, seed, family, null);
+                if (rag != null)
+                {
+                    ModLog.Info("RAGS notMounted hero=" + hero.Name + " taken=" + taken.StringId
+                                + " gave=" + rag.StringId);
+                }
+            }
             if (rag == null && family != MountFamilyRules.NoFamily)
             {
-                rag = Cheapest(hero, taken, seed, MountFamilyRules.NoFamily);
+                rag = Cheapest(hero, taken, seed, MountFamilyRules.NoFamily, null);
             }
             return rag;
         }
@@ -162,8 +184,11 @@ namespace HeroesEvolve
             return MountFamilyRules.NoFamily;
         }
 
-        /// <summary>The passes, for one beast or, with NoFamily, for any.</summary>
-        private static ItemObject Cheapest(Hero hero, ItemObject taken, string seed, int family)
+        /// <summary>
+        /// The passes, for one beast or, with NoFamily, for any; and for a
+        /// rider, only what he can use mounted.
+        /// </summary>
+        private static ItemObject Cheapest(Hero hero, ItemObject taken, string seed, int family, Hero rider)
         {
             CultureObject culture = hero.Culture;
             if (culture == null && hero.Clan != null) culture = hero.Clan.Culture;
@@ -188,7 +213,7 @@ namespace HeroesEvolve
             if (ceiling < floor) ceiling = floor;
 
             // His own people first, at the rag tier and no higher.
-            ItemObject own = Search(taken, culture, floor, floor, seed, family);
+            ItemObject own = Search(taken, culture, floor, floor, seed, family, rider);
             if (own != null) return own;
 
             // Then anyone's, still at the rag tier. Some cultures simply make
@@ -198,18 +223,18 @@ namespace HeroesEvolve
             // just taken off him. Foreign rags are the better answer and the
             // truer one -- what he is standing in was scavenged out of the
             // baggage of the army that held him, and none of that was his.
-            ItemObject foreign = Search(taken, null, floor, floor, seed, family);
+            ItemObject foreign = Search(taken, null, floor, floor, seed, family, rider);
             if (foreign != null) return foreign;
 
             // And if the world sells nothing that cheap in this slot, his own
             // people at whatever it costs, up to what was taken. Late because
             // it is the one that can hand back something nearly as good; still
             // better than a slot left bare, which stays bare for life.
-            ItemObject dearer = Search(taken, culture, ceiling, floor, seed, family);
+            ItemObject dearer = Search(taken, culture, ceiling, floor, seed, family, rider);
             if (dearer != null) return dearer;
 
             // Then anyone's, over the same band.
-            ItemObject dearerForeign = Search(taken, null, ceiling, floor, seed, family);
+            ItemObject dearerForeign = Search(taken, null, ceiling, floor, seed, family, rider);
             if (dearerForeign != null) return dearerForeign;
 
             // Last of all, below the floor. The floor is a preference -- a lord
@@ -221,7 +246,7 @@ namespace HeroesEvolve
             // look at.
             if (floor > RagTier.Everything)
             {
-                ItemObject lastResort = Search(taken, null, ceiling, RagTier.Everything, seed, family);
+                ItemObject lastResort = Search(taken, null, ceiling, RagTier.Everything, seed, family, rider);
                 if (lastResort != null)
                 {
                     ModLog.Info("RAGS belowFloor hero=" + hero.Name + " taken=" + taken.StringId
@@ -235,10 +260,11 @@ namespace HeroesEvolve
 
         /// <summary>
         /// The cheapest item of the same kind within one tier band. A null
-        /// culture means anybody's, and NoFamily any beast.
+        /// culture means anybody's, NoFamily any beast, and a null rider a man
+        /// on foot.
         /// </summary>
         private static ItemObject Search(ItemObject taken, CultureObject culture,
-                                         int ceiling, int floor, string seed, int family)
+                                         int ceiling, int floor, string seed, int family, Hero rider)
         {
             ItemObject.ItemTypeEnum type = taken.ItemType;
             bool mount = type == ItemObject.ItemTypeEnum.Horse;
@@ -262,6 +288,7 @@ namespace HeroesEvolve
                 // sit on. See ItemCatalog.IsWarMount.
                 if (mount && !ItemCatalog.IsWarMount(item)) continue;
                 if (family != MountFamilyRules.NoFamily && FamilyOf(item) != family) continue;
+                if (rider != null && !ItemClassifier.IsUsableMounted(item, rider)) continue;
 
                 if (wanted != WeaponCategory.None
                     && ItemClassifier.Classify(item) != wanted) continue;
