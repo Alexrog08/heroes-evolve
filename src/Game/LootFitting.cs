@@ -21,9 +21,9 @@ namespace HeroesEvolve
     /// better and sells the rest, which is what anyone would do and what makes
     /// taking it worth the standing it cost him.
     ///
-    /// Several pieces, not one. The trip through a town is capped at a single
-    /// purchase to pace the spending; there is no spending here, and a man who
-    /// has just emptied a prisoner would not stop after one buckle.
+    /// Several pieces, not one: a man who has just emptied a prisoner does not
+    /// stop after one buckle, exactly as a trip through a town buys every gap
+    /// the shelves can fill.
     /// </summary>
     public static class LootFitting
     {

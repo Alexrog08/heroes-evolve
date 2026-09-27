@@ -341,7 +341,7 @@ namespace HeroesEvolve
         /// <summary>
         /// The hero's own object id. Not the CharacterObject's: that is unique
         /// per hero in practice, but nothing guarantees it, and a shared
-        /// character would make two heroes share a give-up entry.
+        /// character would make two heroes share one look at the kit.
         /// </summary>
         private static string IdOf(Hero hero)
         {
@@ -457,8 +457,9 @@ namespace HeroesEvolve
         }
 
         /// <summary>
-        /// A lord walks into a town: he offloads any loot he is carrying, and
-        /// may buy one thing.
+        /// A lord walks into a town: he offloads any loot he is carrying, and,
+        /// if it is the first town he has entered today, buys what it has for
+        /// him.
         ///
         /// Villages are skipped: their roster is food and trade goods, and the
         /// scan would find nothing while running for every party on the map.
