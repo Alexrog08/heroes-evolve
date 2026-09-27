@@ -277,6 +277,16 @@ namespace HeroesEvolve
             if (hero.IsHumanPlayerCharacter) return false;
             if (hero == Hero.MainHero) return false;
             if (hero.IsChild) return false;
+
+            // Not from a cell. The game announces a prisoner as entering the
+            // place that holds him: when the player hands captured lords to a
+            // town's dungeon, EnterSettlementAction.ApplyForPrisoner raises
+            // AfterSettlementEntered for each of them, with no party. A lord
+            // with no party passed every test below, so he went shopping in his
+            // captor's market with his clan's gold -- out of the rags he had
+            // just been robbed into, and without leaving the cell.
+            if (hero.IsPrisoner) return false;
+
             // Lords, and companions who lead a party of their own.
             //
             // This clause read "if (!hero.IsLord) return false" and threw out
