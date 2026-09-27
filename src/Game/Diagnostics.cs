@@ -934,8 +934,9 @@ namespace HeroesEvolve
 
         internal static string MountFit()
         {
-            int mounted = 0, harnessed = 0, mismatched = 0;
+            int mounted = 0, harnessed = 0, mismatched = 0, unusable = 0;
             StringBuilder named = new StringBuilder();
+            StringBuilder unusableNamed = new StringBuilder();
 
             foreach (Hero hero in Hero.AllAliveHeroes)
             {
@@ -944,6 +945,23 @@ namespace HeroesEvolve
                 ItemObject mount = hero.BattleEquipment[EquipmentIndex.Horse].Item;
                 if (mount == null) continue;
                 mounted++;
+
+                // And riders carrying a weapon they cannot use from the saddle,
+                // which the market now replaces first. Should fall the same
+                // way the saddles do.
+                for (int i = 0; i < SlotSnapshot.WeaponSlotCount; i++)
+                {
+                    ItemObject weapon = hero.BattleEquipment[SlotMapping.WeaponSlot(i)].Item;
+                    if (weapon == null || ItemClassifier.IsUsableMounted(weapon, hero)) continue;
+
+                    unusable++;
+                    if (unusable <= 5)
+                    {
+                        unusableNamed.Append(unusable == 1 ? " e.g. " : ", ")
+                                     .Append(hero.Name).Append('(').Append(weapon.StringId).Append(')');
+                    }
+                    break;
+                }
 
                 ItemObject harness = hero.BattleEquipment[EquipmentIndex.HorseHarness].Item;
                 if (harness == null) continue;
@@ -960,7 +978,8 @@ namespace HeroesEvolve
             }
 
             return "lords mounted=" + mounted + " harnessed=" + harnessed
-                   + " mismatched=" + mismatched + named;
+                   + " mismatched=" + mismatched + named
+                   + " | unusableMounted=" + unusable + unusableNamed;
         }
 
         internal static string Percentiles(List<int> values)

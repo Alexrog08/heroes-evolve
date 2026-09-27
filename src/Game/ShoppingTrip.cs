@@ -154,12 +154,27 @@ namespace HeroesEvolve
                 bool prefersBlunt = WeaponPerks.FavoursAxeOrMace(hero, category);
 
                 int wornFine = FineOf(hero.BattleEquipment[slot]);
+                int wornTier = TierOf(worn);
+
+                // A weapon he cannot use from the saddle is worth nothing to a
+                // man on a horse, so it counts as the least a piece can be and
+                // the first of its kind he can use mounted replaces it -- the
+                // offers are already only those (ItemCatalog.IsEligible). Only
+                // while he rides: on foot a long bow is a long bow. The rags
+                // no longer hand these out, but earlier robberies did, and
+                // TaleWorlds' own sheets put a few on horseback.
+                if (mounted && !ItemClassifier.IsUsableMounted(worn, hero))
+                {
+                    wornFine = 1;
+                    wornTier = 1;
+                }
+
                 List<MarketOffer> offers = MarketScanner.Weapons(stock, settlement, hero, category, culture,
                                                                  ceiling, wornFine,
                                                                  ItemCatalog.IsOwnCulture(worn, culture),
                                                                  skills, mounted, partner,
                                                                  prefersBlunt);
-                Add(found, slot, offers, worn, wornFine, culture, limit);
+                Add(found, slot, offers, worn, wornTier, wornFine, culture, limit);
             }
 
             foreach (EquipmentIndex slot in SlotMapping.ArmorSlots)
