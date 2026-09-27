@@ -7,6 +7,11 @@ namespace HeroesEvolve.Core
     /// (SkillGrowth.TargetForRank): the weapon he has put the most focus into
     /// first, and slot order wherever focus does not decide.
     ///
+    /// Only the weapons he carries are ranked. Focus reorders them and never
+    /// adds one: a weapon he holds focus in but does not carry takes no share
+    /// at all, and the pass for everything else leaves weapon skills alone
+    /// (SkillGrowthService.IsWeaponSkill).
+    ///
     /// The rule used to be slot order alone, on the grounds that the game reads
     /// it: CharacterHelper.GetDefaultWeapon walks slots 0 to 4, and a kill in a
     /// simulated battle trains the skill of the first real weapon it finds.

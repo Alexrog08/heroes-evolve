@@ -25,6 +25,21 @@ namespace HeroesEvolve.Tests
             Check.Equal("0,1,2", Order(5, 3, 1), "focus that agrees with the slots moves nothing");
             Check.Equal("3,2,1,0", Order(1, 2, 3, 4), "focus that disagrees throughout reverses them");
 
+            // Focus orders the weapons he carries and nothing else. Each comes
+            // back exactly once and no position is invented, so a weapon he
+            // holds focus in but does not carry can never be handed a share: it
+            // is not in the list this is asked about.
+            int[] carried = WeaponRank.ByFocus(new int[] { 0, 5, 2, 5 });
+            Check.Equal(4, carried.Length, "as many ranks as weapons carried, no more");
+            bool[] seen = new bool[4];
+            bool eachOnce = true;
+            for (int i = 0; i < carried.Length; i++)
+            {
+                if (carried[i] < 0 || carried[i] >= 4 || seen[carried[i]]) eachOnce = false;
+                else seen[carried[i]] = true;
+            }
+            Check.True(eachOnce, "each carried weapon exactly once");
+
             Check.Equal("0", Order(4), "one weapon is first");
             Check.Equal("", Order(), "no weapons, no order");
             Check.Equal(0, WeaponRank.ByFocus(null).Length, "and nothing asked about");
