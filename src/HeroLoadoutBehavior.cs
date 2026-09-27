@@ -224,6 +224,17 @@ namespace HeroesEvolve
 
         private void OnAfterSessionLaunched(CampaignGameStarter starter)
         {
+            // Where the saddles stand as the session opens, loaded or new: the
+            // baseline the weekly line is read against.
+            try
+            {
+                ModLog.Info("MOUNTFIT " + Diagnostics.MountFit());
+            }
+            catch (System.Exception ex)
+            {
+                ModLog.Error("MOUNTFIT failed: " + ex.GetType().Name + " " + ex.Message);
+            }
+
             if (!_newCampaign) return;
             _newCampaign = false;
 
@@ -551,6 +562,18 @@ namespace HeroesEvolve
 
         private void OnWeeklyTick()
         {
+            // Saddles on the wrong beast, weekly whatever the switches say, so a
+            // save from before the fix can be watched mending. See
+            // Diagnostics.MountFit.
+            try
+            {
+                ModLog.Info("MOUNTFIT " + Diagnostics.MountFit());
+            }
+            catch (System.Exception ex)
+            {
+                ModLog.Error("MOUNTFIT failed: " + ex.GetType().Name + " " + ex.Message);
+            }
+
             if (!Settings.EnableSkillGrowth) return;
 
             int grown = 0;

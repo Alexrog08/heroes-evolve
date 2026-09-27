@@ -787,6 +787,49 @@ namespace HeroesEvolve
             ModLog.Info("RIDING mountedRole below: " + BelowCounts(mountedRoles));
         }
 
+        /// <summary>
+        /// Every living lord's mount and harness, and how many of the pairs do
+        /// not fit: a camel saddle on a horse, a horse harness on a camel.
+        ///
+        /// Written for a subscriber's report of exactly that, which the market
+        /// was producing -- it let the Aserai swap one beast for the other and
+        /// left the saddle where it was. The market no longer swaps beasts and
+        /// now replaces a saddle that does not fit, so in a save from before
+        /// mismatched should fall week by week toward what TaleWorlds' own
+        /// sheets start with, and in a new campaign stay there. The first few
+        /// are named so a line can be checked by eye.
+        /// </summary>
+        internal static string MountFit()
+        {
+            int mounted = 0, harnessed = 0, mismatched = 0;
+            StringBuilder named = new StringBuilder();
+
+            foreach (Hero hero in Hero.AllAliveHeroes)
+            {
+                if (hero == null || !hero.IsLord || hero.IsChild || hero.BattleEquipment == null) continue;
+
+                ItemObject mount = hero.BattleEquipment[EquipmentIndex.Horse].Item;
+                if (mount == null) continue;
+                mounted++;
+
+                ItemObject harness = hero.BattleEquipment[EquipmentIndex.HorseHarness].Item;
+                if (harness == null) continue;
+                harnessed++;
+
+                if (MarketScanner.HarnessFits(harness, mount)) continue;
+                mismatched++;
+                if (mismatched <= 5)
+                {
+                    named.Append(mismatched == 1 ? " e.g. " : ", ")
+                         .Append(hero.Name).Append('(').Append(mount.StringId)
+                         .Append('+').Append(harness.StringId).Append(')');
+                }
+            }
+
+            return "lords mounted=" + mounted + " harnessed=" + harnessed
+                   + " mismatched=" + mismatched + named;
+        }
+
         internal static string Percentiles(List<int> values)
         {
             if (values.Count == 0) return "n=0";
