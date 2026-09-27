@@ -131,7 +131,8 @@ namespace HeroesEvolve
         /// mount asks Riding 10, band or no band.
         /// </summary>
         public static ItemObject FindMountForGrant(CultureObject culture, int ceiling,
-                                                   SkillProfile skills, Hero hero, string slotKey)
+                                                   SkillProfile skills, Hero hero, string slotKey,
+                                                   int family)
         {
             int lowest, highest;
             GrantTier.Band(ceiling, out lowest, out highest);
@@ -145,6 +146,7 @@ namespace HeroesEvolve
                 ItemObject item = all[i];
                 if (item == null || item.ItemType != ItemObject.ItemTypeEnum.Horse) continue;
                 if (!IsWarMount(item)) continue;
+                if (family != MountFamilyRules.NoFamily && MarketScanner.FamilyOf(item) != family) continue;
                 if (!PassesCommonFilters(item, culture, reach)) continue;
                 if (!ItemClassifier.MeetsDifficulty(item, skills)) continue;
 

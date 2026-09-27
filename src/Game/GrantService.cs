@@ -302,7 +302,18 @@ namespace HeroesEvolve
                 return;
             }
 
-            ItemObject mount = ItemCatalog.FindMountForGrant(culture, ceiling, skills, hero, horse.Label);
+            // A beast for the saddle he already has. An existing harness is
+            // his and is kept (below), so the mount must be one it was cut for,
+            // or the kit itself would sit a camel saddle on a horse. Any beast
+            // only when his people sell none of that kind -- a saddle that does
+            // not fit is replaced at his first market, an empty horse slot never.
+            int saddle = MarketScanner.HarnessFamilyOf(hero.BattleEquipment[EquipmentIndex.HorseHarness].Item);
+            ItemObject mount = ItemCatalog.FindMountForGrant(culture, ceiling, skills, hero, horse.Label, saddle);
+            if (mount == null && saddle != MountFamilyRules.NoFamily)
+            {
+                mount = ItemCatalog.FindMountForGrant(culture, ceiling, skills, hero, horse.Label,
+                                                      MountFamilyRules.NoFamily);
+            }
             horse.Item = mount;
             resolved.Slots.Add(horse);
 
