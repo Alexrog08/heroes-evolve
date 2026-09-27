@@ -832,11 +832,30 @@ namespace HeroesEvolve
                 List<int> steward = new List<int>();
                 List<int> leadership = new List<int>();
                 List<int> tiers = new List<int>();
+                List<int> gold = new List<int>();
+                int lords = 0, held = 0;
                 Dictionary<string, float> parts = new Dictionary<string, float>();
 
                 foreach (Clan clan in kingdom.Clans)
                 {
-                    if (clan == null || clan.WarPartyComponents == null) continue;
+                    if (clan == null) continue;
+
+                    // Whether the purse or the cells are what keep a kingdom's
+                    // parties empty. Gold is the one input to recruiting this
+                    // mod spends from -- a robbed lord buys his way back into
+                    // kit -- and a lord in a cell leads no party at all.
+                    gold.Add(clan.Gold);
+                    if (clan.Heroes != null)
+                    {
+                        foreach (Hero member in clan.Heroes)
+                        {
+                            if (member == null || !member.IsAlive || member.IsChild || !member.IsLord) continue;
+                            lords++;
+                            if (member.IsPrisoner) held++;
+                        }
+                    }
+
+                    if (clan.WarPartyComponents == null) continue;
 
                     foreach (WarPartyComponent war in clan.WarPartyComponents)
                     {
@@ -894,7 +913,9 @@ namespace HeroesEvolve
                           + " | armies=" + armies + " armyMen=" + armyMen
                           + " | clanTier " + Percentiles(tiers)
                           + " | steward " + Percentiles(steward)
-                          + " | leadership " + Percentiles(leadership));
+                          + " | leadership " + Percentiles(leadership)
+                          + " | clanGold " + Percentiles(gold)
+                          + " | lordsHeld=" + held + "/" + lords);
 
                 List<KeyValuePair<string, float>> ranked = new List<KeyValuePair<string, float>>(parts);
                 ranked.Sort((a, b) => b.Value.CompareTo(a.Value));
