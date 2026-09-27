@@ -6,12 +6,15 @@ using HeroesEvolve.Core;
 namespace HeroesEvolve
 {
     /// <summary>
-    /// Hands a hero with nothing a coherent loadout, for free.
+    /// Hands a hero with nothing a coherent loadout, for free: the starting
+    /// kit.
     ///
-    /// It began as a repair for the vanilla come-of-age bug and has not been
-    /// only that for a long time: the same grant dresses a lord the engine left
-    /// in civilian clothes and a lord a captor stripped bare, and calling the
-    /// second a repair would be calling the robbery a defect.
+    /// It repairs one thing, a lord whose gear TaleWorlds generated broken,
+    /// and only at the moments the game generates it -- see
+    /// HeroLoadoutBehavior._freshlyMade. It once dressed robbed men as well,
+    /// and that is gone for good: a robbed man is re-dressed by Rags in the
+    /// instant he is stripped, in the shape he had, and the kit must never
+    /// answer that question a second time.
     ///
     /// Free, and that is the point rather than an oversight. A man with nothing
     /// has no gold either and may never see a town, so a grant that charged him
@@ -85,9 +88,8 @@ namespace HeroesEvolve
         /// <summary>
         /// True for an armour slot holding civilian clothing. An empty slot is
         /// not civilian -- it is a gap, and gaps are filled by the armour pass
-        /// without needing to trigger a repair on their own. Only Body and Head
-        /// are judged: an empty cape or glove slot is ordinary on a lord and
-        /// treating it as a defect would put most of the map through a repair.
+        /// without needing to trigger a repair on their own. NeedsGrant asks it
+        /// of the chest alone; see there for why the head no longer counts.
         /// </summary>
         private static bool IsCivilian(ItemObject item)
         {
@@ -226,8 +228,9 @@ namespace HeroesEvolve
 
         /// <summary>
         /// Repairs the hero and returns how many slots were filled. Zero means
-        /// the catalogue had nothing this hero could be given -- see
-        /// HeroLoadoutBehavior.TryRepair, which uses that to stop retrying.
+        /// the catalogue had nothing this hero could be given, which
+        /// HeroLoadoutBehavior.TryRepair logs as GIVEUP. Either way he is not
+        /// looked at again: the kit has one look per lord.
         /// </summary>
         public static int Grant(Hero hero, float clanWeight, float skillWeight,
                                 int minimumTier, int dominanceMargin)
@@ -241,6 +244,27 @@ namespace HeroesEvolve
                         + " id=" + (hero.CharacterObject != null ? hero.CharacterObject.StringId : "?")
                         + " tier=" + resolved.Ceiling
                         + " planned=" + resolved.PlannedWeaponCount + " granted=" + granted);
+
+            // Every piece that had to leave the band, and where it went. Here
+            // rather than where the piece is chosen, because a dry run resolves
+            // the same kit and hands out nothing, and must not read as a grant.
+            // It should be rare -- throwing weapons, where a culture makes none
+            // at tier 2 or 3 -- and the tier should be the nearest one outside
+            // the band, never the top of his ceiling. See GrantTier.Fallback.
+            int lowest, highest;
+            GrantTier.Band(resolved.Ceiling, out lowest, out highest);
+            for (int i = 0; i < resolved.Slots.Count; i++)
+            {
+                ResolvedSlot entry = resolved.Slots[i];
+                if (!entry.WouldWrite) continue;
+
+                int tier = (int)entry.Item.Tier + 1;
+                if (tier >= lowest && tier <= highest) continue;
+
+                ModLog.Info("KIT fallback hero=" + hero.Name + " slot=" + entry.Label
+                            + " band=" + lowest + "-" + highest
+                            + " tier=" + tier + " item=" + entry.Item.StringId);
+            }
 
             return granted;
         }

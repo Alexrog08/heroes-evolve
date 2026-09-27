@@ -220,18 +220,6 @@ namespace HeroesEvolve
                 {
                     if (tiers[i] == fallback) chosen.Add(offered[i]);
                 }
-
-                // Every time the kit leaves its band, and where it went. It
-                // should be rare -- throwing weapons, where a culture makes
-                // none at 2 or 3 -- and the tier should be the nearest one
-                // outside the band, never the top of the hero's ceiling.
-                ItemObject picked = chosen[GrantTier.Choose(HeroIdOf(hero), slotKey, chosen.Count)];
-                ModLog.Info("KIT fallback hero=" + (hero != null ? hero.Name.ToString() : "?")
-                            + " slot=" + slotKey
-                            + " band=" + lowest + "-" + highest
-                            + " tier=" + fallback
-                            + " item=" + picked.StringId);
-                return picked;
             }
 
             return chosen[GrantTier.Choose(HeroIdOf(hero), slotKey, chosen.Count)];
