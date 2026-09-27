@@ -234,6 +234,7 @@ namespace HeroesEvolve
             {
                 ModLog.Error("MOUNTFIT failed: " + ex.GetType().Name + " " + ex.Message);
             }
+            LogKingdoms();
 
             if (!_newCampaign) return;
             _newCampaign = false;
@@ -560,6 +561,23 @@ namespace HeroesEvolve
             }
         }
 
+        /// <summary>
+        /// Each kingdom's parties, limits and armies, as the session opens and
+        /// weekly. See Diagnostics.Kingdoms.
+        /// </summary>
+        private static void LogKingdoms()
+        {
+            try
+            {
+                List<string> kingdoms = Diagnostics.Kingdoms();
+                for (int i = 0; i < kingdoms.Count; i++) ModLog.Info("KINGDOM " + kingdoms[i]);
+            }
+            catch (System.Exception ex)
+            {
+                ModLog.Error("KINGDOM failed: " + ex.GetType().Name + " " + ex.Message);
+            }
+        }
+
         private void OnWeeklyTick()
         {
             // Saddles on the wrong beast, weekly whatever the switches say, so a
@@ -573,6 +591,7 @@ namespace HeroesEvolve
             {
                 ModLog.Error("MOUNTFIT failed: " + ex.GetType().Name + " " + ex.Message);
             }
+            LogKingdoms();
 
             if (!Settings.EnableSkillGrowth) return;
 

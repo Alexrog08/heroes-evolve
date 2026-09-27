@@ -3,6 +3,8 @@ using System.Text;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.CharacterDevelopment;
 using TaleWorlds.CampaignSystem.Party;
+using TaleWorlds.CampaignSystem.ComponentInterfaces;
+using TaleWorlds.CampaignSystem.Party.PartyComponents;
 using TaleWorlds.CampaignSystem.Roster;
 using TaleWorlds.CampaignSystem.Settlements;
 using TaleWorlds.Core;
@@ -799,6 +801,116 @@ namespace HeroesEvolve
         /// sheets start with, and in a new campaign stay there. The first few
         /// are named so a line can be checked by eye.
         /// </summary>
+        /// <summary>
+        /// Every kingdom's field strength, two lines each: its lords' war
+        /// parties, how full they are against their limit, and its armies; then
+        /// what that limit is made of, averaged per party, largest part first.
+        ///
+        /// Written for a report that Vlandia was losing its war with small
+        /// armies against Battania's large ones. Two different causes look the
+        /// same from the map, and only one of them could be this mod's. A lower
+        /// limit comes from the leader -- Steward skill and a string of perks
+        /// across Leadership, One and Two Handed, Athletics, Bow, Tactics and
+        /// Scouting (DefaultPartySizeLimitModel), which the starting curve can
+        /// move -- or from clan tier and kingdom policy, which it cannot.
+        /// Parties short of their limit are gold, recruits and losses instead.
+        /// The limit is read through the game's own model with its lines, so
+        /// every part carries the name the game gives it.
+        /// </summary>
+        internal static List<string> Kingdoms()
+        {
+            List<string> lines = new List<string>();
+            PartySizeLimitModel model = Campaign.Current != null && Campaign.Current.Models != null
+                ? Campaign.Current.Models.PartySizeLimitModel : null;
+
+            foreach (Kingdom kingdom in Kingdom.All)
+            {
+                if (kingdom == null || kingdom.IsEliminated) continue;
+
+                List<int> men = new List<int>();
+                List<int> limits = new List<int>();
+                List<int> steward = new List<int>();
+                List<int> leadership = new List<int>();
+                List<int> tiers = new List<int>();
+                Dictionary<string, float> parts = new Dictionary<string, float>();
+
+                foreach (Clan clan in kingdom.Clans)
+                {
+                    if (clan == null || clan.WarPartyComponents == null) continue;
+
+                    foreach (WarPartyComponent war in clan.WarPartyComponents)
+                    {
+                        try
+                        {
+                            MobileParty party = war != null ? war.MobileParty : null;
+                            if (party == null || party.LeaderHero == null || party.Party == null) continue;
+                            if (party == MobileParty.MainParty) continue;
+
+                            men.Add(party.MemberRoster.TotalManCount);
+                            limits.Add(party.Party.PartySizeLimit);
+                            steward.Add(party.LeaderHero.GetSkillValue(DefaultSkills.Steward));
+                            leadership.Add(party.LeaderHero.GetSkillValue(DefaultSkills.Leadership));
+                            tiers.Add(clan.Tier);
+
+                            if (model == null) continue;
+                            ExplainedNumber limit = model.GetPartyMemberSizeLimit(party.Party, true);
+                            foreach (System.ValueTuple<string, float> line in limit.GetLines())
+                            {
+                                string name = string.IsNullOrEmpty(line.Item1) ? "?" : line.Item1;
+                                float sum;
+                                parts.TryGetValue(name, out sum);
+                                parts[name] = sum + line.Item2;
+                            }
+                        }
+                        catch
+                        {
+                            // One unreadable party must not cost the kingdom.
+                        }
+                    }
+                }
+
+                if (men.Count == 0) continue;
+
+                int total = 0, room = 0;
+                for (int i = 0; i < men.Count; i++) { total += men[i]; room += limits[i]; }
+
+                int armies = 0, armyMen = 0;
+                if (kingdom.Armies != null)
+                {
+                    foreach (Army army in kingdom.Armies)
+                    {
+                        if (army == null) continue;
+                        armies++;
+                        armyMen += army.TotalManCount;
+                    }
+                }
+
+                lines.Add(kingdom.StringId
+                          + " parties=" + men.Count
+                          + " men=" + total
+                          + " fill=" + (room > 0 ? total * 100 / room : 0) + "%"
+                          + " men " + Percentiles(men)
+                          + " | limit " + Percentiles(limits)
+                          + " | armies=" + armies + " armyMen=" + armyMen
+                          + " | clanTier " + Percentiles(tiers)
+                          + " | steward " + Percentiles(steward)
+                          + " | leadership " + Percentiles(leadership));
+
+                List<KeyValuePair<string, float>> ranked = new List<KeyValuePair<string, float>>(parts);
+                ranked.Sort((a, b) => b.Value.CompareTo(a.Value));
+                StringBuilder made = new StringBuilder(kingdom.StringId + " limitPerParty");
+                for (int i = 0; i < ranked.Count; i++)
+                {
+                    made.Append(i == 0 ? " " : ", ")
+                        .Append(ranked[i].Key).Append('=')
+                        .Append((ranked[i].Value / men.Count).ToString("0.0"));
+                }
+                lines.Add(made.ToString());
+            }
+
+            return lines;
+        }
+
         internal static string MountFit()
         {
             int mounted = 0, harnessed = 0, mismatched = 0;
