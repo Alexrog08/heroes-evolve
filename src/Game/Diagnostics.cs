@@ -940,7 +940,14 @@ namespace HeroesEvolve
 
             foreach (Hero hero in Hero.AllAliveHeroes)
             {
-                if (hero == null || !hero.IsLord || hero.IsChild || hero.BattleEquipment == null) continue;
+                if (hero == null || hero.IsChild || hero.BattleEquipment == null) continue;
+
+                // Lords and companions: everyone the market dresses. Companions
+                // were left out at first, and the rider who started this --
+                // Kuruntai the Hawk, a caravan master -- is one. The player's
+                // own character chooses his own gear.
+                if (!hero.IsLord && hero.CompanionOf == null) continue;
+                if (hero == Hero.MainHero) continue;
 
                 ItemObject mount = hero.BattleEquipment[EquipmentIndex.Horse].Item;
                 if (mount == null) continue;
@@ -977,7 +984,7 @@ namespace HeroesEvolve
                 }
             }
 
-            return "lords mounted=" + mounted + " harnessed=" + harnessed
+            return "lords+companions mounted=" + mounted + " harnessed=" + harnessed
                    + " mismatched=" + mismatched + named
                    + " | unusableMounted=" + unusable + unusableNamed;
         }
