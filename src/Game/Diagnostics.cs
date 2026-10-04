@@ -816,6 +816,15 @@ namespace HeroesEvolve
         /// Parties short of their limit are gold, recruits and losses instead.
         /// The limit is read through the game's own model with its lines, so
         /// every part carries the name the game gives it.
+        ///
+        /// A third line is the ruler alone: who he is, whether TaleWorlds wrote
+        /// him or the campaign made him, his party against its limit, where
+        /// that limit ranks among his own lords, and what it is made of. For
+        /// the question of whether a king who inherits the crown still rides
+        /// with a king's party. The office itself is worth 20 men (Faction
+        /// Leader Bonus) and 60 more under the Royal Guard policy; everything
+        /// else a first-generation king has over his lords is his own sheet --
+        /// Steward, Leadership and their perks -- and an heir has his own.
         /// </summary>
         internal static List<string> Kingdoms()
         {
@@ -835,6 +844,8 @@ namespace HeroesEvolve
                 List<int> gold = new List<int>();
                 int lords = 0, held = 0;
                 Dictionary<string, float> parts = new Dictionary<string, float>();
+                int rulerMen = -1, rulerLimit = -1;
+                StringBuilder rulerParts = new StringBuilder();
 
                 foreach (Clan clan in kingdom.Clans)
                 {
@@ -871,6 +882,13 @@ namespace HeroesEvolve
                             leadership.Add(party.LeaderHero.GetSkillValue(DefaultSkills.Leadership));
                             tiers.Add(clan.Tier);
 
+                            bool isRuler = party.LeaderHero == kingdom.Leader;
+                            if (isRuler)
+                            {
+                                rulerMen = party.MemberRoster.TotalManCount;
+                                rulerLimit = party.Party.PartySizeLimit;
+                            }
+
                             if (model == null) continue;
                             ExplainedNumber limit = model.GetPartyMemberSizeLimit(party.Party, true);
                             foreach (System.ValueTuple<string, float> line in limit.GetLines())
@@ -879,6 +897,12 @@ namespace HeroesEvolve
                                 float sum;
                                 parts.TryGetValue(name, out sum);
                                 parts[name] = sum + line.Item2;
+
+                                if (isRuler)
+                                {
+                                    rulerParts.Append(rulerParts.Length == 0 ? " " : ", ")
+                                              .Append(name).Append('=').Append(line.Item2.ToString("0"));
+                                }
                             }
                         }
                         catch
@@ -927,6 +951,28 @@ namespace HeroesEvolve
                         .Append((ranked[i].Value / men.Count).ToString("0.0"));
                 }
                 lines.Add(made.ToString());
+
+                Hero ruler = kingdom.Leader;
+                if (ruler != null)
+                {
+                    int larger = 0;
+                    for (int i = 0; i < limits.Count; i++)
+                    {
+                        if (limits[i] > rulerLimit) larger++;
+                    }
+
+                    lines.Add(kingdom.StringId + " ruler=" + ruler.Name
+                              + " age=" + (int)ruler.Age
+                              + " authored=" + HeroTalent.IsAuthored(ruler)
+                              + " clanTier=" + (ruler.Clan != null ? ruler.Clan.Tier : 0)
+                              + " steward=" + ruler.GetSkillValue(DefaultSkills.Steward)
+                              + " leadership=" + ruler.GetSkillValue(DefaultSkills.Leadership)
+                              + (rulerLimit < 0
+                                  ? " party=none" + (ruler.IsPrisoner ? " (prisoner)" : "")
+                                  : " party=" + rulerMen + "/" + rulerLimit
+                                    + " limitRank=" + (larger + 1) + "/" + limits.Count
+                                    + " |" + rulerParts));
+                }
             }
 
             return lines;
