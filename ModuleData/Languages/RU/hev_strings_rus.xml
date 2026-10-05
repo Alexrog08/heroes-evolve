@@ -11,8 +11,12 @@
     <string id="hev_strip_friend" text="Не принимай это на свой счёт. Отдай своё оружие и доспехи." />
     <string id="hev_strip_friend_reply" text="От кого угодно я мог этого ждать, но не от тебя. Забирай. Больше мне нечего тебе сказать." />
     <string id="hev_robbed" text="У {VICTIM} отобрал оружие и доспехи {CAPTOR}." />
+    <string id="hev_robbed_reprisal" text="У {VICTIM} в отместку отобрал оружие и доспехи {CAPTOR}." />
+    <string id="hev_strip_take" text="Я их заберу." />
+    <string id="hev_strip_leave" text="Что ж, оставь себе." />
     <string id="hev_released_scavenged" text="Уходя, вы раздобыли простое снаряжение в обозе пленивших вас, того же рода, что носили прежде." />
     <string id="hev_of_faction" text="{NAME} ({FACTION})" />
     <string id="hev_released_given" text="Пленившие вас отпустили вас с простым снаряжением в дорогу, того же рода, что носили прежде." />
+    <string id="hev_robbery_hurt" text="Ограбление испортило ваши отношения с кланами: {COUNT}." />
   </strings>
 </base>

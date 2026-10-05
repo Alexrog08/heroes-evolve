@@ -11,8 +11,12 @@
     <string id="hev_strip_friend" text="No te lo tomes como algo personal. Entrégame tus armas y tu armadura." />
     <string id="hev_strip_friend_reply" text="Esperaba esto de cualquiera menos de ti. Tómalas, pues. No tengo nada más que decirte." />
     <string id="hev_robbed" text="{VICTIM} ha sido despojado de sus armas y su armadura por {CAPTOR}." />
+    <string id="hev_robbed_reprisal" text="{VICTIM} ha sido despojado de sus armas y su armadura por {CAPTOR}, en represalia." />
+    <string id="hev_strip_take" text="Las tomaré." />
+    <string id="hev_strip_leave" text="Quédatelas, pues." />
     <string id="hev_released_scavenged" text="Has rapiñado equipo sencillo del bagaje de tus captores al salir, de los mismos tipos que llevabas." />
     <string id="hev_of_faction" text="{NAME} de {FACTION}" />
     <string id="hev_released_given" text="Tus captores te despidieron con equipo sencillo para el camino, de los mismos tipos que llevabas." />
+    <string id="hev_robbery_hurt" text="El robo ha dañado tu relación con {COUNT} {?IS_PLURAL}clanes{?}clan{\?}." />
   </strings>
 </base>

@@ -44,6 +44,28 @@ namespace HeroesEvolve
         }
 
         /// <summary>
+        /// A named lord against the player, both ways: how likely he is to
+        /// strip the player if he holds him, how much of that is his grudge,
+        /// and what stripping him would cost. With no name, the census lines
+        /// for every house. Reads only -- no standing moves.
+        /// </summary>
+        [CommandLineFunctionality.CommandLineArgumentFunction("feud", "hev")]
+        public static string Feud(List<string> args)
+        {
+            if (Campaign.Current == null) return "hev: no campaign is running.";
+
+            Hero hero = FindHero(args);
+            if (hero != null) return Diagnostics.FeudWith(hero);
+
+            if (args != null && args.Count > 0) return Usage("hev.feud", args);
+
+            List<string> lines = Diagnostics.Feuds();
+            StringBuilder text = new StringBuilder();
+            for (int i = 0; i < lines.Count; i++) text.Append("FEUD ").Append(lines[i]).Append('\n');
+            return text.ToString();
+        }
+
+        /// <summary>
         /// What the purchase engine would do for a hero in the town the player
         /// is standing in. Reads only -- nothing is bought and no gold moves.
         /// </summary>

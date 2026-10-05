@@ -24,10 +24,10 @@ namespace HeroesEvolve
     public static class PrisonerDialogue
     {
         /// <summary>
-        /// What it costs you with the man himself. Spread to his relatives, as
-        /// robbing a lord is the sort of thing a house remembers.
+        /// The state every answer leads to: he has said what he thinks of it,
+        /// and the decision is still the player's.
         /// </summary>
-        public const int PlayerRelationCost = -12;
+        private const string Decide = "hev_strip_decide";
 
         public static void Register(CampaignGameStarter starter)
         {
@@ -41,11 +41,42 @@ namespace HeroesEvolve
 
             starter.AddDialogLine("hev_strip_prisoner_reply",
                                   "hev_strip_prisoner_reply",
-                                  "close_window",
+                                  Decide,
                                   "{=hev_strip_reply}You would take the arms off a beaten man? "
                                   + "This dishonours you. Take them, then. My clan will hear of it, "
                                   + "and so will yours.",
+                                  null, null, 100, null);
+
+            // He answers first and the arms change hands second, and between
+            // the two the player may still think better of it.
+            //
+            // The demand used to be the act: the prisoner's answer carried the
+            // robbery as its consequence, so by the time he had told you what
+            // it would cost, it had cost it. That was tolerable at twelve
+            // relation and a scratch on Honor. It is not at the price of half
+            // an execution -- his clan, his friends, his kingdom, and half a
+            // level of your name (RobberyReckoning).
+            //
+            // The game asks the same question the same way. Its own "Off with
+            // your head!" does not kill anybody: the lord protests that the
+            // other lords will hate you for it and his family never forget,
+            // adds that a ransom would pay better, and only then are you
+            // offered "I care not" beside "Fine then. You are my prisoner now"
+            // (LordConversationsCampaignBehavior.AddOtherConversations, the
+            // talk_lord_defeat_to_lord_capture_and_kill lines). All three
+            // answers below already said what the robbery would be remembered
+            // as, so none of them needed a new word.
+            starter.AddPlayerLine("hev_strip_take",
+                                  Decide,
+                                  "close_window",
+                                  "{=hev_strip_take}I will take them.",
                                   null, Strip, 100, null);
+
+            starter.AddPlayerLine("hev_strip_leave",
+                                  Decide,
+                                  "close_window",
+                                  "{=hev_strip_leave}Keep them, then.",
+                                  null, null, 100, null);
 
             // The same act against a man who trades in it. Said differently
             // because it is a different thing, and it costs half -- see
@@ -108,19 +139,19 @@ namespace HeroesEvolve
 
             starter.AddDialogLine("hev_strip_prisoner_friend_reply",
                                   "hev_strip_prisoner_friend_reply",
-                                  "close_window",
+                                  Decide,
                                   "{=hev_strip_friend_reply}I expected this from anyone but you. "
                                   + "Take them, then. I have nothing else to say to you.",
-                                  null, Strip, 100, null);
+                                  null, null, 100, null);
 
             starter.AddDialogLine("hev_strip_prisoner_reprisal_reply",
                                   "hev_strip_prisoner_reprisal_reply",
-                                  "close_window",
+                                  Decide,
                                   "{=hev_strip_reprisal_reply}Speak to me of honour when you have "
                                   + "finished robbing me. Take it, then, take all of it -- I will have "
                                   + "better within the month, and the next man I strip to his shirt "
                                   + "may well share your name.",
-                                  null, Strip, 100, null);
+                                  null, null, 100, null);
         }
 
         /// <summary>
@@ -257,26 +288,39 @@ namespace HeroesEvolve
             int taken = PlunderService.Take(spoils, hero, out value);
             if (taken == 0) return;
 
-            // Chosen, and therefore paid for. This is the one path where the
-            // player's own standing moves, and it is right that it does: the
-            // objection was ever only to consequences for decisions he did not
-            // make. His relatives hear about it too.
+            // Chosen, and therefore paid for, and always in full: nobody drew
+            // for him, so there is no grudge to have done it in his place and
+            // every robbery of his is his own doing (PlunderRules.Motive).
+            //
+            // The same bill an AI lord's house is sent for the same act -- his
+            // clan, his friends, his kingdom, at half the game's price for an
+            // execution -- and beside it the one thing only the player has to
+            // lose, his name. It is the house that hears of it, not his
+            // relatives: an earlier comment here said the cost "spread to his
+            // relatives" on the strength of an argument to
+            // ChangeRelationAction.ApplyPlayerRelation that the game accepts
+            // and ignores. It reaches them because a standing is kept between
+            // the heads of two houses and everybody under them shares it.
             //
             // Half of it when the man had it coming, which is the game's own
             // arithmetic for the same situation and not a courtesy invented
             // here -- an execution costs half against a dishonourable victim.
+            // Read before the bill is sent, because the bill moves the very
+            // relation that decides whether he was a friend.
             bool reprisal = MannerFor(hero) == Manner.Reprisal;
 
-            ChangeRelationAction.ApplyPlayerRelation(
-                hero, PlunderRules.AfterReprisal(PlayerRelationCost, reprisal), true, true);
-            TraitLevelingHelper.OnHostileAction(
-                PlunderRules.AfterReprisal(PlunderService.HostileActionXp, reprisal));
+            RobberyReckoning.Bill bill = RobberyReckoning.Charge(Hero.MainHero, hero, reprisal);
+            int honour = RobberyReckoning.ChargeName(reprisal);
+            RobberyTally.Offence(bill.Spent, bill.Houses);
+
             Hero.MainHero.AddSkillXp(DefaultSkills.Roguery, PlunderService.RogueryXpFor(value));
 
             ModLog.Info("PLUNDER by player prisoner=" + hero.Name
                         + " prisonerHonor=" + hero.GetTraitLevel(DefaultTraits.Honor)
                         + " pieces=" + taken + " worth=" + value
                         + " reprisal=" + reprisal
+                        + " " + bill.Describe()
+                        + " honour=" + honour
                         + " roguery=" + PlunderService.RogueryXpFor(value));
         }
 

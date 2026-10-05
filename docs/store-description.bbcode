@@ -84,10 +84,17 @@ slots that held something get something.
 [*]Rags are not worth stealing, so a man already at the bottom is left alone.
 [*]You are told when anyone in your clan or kingdom is robbed, and when one of
 them does the robbing. On the field or in a cell, naming who did it.
-[*]Costs you relation with the man you rob and a hit to your honour. A
-dishonourable prisoner costs half, a friend costs full.
+[*]Costs half of what the game charges for an execution: 30 relation with his
+clan, 15 with each of his friends, 5 with every lord of his kingdom, and half a
+level of your honour. A dishonourable prisoner costs half, a friend costs full.
+AI lords who rob pay the same relation.
+[*]The houses you rob rob you back. A captor's grudge against your clan wears
+away whatever holds him back, and your family and companions answer for it as
+you do. A robbery taken in reprisal settles the score by one robbery's worth.
+[*]Lose your honour and honourable lords strip you as a matter of justice.
 [*]To do it: hold him prisoner in your party or in a settlement your clan owns,
-talk to him, choose [i]"Hand over your arms and armour."[/i]
+talk to him, choose [i]"Hand over your arms and armour."[/i] He answers before
+anything is taken, and you can still change your mind.
 [/list]
 
 An AI captor's chance comes from his character. Each trait on its own, with the
@@ -105,9 +112,20 @@ They stack: all four at -1 is 21.1%, all four neutral 6.2%, all four at +1 is
 0.8%. All +2 never robs, all -2 robs half the time. In practice traits sit
 between -1 and +1.
 
-Then adjusted: Roguery up to +50% at 300. Relation +100 = never, -100 = +50%.
-Clansmen x0.25. Close family never, unless relation is under -50. Bandits ignore
-all of it and sit at a flat 50%.
+Then adjusted: Roguery up to +50% at 300. Relation +100 = never. Clansmen
+x0.25. Close family never, unless relation is under -50. Bandits ignore all of
+it and sit at a flat 50%.
+
+Bad blood works differently. Below -10 it wears away whatever holds the captor
+back, whoever he is. A lord neutral in all four traits, at default settings:
+
+[code]
+Relation          0     -15     -30     -60    -100
+Chance          6.2%    8.7%   16.0%   30.6%   50.0%
+[/code]
+
+An honourable lord, 3.4% against a stranger, strips a prisoner of Honour -1
+17.4% of the time and one of Honour -2 31.4%.
 
 One slider, [b]How often lords rob[/b], multiplies every figure above. It runs
 0 to 2 and ships at 1.00.

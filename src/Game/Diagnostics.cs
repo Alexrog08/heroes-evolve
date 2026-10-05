@@ -53,6 +53,7 @@ namespace HeroesEvolve
         public static void ResetSession()
         {
             _repairsBeforeCensus = 0;
+            RobberyTally.Reset();
         }
 
         public static void RunCensus(float clanWeight, float skillWeight, int minimumTier, int dominanceMargin)
@@ -78,6 +79,7 @@ namespace HeroesEvolve
             ReportTalentSpread();
             ReportAuthoredTalent();
             ReportTraits();
+            ReportFeuds();
             ReportAllSkills();
             ReportGaps();
             ReportNaval();
@@ -213,6 +215,20 @@ namespace HeroesEvolve
             for (int i = 0; i < dishonourable.Count; i++)
             {
                 ModLog.Info("TRAITS dishonourable " + dishonourable[i]);
+            }
+        }
+
+        /// <summary>The feud lines, under the traits that drive them. See Feuds.</summary>
+        internal static void ReportFeuds()
+        {
+            try
+            {
+                List<string> feuds = Feuds();
+                for (int i = 0; i < feuds.Count; i++) ModLog.Info("FEUD " + feuds[i]);
+            }
+            catch (System.Exception ex)
+            {
+                ModLog.Error("FEUD failed: " + ex.GetType().Name + " " + ex.Message);
             }
         }
 
@@ -1033,6 +1049,356 @@ namespace HeroesEvolve
             return "lords+companions mounted=" + mounted + " harnessed=" + harnessed
                    + " mismatched=" + mismatched + named
                    + " | unusableMounted=" + unusable + unusableNamed;
+        }
+
+        /// <summary>
+        /// Where the houses of Calradia stand with one another, and what that
+        /// standing does to robbery. The census for one fear and one promise.
+        ///
+        /// The fear is that charging a robbery to three circles of houses sinks
+        /// relation across the map, and relation between AI lords is not
+        /// decoration: clans leave kingdoms on it, armies cost influence by it,
+        /// marriages and alliances are refused over it. So the standing lines
+        /// are the baseline and the watch. They are read between heads of
+        /// houses, which is where the game keeps a standing, and split the way
+        /// the damage would show: every pair, pairs at war, pairs inside one
+        /// kingdom, and each house with its own king. A robbery's cost falls
+        /// mostly on pairs at war; the last two are the ones that must not
+        /// move. Simulated, a campaign's own drift takes the mean of all pairs
+        /// to about -4 in thirteen years and this rule to about -8, with one
+        /// pair in eleven at minus thirty or worse against one in twenty.
+        /// Numbers far below those in the kingdom or ruler lines are the fear
+        /// come true.
+        ///
+        /// The promise is that a grudge makes a robbery likelier without the
+        /// robberies of the whole map running away. perCapture says what the
+        /// rule does today to every capture that could happen between lords at
+        /// war: what a captor would do on his own character, what his grudge
+        /// and the prisoner's name add, and what the rule this replaced would
+        /// have done with the same standings. It is the one figure that cannot
+        /// be simulated, because it depends on how much bad blood a campaign
+        /// has made for itself -- its raids, its defections, its thirteen
+        /// years of war -- and it is the figure to set the slope by. total
+        /// well above half again own, in a long campaign, says the slope in
+        /// PlunderRules.GrudgeDeadZone is too steep for that campaign.
+        ///
+        /// circles is how wide one robbery lands: how many houses count a
+        /// given lord their friend, and how many share his kingdom. The player
+        /// line is the same reading for him alone, with the lords at war with
+        /// him as captors and his own name beside it; belowMinus30 counts the
+        /// ones the game itself lets execute a captive they hold
+        /// (PlayerCaptivityCampaignBehavior.OnPrisonerTaken, two in a hundred
+        /// below that standing). session is what the robberies since the
+        /// campaign was loaded have cost and settled (RobberyTally).
+        /// </summary>
+        internal static List<string> Feuds()
+        {
+            List<string> lines = new List<string>();
+            if (Campaign.Current == null || Hero.MainHero == null) return lines;
+
+            // Houses that can be on either end of a robbery: led, alive and
+            // not bandits. The player's own is read separately, below.
+            List<Clan> houses = new List<Clan>();
+            int[] honour = new int[5];
+
+            foreach (Clan clan in Clan.All)
+            {
+                if (clan == null || clan.IsEliminated || clan.IsBanditFaction) continue;
+                if (clan == Clan.PlayerClan) continue;
+
+                Hero leader = clan.Leader;
+                if (leader == null || !leader.IsAlive) continue;
+
+                houses.Add(clan);
+                Count(honour, leader.GetTraitLevel(DefaultTraits.Honor));
+            }
+
+            List<int> all = new List<int>();
+            List<int> atWar = new List<int>();
+            List<int> sameRealm = new List<int>();
+            List<int> withRuler = new List<int>();
+
+            for (int i = 0; i < houses.Count; i++)
+            {
+                Hero one = houses[i].Leader;
+                IFaction realm = houses[i].MapFaction;
+
+                for (int j = i + 1; j < houses.Count; j++)
+                {
+                    int standing = one.GetRelation(houses[j].Leader);
+                    IFaction other = houses[j].MapFaction;
+
+                    all.Add(standing);
+                    if (realm != null && realm == other)
+                    {
+                        sameRealm.Add(standing);
+                    }
+                    else if (realm != null && other != null
+                             && FactionManager.IsAtWarAgainstFaction(realm, other))
+                    {
+                        atWar.Add(standing);
+                    }
+                }
+
+                Kingdom kingdom = houses[i].Kingdom;
+                Hero ruler = kingdom != null ? kingdom.Leader : null;
+                if (ruler != null && ruler != one && ruler != Hero.MainHero)
+                {
+                    withRuler.Add(one.GetRelation(ruler));
+                }
+            }
+
+            lines.Add("houses=" + houses.Count + " leaderHonour " + Spread(honour));
+            lines.Add("standing all         " + Percentiles(all) + " | " + Bands(all));
+            lines.Add("standing atWar       " + Percentiles(atWar) + " | " + Bands(atWar));
+            lines.Add("standing sameKingdom " + Percentiles(sameRealm) + " | " + Bands(sameRealm));
+            lines.Add("standing withRuler   " + Percentiles(withRuler) + " | " + Bands(withRuler));
+
+            // Every lord this mod may strip, and how many of each house are
+            // known for what: minus two, minus one, and everybody else.
+            List<Hero> lords = new List<Hero>();
+            Dictionary<Clan, int[]> names = new Dictionary<Clan, int[]>();
+
+            foreach (Hero hero in Hero.AllAliveHeroes)
+            {
+                try
+                {
+                    if (hero == null || hero == Hero.MainHero || !HeroFilter.IsEligible(hero)) continue;
+
+                    Clan clan = hero.Clan;
+                    if (clan == null || clan == Clan.PlayerClan || clan.IsBanditFaction) continue;
+
+                    lords.Add(hero);
+
+                    int[] counts;
+                    if (!names.TryGetValue(clan, out counts))
+                    {
+                        counts = new int[3];
+                        names[clan] = counts;
+                    }
+
+                    int level = hero.GetTraitLevel(DefaultTraits.Honor);
+                    counts[level <= -2 ? 0 : (level == -1 ? 1 : 2)]++;
+                }
+                catch
+                {
+                    // One unreadable hero must not cost the survey.
+                }
+            }
+
+            // Every capture that could happen today between lords at war,
+            // each counted once: this captor, a lord of that house.
+            float rate = Settings.RobberyMultiplier();
+            int[] levels = { -2, -1, 0 };
+            double own = 0, noName = 0, total = 0, old = 0;
+            long pairs = 0, moved = 0;
+
+            foreach (Hero captor in lords)
+            {
+                IFaction mine = captor.MapFaction;
+                if (mine == null) continue;
+
+                int h = captor.GetTraitLevel(DefaultTraits.Honor);
+                int m = captor.GetTraitLevel(DefaultTraits.Mercy);
+                int g = captor.GetTraitLevel(DefaultTraits.Generosity);
+                int c = captor.GetTraitLevel(DefaultTraits.Calculating);
+                int roguery = captor.GetSkillValue(DefaultSkills.Roguery);
+
+                foreach (Clan house in houses)
+                {
+                    if (house == captor.Clan) continue;
+
+                    int[] counts;
+                    if (!names.TryGetValue(house, out counts)) continue;
+
+                    IFaction theirs = house.MapFaction;
+                    if (theirs == null || theirs == mine) continue;
+                    if (!FactionManager.IsAtWarAgainstFaction(mine, theirs)) continue;
+
+                    int standing = captor.GetRelation(house.Leader);
+
+                    float plainOwn;
+                    float plain = PlunderRules.Chance(false, h, m, g, c, roguery, standing,
+                                                      PlunderRules.Kinship.None, 0, rate, out plainOwn);
+
+                    // What the rule before this one made of the same standing:
+                    // enmity as a multiplier, one and a half at the bottom.
+                    float before = standing < 0 ? plainOwn * (1f + (-standing) / 200f) : plainOwn;
+                    if (before > 1f) before = 1f;
+
+                    for (int k = 0; k < levels.Length; k++)
+                    {
+                        int n = counts[k];
+                        if (n == 0) continue;
+
+                        float chance = plain;
+                        if (levels[k] != 0)
+                        {
+                            float unused;
+                            chance = PlunderRules.Chance(false, h, m, g, c, roguery, standing,
+                                                         PlunderRules.Kinship.None, levels[k], rate,
+                                                         out unused);
+                        }
+
+                        pairs += n;
+                        own += n * (double)plainOwn;
+                        noName += n * (double)plain;
+                        total += n * (double)chance;
+                        old += n * (double)before;
+                        if (chance > plainOwn + 0.00001f) moved += n;
+                    }
+                }
+            }
+
+            lines.Add("perCapture atWar pairs=" + pairs
+                      + " own=" + Share(own, pairs)
+                      + " grudge=+" + Share(noName - own, pairs)
+                      + " justice=+" + Share(total - noName, pairs)
+                      + " total=" + Share(total, pairs)
+                      + " | ruleBefore=" + Share(old, pairs)
+                      + " | movedByGrudgeOrName=" + Share(moved, pairs));
+
+            // How wide one robbery lands, by the game's own two tests.
+            List<int> friendHouses = new List<int>();
+            List<int> realmHouses = new List<int>();
+
+            foreach (Hero victim in lords)
+            {
+                int friends = 0, realm = 0;
+                IFaction his = victim.MapFaction;
+
+                foreach (Clan house in houses)
+                {
+                    if (house == victim.Clan) continue;
+
+                    Hero leader = house.Leader;
+                    if (victim.IsFriend(leader)) friends++;
+                    else if (his != null && leader.MapFaction == his && leader.IsLord) realm++;
+                }
+
+                friendHouses.Add(friends);
+                realmHouses.Add(realm);
+            }
+
+            lines.Add("circles perRobbery friends " + Percentiles(friendHouses)
+                      + " | kingdom " + Percentiles(realmHouses));
+
+            // And the one house the player can do anything about.
+            Hero player = Hero.MainHero;
+            IFaction banner = player.MapFaction;
+            List<int> hisStanding = new List<int>();
+            foreach (Clan house in houses) hisStanding.Add(player.GetRelation(house.Leader));
+
+            double hisOwn = 0, hisTotal = 0;
+            int captors = 0, executioners = 0;
+
+            foreach (Hero captor in lords)
+            {
+                IFaction theirs = captor.MapFaction;
+                if (banner == null || theirs == null || theirs == banner) continue;
+                if (!FactionManager.IsAtWarAgainstFaction(theirs, banner)) continue;
+
+                float captorOwn;
+                float chance = PlunderService.ChanceFor(false, captor, player, out captorOwn);
+
+                captors++;
+                hisOwn += captorOwn;
+                hisTotal += chance;
+                if (captor.GetRelation(player) < -30) executioners++;
+            }
+
+            int honourXp = 0;
+            try
+            {
+                honourXp = Campaign.Current.PlayerTraitDeveloper.GetPropertyValue(DefaultTraits.Honor);
+            }
+            catch
+            {
+                // The level beside it is the part that matters.
+            }
+
+            lines.Add("player honour=" + player.GetTraitLevel(DefaultTraits.Honor)
+                      + " honourXp=" + honourXp
+                      + " standing " + Percentiles(hisStanding) + " | " + Bands(hisStanding)
+                      + " | atWar captors=" + captors
+                      + " own=" + Share(hisOwn, captors)
+                      + " total=" + Share(hisTotal, captors)
+                      + " belowMinus30=" + executioners);
+
+            lines.Add("session " + RobberyTally.Describe());
+
+            return lines;
+        }
+
+        /// <summary>
+        /// One lord against the player, both ways: what he would do holding
+        /// the player, and what the player would be charged for stripping
+        /// him. Reads only.
+        /// </summary>
+        internal static string FeudWith(Hero hero)
+        {
+            Hero player = Hero.MainHero;
+            if (hero == null || player == null) return "hev: no such hero.";
+            if (hero == player) return "hev: name somebody else.";
+
+            int standing = hero.GetRelation(player);
+
+            float own;
+            float chance = PlunderService.ChanceFor(false, hero, player, out own);
+
+            bool hadItComing = PlunderRules.IsReprisal(hero.GetTraitLevel(DefaultTraits.Honor))
+                               && !hero.IsFriend(player);
+            RobberyReckoning.Bill bill = RobberyReckoning.Quote(player, hero, hadItComing);
+
+            StringBuilder text = new StringBuilder();
+            text.Append(hero.Name)
+                .Append(hero.Clan != null ? " of " + hero.Clan.Name : "")
+                .Append(": standing with you ").Append(standing)
+                .Append(", his Honor ").Append(hero.GetTraitLevel(DefaultTraits.Honor))
+                .Append(", yours ").Append(player.GetTraitLevel(DefaultTraits.Honor)).Append('.');
+
+            text.Append("\nHolding you he strips you ").Append(Share(chance, 1))
+                .Append(" of the time; ").Append(Share(own, 1)).Append(" is his own character, ")
+                .Append(Share(PlunderRules.Grudge(standing), 1)).Append(" of his restraint is worn by the grudge");
+            if (standing < -30) text.Append(". The game itself lets him execute a captive he holds at this standing");
+            text.Append('.');
+
+            text.Append("\nStripping him would cost you ").Append(bill.Describe())
+                .Append(" honour=").Append(RobberyReckoning.NamePrice(hadItComing))
+                .Append(hadItComing ? " (half: he has no honour and is no friend of yours)." : ".");
+
+            return text.ToString();
+        }
+
+        /// <summary>A part of a whole as a percentage, written the same on every machine.</summary>
+        private static string Share(double part, long whole)
+        {
+            if (whole <= 0) return "n/a";
+            return (part * 100.0 / whole).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + "%";
+        }
+
+        /// <summary>
+        /// How many standings sit at each of the lines the rules read: a feud
+        /// twice over, a robbery's worth, anything past the dead zone, and on
+        /// the other side goodwill and friendship as the game counts it.
+        /// </summary>
+        private static string Bands(List<int> values)
+        {
+            int feud = 0, robbed = 0, grudge = 0, warm = 0, friends = 0;
+
+            for (int i = 0; i < values.Count; i++)
+            {
+                int v = values[i];
+                if (v <= -60) feud++;
+                if (v <= -30) robbed++;
+                if (v < -PlunderRules.GrudgeDeadZone) grudge++;
+                if (v > 10) warm++;
+                if (v > 50) friends++;
+            }
+
+            return "<=-60 " + feud + " <=-30 " + robbed
+                   + " grudge(<-" + PlunderRules.GrudgeDeadZone + ") " + grudge
+                   + " >10 " + warm + " friend(>50) " + friends;
         }
 
         internal static string Percentiles(List<int> values)

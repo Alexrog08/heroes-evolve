@@ -10,6 +10,13 @@ namespace HeroesEvolve.Core
     ///   disposition   who he is      -- his traits, stable across the campaign
     ///   circumstance  who he holds   -- standing and blood, a property of the pair
     ///
+    /// Standing cuts both ways and not alike. Goodwill scales what his
+    /// character would do, down to nothing. Bad blood does not scale it: it
+    /// wears away what holds him back, so that a decent man robs the house he
+    /// has a feud with as a brute robs anyone -- and a robbery that only the
+    /// feud explains is priced differently from one that is his own doing. See
+    /// GrudgeDeadZone and Motive.
+    ///
     /// The trait weighting comes from what the game says each one means, not from
     /// taste. Honor is "respecting your formal commitments and obeying the law",
     /// and taking a prisoner's property is the plainest breach of the customs of
@@ -147,12 +154,103 @@ namespace HeroesEvolve.Core
         // --- circumstance: who he is holding --------------------------------
 
         /// <summary>
-        /// Goodwill protects outright and enmity aggravates by half. The
-        /// asymmetry is deliberate: a man you like is a man you do not rob at
-        /// all, while a man you hate is not thereby someone you rob twice.
+        /// Goodwill protects outright: at a hundred a man is not robbed at all,
+        /// whoever holds him.
         /// </summary>
         public const int FriendshipShield = 100;
-        public const int EnmitySpur = 200;
+
+        /// <summary>
+        /// Bad blood wears a man's restraint away, and at its worst leaves him
+        /// none.
+        ///
+        /// Enmity used to multiply: one and a half times the chance at minus a
+        /// hundred. That put a lord of average character at 7.2% against the
+        /// house that had robbed his own, at minus thirty, from 6.2% against a
+        /// stranger -- a difference nobody could have told from the saddle, and
+        /// a robbery that is answered by nothing has no price. A multiplier was
+        /// also the wrong shape. It left an honourable man an honourable man
+        /// however he had been wronged, when taking back from the house that
+        /// took from yours is not a thing honour forbids.
+        ///
+        /// So the grudge works on what holds him back instead. Whatever share
+        /// of his restraint it has worn away, he robs as though that share were
+        /// not there: own + (1 - own) x grudge, where own is what his character
+        /// does unprovoked. A stranger is robbed exactly as before.
+        ///
+        /// The dead zone is where dislike is not yet a grudge. Relation drifts
+        /// a few points for a dozen reasons that have nothing to do with being
+        /// robbed -- a raided village costs up to six
+        /// (CharacterRelationCampaignBehavior.OnRaidCompleted), two men's
+        /// characters up to four (DefaultDiplomacyModel.GetPersonalityEffects)
+        /// -- and none of that should strip a prisoner. It also keeps the
+        /// smallest price of a robbery, five with each house of the victim's
+        /// kingdom, from meaning anything until a man has made a habit of it.
+        ///
+        /// Linear from there to certainty at minus a hundred. A lord neutral in
+        /// all four traits, in a normal campaign:
+        ///
+        ///      0    6.2%   a stranger
+        ///    -15    8.7%   the kingdom of the men you robbed, at its floor
+        ///    -30   16.0%   the house you robbed
+        ///    -60   30.6%   the house you robbed twice
+        ///   -100   50.0%   as sure as a bandit
+        ///
+        /// The slope is the gentler of two that were simulated over thirty
+        /// years of seventy-two houses. Left unhalved by the campaign's rate it
+        /// gave 27% at minus thirty and added as many robberies of grudge as
+        /// there were robberies of character from the first year. This one
+        /// adds a quarter as many in the first year and about three quarters
+        /// by the twentieth, and then stops climbing.
+        ///
+        /// How many it adds is the one thing the simulation cannot settle,
+        /// because it depends on how much bad blood a campaign makes for
+        /// itself -- raids, defections, a decade of war -- and with three times
+        /// the game's own share of that the same slope was still climbing at
+        /// thirty years. Neither slope feeds on itself (Motive says why), but
+        /// both convert whatever enmity the map already holds into robberies.
+        /// So the census prints the conversion for the campaign it is run in
+        /// (FEUD perCapture), and that line is what this constant answers to.
+        /// </summary>
+        public const int GrudgeDeadZone = 10;
+        public const int GrudgeFull = 100;
+
+        /// <summary>
+        /// What each level of a prisoner's dishonour is worth to an honourable
+        /// captor, as a grudge he holds without ever having met the man.
+        ///
+        /// The game charges an execution to four circles: the dead man's clan,
+        /// his friends, his kingdom, and every honourable noble in Calradia. A
+        /// robbery is charged to the first three at half the price
+        /// (RobberyCost). The fourth is here instead, and not as relation.
+        ///
+        /// As relation it was simulated and it sank the map. One robbery
+        /// touched some eighteen houses, the same eighteen every time, and
+        /// since nearly every house robs somebody sooner or later -- 156
+        /// different captors in the log of one campaign -- thirteen years put
+        /// one pair of houses in five at minus thirty or worse, a kingdom's own
+        /// vassals and its king among them. Relation between AI lords is not
+        /// decoration: clans leave kingdoms on it, armies cost influence by it,
+        /// marriages and alliances are refused over it.
+        ///
+        /// Reputation needs no ledger, because the game already keeps one.
+        /// Honor is what a man is known for -- the encyclopedia's "reputed to
+        /// be" reads it -- and the player's falls with what he does: half an
+        /// execution's worth for each prisoner he strips. Two robberies make
+        /// him a man honourable lords know for a thief, and they take his arms
+        /// when they hold him as a matter of justice rather than of appetite.
+        /// An AI lord's Honor is fixed the day he is made, so for him it is
+        /// what it has always been in this file: not a record of what he did,
+        /// but a description of the sort of man who would.
+        ///
+        /// Honourable captors only. A man with no honour of his own robs by
+        /// appetite and needs no excuse, and a neutral one is not offended on
+        /// principle.
+        ///
+        /// Three tenths a level. An honourable lord, 3.4% against a stranger in
+        /// a normal campaign, strips a man of Honor minus one 17% of the time
+        /// and a man of minus two 31%.
+        /// </summary>
+        public const float JusticePerLevel = 0.3f;
 
         /// <summary>A clansman is family enough to be a rare victim.</summary>
         public const float ClanFactor = 0.25f;
@@ -176,21 +274,94 @@ namespace HeroesEvolve.Core
         }
 
         /// <summary>
-        /// The chance this captor strips this prisoner, from zero to one.
+        /// The chance this captor strips a prisoner with no name for or against
+        /// him, from zero to one. What the census and the store page read.
+        /// </summary>
+        public static float Chance(bool captorIsBandit, int honor, int mercy, int generosity, int calculating,
+                                   int roguery, int relation, Kinship kinship, float multiplier)
+        {
+            float ownDoing;
+            return Chance(captorIsBandit, honor, mercy, generosity, calculating, roguery,
+                          relation, kinship, 0, multiplier, out ownDoing);
+        }
+
+        /// <summary>
+        /// The chance this captor strips this prisoner, from zero to one, and
+        /// the part of it that is his own doing.
+        ///
+        /// Two numbers, because a robbery has two possible causes and they are
+        /// priced differently (Motive). ownDoing is what his character does to
+        /// a man he has nothing against, friendship still counting in the
+        /// prisoner's favour. The return value adds what bad blood wears away
+        /// of the rest: his own with the prisoner's house (Grudge), and for an
+        /// honourable captor the prisoner's own name (Justice).
+        ///
+        /// The multiplier scales both alike, so a campaign's one dial still
+        /// means what it says. At its normal setting a brute, a bandit and the
+        /// deepest feud on the map all stop at one prisoner in two.
         ///
         /// Traits arrive on the game's own -2..+2 scale and are clamped rather
         /// than trusted: a trait some other mod has widened must not quietly
         /// turn a tendency into a certainty.
         /// </summary>
         public static float Chance(bool captorIsBandit, int honor, int mercy, int generosity, int calculating,
-                                   int roguery, int relation, Kinship kinship, float multiplier)
+                                   int roguery, int relation, Kinship kinship, int prisonerHonor,
+                                   float multiplier, out float ownDoing)
         {
-            if (captorIsBandit) return Clamp(BanditChance * multiplier);
+            ownDoing = 0f;
 
+            if (captorIsBandit)
+            {
+                ownDoing = Clamp(BanditChance * multiplier);
+                return ownDoing;
+            }
+
+            // A paragon stays one. No feud and no thief's name makes a robber
+            // of the man Disposition puts at nought: zero still means zero.
             float disposition = Disposition(honor, mercy, generosity, calculating, roguery);
             if (disposition <= 0f) return 0f;
 
-            return Clamp(disposition * Circumstance(relation, kinship) * multiplier);
+            float blood = Blood(relation, kinship);
+            if (blood <= 0f) return 0f;
+
+            float shield = Shield(relation);
+            float own = disposition * shield;
+            if (own > 1f) own = 1f;
+
+            // His friend's bad name is still his friend's: the same shield
+            // that stays his hand stays his sense of justice.
+            float worn = Grudge(relation) + Justice(honor, prisonerHonor) * shield;
+            if (worn > 1f) worn = 1f;
+
+            ownDoing = Clamp(own * blood * multiplier);
+            return Clamp((own + (1f - own) * worn) * blood * multiplier);
+        }
+
+        /// <summary>
+        /// How much of a captor's restraint his bad blood with the prisoner's
+        /// house has worn away, from none to all of it. See GrudgeDeadZone.
+        /// </summary>
+        public static float Grudge(int relation)
+        {
+            int depth = -relation;
+            if (depth <= GrudgeDeadZone) return 0f;
+            if (depth >= GrudgeFull) return 1f;
+
+            return (depth - GrudgeDeadZone) / (float)(GrudgeFull - GrudgeDeadZone);
+        }
+
+        /// <summary>
+        /// What a prisoner's own name wears away of an honourable captor's
+        /// restraint. See JusticePerLevel.
+        /// </summary>
+        public static float Justice(int captorHonor, int prisonerHonor)
+        {
+            if (ClampTrait(captorHonor) <= 0) return 0f;
+
+            int dishonour = -ClampTrait(prisonerHonor);
+            if (dishonour <= 0) return 0f;
+
+            return JusticePerLevel * dishonour;
         }
 
         /// <summary>
@@ -256,32 +427,31 @@ namespace HeroesEvolve.Core
         }
 
         /// <summary>
-        /// How much this particular prisoner invites or forbids it.
+        /// What kinship does to the whole of it, grudge included.
         ///
         /// Blood is a veto rather than a weight, and it is checked against the
         /// relation because a father who has come to hate his son is no longer
         /// protected by being his father.
         /// </summary>
-        private static float Circumstance(int relation, Kinship kinship)
+        private static float Blood(int relation, Kinship kinship)
         {
             if (kinship == Kinship.Immediate && relation > FeudRelation) return 0f;
 
-            float factor;
-            if (relation > 0)
-            {
-                factor = 1f - relation / (float)FriendshipShield;
-                if (factor < 0f) factor = 0f;
-            }
-            else
-            {
-                factor = 1f + (-relation) / (float)EnmitySpur;
-            }
-
             // A feud strips the veto but not the reticence: robbing your own
             // brother is still a rarer thing than robbing a stranger.
-            if (kinship == Kinship.Clan || kinship == Kinship.Immediate) factor *= ClanFactor;
+            return kinship == Kinship.None ? 1f : ClanFactor;
+        }
 
-            return factor;
+        /// <summary>
+        /// How much of his own doing goodwill lets through: all of it for a
+        /// man he does not care for, none at FriendshipShield.
+        /// </summary>
+        private static float Shield(int relation)
+        {
+            if (relation <= 0) return 1f;
+
+            float shield = 1f - relation / (float)FriendshipShield;
+            return shield < 0f ? 0f : shield;
         }
 
         /// <summary>
@@ -363,6 +533,61 @@ namespace HeroesEvolve.Core
             }
 
             return (hash % 10000u) / 10000f;
+        }
+
+        /// <summary>
+        /// Why a robbery happened, which is what decides its price.
+        ///
+        /// One draw is read against two bars. Under the lower, his character
+        /// alone accounts for it -- he would have robbed a stranger on the same
+        /// draw -- and the act is his own doing, charged in full (RobberyCost).
+        /// Between the two, only the grudge explains it: a robbery that would
+        /// not have happened had there been no bad blood. That one is an answer
+        /// rather than an offence. It costs him nothing, and it spends the
+        /// grudge that caused it (RobberyCost.Settled).
+        ///
+        /// This is the whole defence against relation feeding on itself, and it
+        /// is arithmetic rather than tuning. Were a robbery of grudge charged
+        /// like any other, bad blood would raise the chance of robbery and
+        /// robbery would deepen the bad blood, between every two houses at
+        /// once. Charging only the lower bar means the relation a captor is
+        /// expected to lose at a capture is his own chance times the price --
+        /// and his own chance does not contain the relation. However deep a
+        /// feud runs it adds nothing to itself. It can only be spent.
+        ///
+        /// Simulated over thirty years of seventy-two houses: one pair of
+        /// houses in six at minus thirty or worse, against nearly one in two
+        /// when all four of the game's circles were charged as relation with
+        /// no such rule. And with the grudge spent by each answer the robberies
+        /// of grudge levelled off, where left unspent they were still climbing
+        /// in the thirtieth year.
+        ///
+        /// The draw cannot say who started it, and is not asked to. A grudge is
+        /// one number between two houses and both of them wear it. What the
+        /// draw does know is whether this robbery needed the grudge, and one
+        /// that did is the grudge being used up, whichever of the two lit it.
+        ///
+        /// The player is never drawn for. He robs by choosing to
+        /// (PrisonerDialogue), so every robbery of his is his own doing by
+        /// definition and is charged as one.
+        /// </summary>
+        public enum Motive
+        {
+            /// <summary>No robbery.</summary>
+            None,
+
+            /// <summary>His own doing: his character accounts for it without help.</summary>
+            Character,
+
+            /// <summary>Only the grudge accounts for it.</summary>
+            Grudge
+        }
+
+        /// <summary>Reads one draw against the two bars Chance returns.</summary>
+        public static Motive Judge(float draw, float ownDoing, float chance)
+        {
+            if (chance <= 0f || draw > chance) return Motive.None;
+            return draw <= ownDoing ? Motive.Character : Motive.Grudge;
         }
 
         /// <summary>

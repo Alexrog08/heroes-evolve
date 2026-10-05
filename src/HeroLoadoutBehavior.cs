@@ -236,6 +236,11 @@ namespace HeroesEvolve
             }
             LogKingdoms();
 
+            // Where the houses stand with one another as the session opens:
+            // the baseline the weekly lines are read against. See
+            // Diagnostics.Feuds.
+            Diagnostics.ReportFeuds();
+
             if (!_newCampaign) return;
             _newCampaign = false;
 
@@ -592,6 +597,11 @@ namespace HeroesEvolve
                 ModLog.Error("MOUNTFIT failed: " + ex.GetType().Name + " " + ex.Message);
             }
             LogKingdoms();
+
+            // And weekly, whatever the switches say: the standing between
+            // houses is the one thing a robbery rule could quietly ruin, and it
+            // moves too slowly to notice any other way.
+            Diagnostics.ReportFeuds();
 
             if (!Settings.EnableSkillGrowth) return;
 

@@ -72,6 +72,7 @@ namespace HeroesEvolve.Tests
             GearBalanceTests.RunAll();
             SwapRulesTests.RunAll();
             PlunderRulesTests.RunAll();
+            RobberyCostTests.RunAll();
 
             Console.WriteLine();
             Console.WriteLine(Check.Passes + " passed, " + Check.Failures + " failed");

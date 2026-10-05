@@ -22,53 +22,18 @@ namespace HeroesEvolve
     ///
     /// Whose decision it is matters as much as the dice. Every captor here is a
     /// person -- the lord leading the party, or the lord who owns the castle --
-    /// and he wears the consequence himself: robbing a prisoner costs him
-    /// standing with that prisoner, exactly as it should for a thing he chose to
-    /// do. The player is the one exception in both directions. He is never made
-    /// to rob anybody, because nothing should be deciding that for him, and his
-    /// own standing never moves for having been robbed, because being robbed is
-    /// not an act of his. Relations in this game are the player's to earn.
+    /// and his house wears the consequence. A robbery that was his own doing is
+    /// charged like an execution at half the price: with the prisoner's clan,
+    /// with his friends and with his kingdom (RobberyReckoning). One that only
+    /// a grudge explains costs nothing and spends the grudge instead
+    /// (PlunderRules.Motive). The player is the one exception in both
+    /// directions. He is never made to rob anybody, because nothing should be
+    /// deciding that for him, and his own standing never falls for having been
+    /// robbed, because being robbed is not an act of his. Relations in this
+    /// game are the player's to earn.
     /// </summary>
     public static class PlunderService
     {
-        /// <summary>
-        /// What robbing a prisoner costs the captor in that prisoner's regard.
-        /// </summary>
-        public const int RelationCost = -10;
-
-        /// <summary>
-        /// What the act does to the robber's character, on the game's own
-        /// scale and through the game's own door.
-        ///
-        /// TraitLevelingHelper.OnHostileAction is what Bannerlord calls when
-        /// somebody does something ugly, and it charges Honor and Mercy
-        /// together -- which is exactly the pair of marks robbing a disarmed
-        /// prisoner leaves. Using it rather than hand-rolling two calls means
-        /// the act is logged and weighted the way the game weighs its own.
-        ///
-        /// Twenty sits just below the game's own figure, which is twenty-five
-        /// at full severity: BeHostileAction.ApplyGeneralConsequencesOnPeace
-        /// computes -25 times a severity and hands the result to this same
-        /// door. No civilian is harmed here, and the offence is chiefly a
-        /// breach of the customs of war rather than a cruelty, so a little
-        /// under is right. (An earlier version of this comment said thirty,
-        /// from memory rather than from the assembly.)
-        ///
-        /// What that buys, now that the scale has been read: a trait level
-        /// costs a thousand experience -- DefaultCharacterDevelopmentModel.
-        /// GetTraitLevelForTraitXp steps at 1000 and 4000 either side of zero,
-        /// clamped at 6000 -- so fifty robberies move a man's Honor by one,
-        /// against forty of the game's own hostile acts. A career of it, not an
-        /// afternoon.
-        ///
-        /// Only the player has traits that move at all: AddTraitXp is hardwired
-        /// to Campaign.PlayerTraitDeveloper and Hero.MainHero, and an AI lord's
-        /// character is fixed when he is generated. So this fires exactly when
-        /// the player's own party robs somebody, which it does only if he has
-        /// turned that on himself.
-        /// </summary>
-        public const int HostileActionXp = -20;
-
         /// <summary>
         /// Denars of loot per point of Roguery experience.
         ///
@@ -133,9 +98,15 @@ namespace HeroesEvolve
             if (captor != null && captor == Hero.MainHero) return 0;
             if (captor == prisoner) return 0;
 
-            float chance = ChanceFor(bandit, captor, prisoner);
+            float ownDoing;
+            float chance = ChanceFor(bandit, captor, prisoner, out ownDoing);
             if (chance <= 0f) return 0;
-            if (MBRandom.RandomFloat > chance) return 0;
+
+            // One draw read against two bars: whether he robs at all, and
+            // whether it was his character or his grudge that did it. See
+            // PlunderRules.Motive.
+            PlunderRules.Motive motive = PlunderRules.Judge(MBRandom.RandomFloat, ownDoing, chance);
+            if (motive == PlunderRules.Motive.None) return 0;
 
             // Nobody to hand it to, nobody robs him. See SpoilsFor.
             PartyBase spoils = SpoilsFor(captorParty, captor);
@@ -150,24 +121,18 @@ namespace HeroesEvolve
             // settlements took the early return above -- so a looter gang is
             // named as readily as a lord.
             Announce(captorParty.MapFaction,
-                     captor != null ? NameOf(captor) : captorParty.Name, prisoner, false);
+                     captor != null ? NameOf(captor) : captorParty.Name, prisoner, false,
+                     motive == PlunderRules.Motive.Grudge);
 
-            // Doing the robbing costs the robber standing with the man he
-            // robbed. Being robbed costs the victim nothing, because it is not
-            // an act of his.
-            //
-            // The player is excluded as the victim, and that is forced rather
-            // than chosen: Bannerlord keeps one relation number per pair of
-            // heroes, so charging the captor and moving the player's number are
-            // the same write. They cannot be separated, and of the two the
-            // player's number is the one that should only ever move for things
-            // he did. He is not excluded as the captor here -- he cannot reach
-            // this line at all, the guard above returns before it. His own
-            // reckoning is in PrisonerDialogue, where he chose it.
-            if (captor != null && prisoner != Hero.MainHero)
-            {
-                ChangeRelationAction.ApplyRelationChangeBetweenHeroes(captor, prisoner, RelationCost, false);
-            }
+            // Read before the bill moves it. This is the standing the draw was
+            // judged on, which is the one a log reader needs to check the
+            // chance beside it.
+            int relation = captor != null ? captor.GetRelation(prisoner) : 0;
+
+            // What it cost him, or what it settled. His own reckoning when the
+            // captor is the player is in PrisonerDialogue, where he chose it;
+            // he cannot reach this line, the guard above returns before it.
+            string reckoning = Reckon(bandit, captor, prisoner, motive, relation);
 
             if (captor != null)
             {
@@ -198,11 +163,67 @@ namespace HeroesEvolve
                             ? captor.GetTraitLevel(DefaultTraits.Honor).ToString() : "-")
                         + " prisoner=" + prisoner.Name
                         + " prisonerHonor=" + prisoner.GetTraitLevel(DefaultTraits.Honor)
+                        + " relation=" + relation
                         + " chance=" + (int)(chance * 100f) + "%"
+                        + " own=" + (int)(ownDoing * 100f) + "%"
+                        + reckoning
                         + " pieces=" + taken
                         + " worth=" + value);
 
             return taken;
+        }
+
+        /// <summary>
+        /// Prices a robbery by what caused it, and says what it did for the
+        /// log.
+        ///
+        /// Three outcomes and no fourth. A bandit's robbery is charged to
+        /// nobody: there is no honour to appeal to, no standing to lose and no
+        /// relation to spend, which PlunderRules.BanditChance has always said
+        /// and this code did not quite do -- an outlaw chief with a name used
+        /// to lose ten with his victim all the same. A robbery of character is
+        /// billed (RobberyReckoning.Charge). A robbery of grudge is free and
+        /// spends the grudge (RobberyReckoning.Settle).
+        /// </summary>
+        private static string Reckon(bool bandit, Hero captor, Hero prisoner,
+                                     PlunderRules.Motive motive, int relation)
+        {
+            if (bandit || captor == null)
+            {
+                RobberyTally.Bandit();
+                return " motive=bandit";
+            }
+
+            if (motive == PlunderRules.Motive.Grudge)
+            {
+                // Which of the two wore his restraint away. With no grudge
+                // between the houses it can only have been the prisoner's
+                // name, and then there is nothing between them to settle: a
+                // standing still inside the dead zone was never what robbed
+                // him, so it is not what gets paid off.
+                bool justice = PlunderRules.Grudge(relation) <= 0f;
+                int settled = justice ? 0 : RobberyReckoning.Settle(captor, prisoner);
+
+                RobberyTally.Answer(settled, justice);
+                return " motive=" + (justice ? "justice" : "grudge") + " settled=" + settled;
+            }
+
+            RobberyReckoning.Bill bill = RobberyReckoning.Charge(captor, prisoner,
+                                                                 HadItComing(captor, prisoner));
+            RobberyTally.Offence(bill.Spent, bill.Houses);
+            return " motive=character " + bill.Describe();
+        }
+
+        /// <summary>
+        /// Whether robbing this man is cheaper for what he is: a prisoner
+        /// without honour, who is not the robber's friend. The same two tests,
+        /// in the same order, as the three ways the player can ask
+        /// (PrisonerDialogue.MannerFor).
+        /// </summary>
+        private static bool HadItComing(Hero robber, Hero victim)
+        {
+            if (!PlunderRules.IsReprisal(victim.GetTraitLevel(DefaultTraits.Honor))) return false;
+            return !victim.IsFriend(robber);
         }
 
         /// <summary>
@@ -295,7 +316,8 @@ namespace HeroesEvolve
                 if (!CanBeStripped(prisoner)) continue;
                 if (!HasAnythingToTake(prisoner)) continue;
 
-                float chance = ChanceFor(false, visitor, prisoner);
+                float ownDoing;
+                float chance = ChanceFor(false, visitor, prisoner, out ownDoing);
                 if (chance <= 0f) continue;
                 // Seeded on this spell in the cells, not on the two men alone:
                 // Hero.CaptivityStartTime is written by TakePrisonerAction on
@@ -309,7 +331,15 @@ namespace HeroesEvolve
                 // do. Two captivities of the same pair are always many days
                 // apart, so the coarseness costs nothing.
                 long episode = (long)prisoner.CaptivityStartTime.ToHours;
-                if (PlunderRules.Draw(visitor.StringId, prisoner.StringId, episode) > chance) continue;
+
+                // The same draw read against the same two bars as on the
+                // field. It does not move while he sits in the cell, but the
+                // upper bar does: a prisoner whose house robs the keeper's
+                // while he is held may find the keeper's next visit goes
+                // differently, and that robbery is the answer to it.
+                PlunderRules.Motive motive = PlunderRules.Judge(
+                    PlunderRules.Draw(visitor.StringId, prisoner.StringId, episode), ownDoing, chance);
+                if (motive == PlunderRules.Motive.None) continue;
 
                 int value;
                 int taken = Take(party.Party, prisoner, out value);
@@ -318,17 +348,17 @@ namespace HeroesEvolve
                 robbed += taken;
                 worth += value;
 
-                if (prisoner != Hero.MainHero)
-                {
-                    ChangeRelationAction.ApplyRelationChangeBetweenHeroes(visitor, prisoner,
-                                                                          RelationCost, false);
-                }
+                int relation = visitor.GetRelation(prisoner);
+                string reckoning = Reckon(false, visitor, prisoner, motive, relation);
 
                 ModLog.Info("PLUNDER captor=" + visitor.Name
                             + " captorHonor=" + visitor.GetTraitLevel(DefaultTraits.Honor)
                             + " prisoner=" + prisoner.Name
                             + " prisonerHonor=" + prisoner.GetTraitLevel(DefaultTraits.Honor)
+                            + " relation=" + relation
                             + " chance=" + (int)(chance * 100f) + "%"
+                            + " own=" + (int)(ownDoing * 100f) + "%"
+                            + reckoning
                             + " pieces=" + taken
                             + " worth=" + value
                             + " at=" + settlement.Name);
@@ -339,7 +369,8 @@ namespace HeroesEvolve
                 // than under a capture notice, because his capture was days
                 // ago, but withholding it would mean the message depended on
                 // where the robbery happened instead of whom it happened to.
-                Announce(visitor.MapFaction, NameOf(visitor), prisoner, false);
+                Announce(visitor.MapFaction, NameOf(visitor), prisoner, false,
+                         motive == PlunderRules.Motive.Grudge);
             }
 
             if (robbed == 0) return 0;
@@ -466,7 +497,7 @@ namespace HeroesEvolve
         }
 
         internal static void Announce(IFaction captorFaction, TextObject captor,
-                                      Hero prisoner, bool force)
+                                      Hero prisoner, bool force, bool inAnswer = false)
         {
             if (prisoner == null || captor == null || Hero.MainHero == null) return;
 
@@ -493,8 +524,17 @@ namespace HeroesEvolve
 
             try
             {
-                TextObject line = new TextObject(
-                    "{=hev_robbed}{VICTIM} has been stripped of arms and armour by {CAPTOR}.");
+                // Two wordings, and the second is the only place the player is
+                // told why. A robbery his house brought on itself -- the
+                // captor's grudge against it, or his own name with honourable
+                // men -- reads differently from one that simply happened to
+                // him, and it is also the line that tells him the debt is that
+                // much nearer paid (RobberyReckoning.Settle).
+                TextObject line = inAnswer
+                    ? new TextObject(
+                        "{=hev_robbed_reprisal}{VICTIM} has been stripped of arms and armour by {CAPTOR} in reprisal.")
+                    : new TextObject(
+                        "{=hev_robbed}{VICTIM} has been stripped of arms and armour by {CAPTOR}.");
 
                 line.SetTextVariable("VICTIM", NameOf(prisoner));
                 line.SetTextVariable("CAPTOR", captor);
@@ -618,9 +658,22 @@ namespace HeroesEvolve
         /// </summary>
         public static float ChanceFor(bool bandit, Hero captor, Hero prisoner)
         {
+            float ownDoing;
+            return ChanceFor(bandit, captor, prisoner, out ownDoing);
+        }
+
+        /// <summary>
+        /// The same, with the part of it that is the captor's own doing: what
+        /// his character would do to a man he had nothing against.
+        /// </summary>
+        public static float ChanceFor(bool bandit, Hero captor, Hero prisoner, out float ownDoing)
+        {
+            ownDoing = 0f;
+
             if (bandit) return PlunderRules.Chance(true, 0, 0, 0, 0, 0, 0,
-                                                   PlunderRules.Kinship.None, Settings.RobberyMultiplier());
-            if (captor == null) return 0f;
+                                                   PlunderRules.Kinship.None, 0,
+                                                   Settings.RobberyMultiplier(), out ownDoing);
+            if (captor == null || prisoner == null) return 0f;
 
             return PlunderRules.Chance(false,
                                        captor.GetTraitLevel(DefaultTraits.Honor),
@@ -630,7 +683,8 @@ namespace HeroesEvolve
                                        captor.GetSkillValue(DefaultSkills.Roguery),
                                        captor.GetRelation(prisoner),
                                        KinshipBetween(captor, prisoner),
-                                       Settings.RobberyMultiplier());
+                                       prisoner.GetTraitLevel(DefaultTraits.Honor),
+                                       Settings.RobberyMultiplier(), out ownDoing);
         }
 
         /// <summary>
