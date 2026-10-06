@@ -1064,7 +1064,11 @@ namespace HeroesEvolve
         /// grows for years, because two houses have to meet before one can
         /// collect, and levels off when the oldest oaths begin to lapse:
         /// simulated, about a hundred and seventy by the thirteenth year and
-        /// about two hundred and thirty from the twentieth.
+        /// about two hundred and thirty from the twentieth. quarrelsLeftAlone
+        /// is the quarrels in the same log that are not this mod's and are
+        /// never read as debts: the vengeances TaleWorlds has a murdered
+        /// Aserai lord's kinsmen swear before the campaign opens, a handful
+        /// until the game forgets them in 1100, and nought after.
         ///
         /// perCapture says what the rules do today to every capture that could
         /// happen between lords at war: what a captor would do on his own
@@ -1115,8 +1119,8 @@ namespace HeroesEvolve
 
             // The ledger, read once: how many oaths each house holds against
             // each other house.
-            int sworn;
-            Dictionary<string, int> oaths = VengeanceOaths.Outstanding(out sworn);
+            int sworn, leftAlone;
+            Dictionary<string, int> oaths = VengeanceOaths.Outstanding(out sworn, out leftAlone);
 
             List<int> all = new List<int>();
             List<int> atWar = new List<int>();
@@ -1140,7 +1144,8 @@ namespace HeroesEvolve
                 }
             }
 
-            lines.Add("houses=" + houses.Count + " oaths outstanding=" + sworn + " pairs=" + oaths.Count);
+            lines.Add("houses=" + houses.Count + " oaths outstanding=" + sworn + " pairs=" + oaths.Count
+                      + " quarrelsLeftAlone=" + leftAlone);
             lines.Add("standing all   " + Percentiles(all)
                       + " atOrBelowMinus30=" + Share(AtOrBelow(all, -30), all.Count));
             lines.Add("standing atWar " + Percentiles(atWar)
@@ -1332,8 +1337,8 @@ namespace HeroesEvolve
 
             // Each way on its own: two houses can each hold an oath against
             // the other, and collecting one leaves the other standing.
-            int sworn;
-            Dictionary<string, int> oaths = VengeanceOaths.Outstanding(out sworn);
+            int sworn, leftAlone;
+            Dictionary<string, int> oaths = VengeanceOaths.Outstanding(out sworn, out leftAlone);
 
             int his = 0, mine = 0;
             if (hero.Clan != null && player.Clan != null && hero.Clan != player.Clan)

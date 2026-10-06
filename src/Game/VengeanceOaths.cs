@@ -116,10 +116,15 @@ namespace HeroesEvolve
         /// Every oath outstanding, counted by who swore against whom: the key
         /// is Key(swore, against). For the census, which wants all of it at
         /// one reading rather than one pair at a time.
+        ///
+        /// leftAlone is the quarrels in the log that are not read as debts:
+        /// the ones TaleWorlds wrote, and any oath whose two men have since
+        /// ended up in one house or in none.
         /// </summary>
-        internal static Dictionary<string, int> Outstanding(out int sworn)
+        internal static Dictionary<string, int> Outstanding(out int sworn, out int leftAlone)
         {
             sworn = 0;
+            leftAlone = 0;
             Dictionary<string, int> owed = new Dictionary<string, int>();
 
             MBReadOnlyList<LogEntry> logs = Logs();
@@ -130,7 +135,11 @@ namespace HeroesEvolve
             for (int i = 0; i < logs.Count; i++)
             {
                 Clan swore, against;
-                if (!Read(logs[i], opened, out swore, out against)) continue;
+                if (!Read(logs[i], opened, out swore, out against))
+                {
+                    if (logs[i] is CharacterInsultedLogEntry) leftAlone++;
+                    continue;
+                }
 
                 string key = Key(swore, against);
                 int count;
@@ -177,13 +186,24 @@ namespace HeroesEvolve
         /// Whether a log entry is an oath this mod reads, and between which
         /// houses.
         ///
-        /// Every quarrel written since the campaign opened. The note that
-        /// makes one a vengeance is a private field, so it is not read; the
-        /// date is. The game dates its own backstory quarrels years before
-        /// the campaign begins and adds none afterwards, so anything later is
-        /// one of ours -- and the feuds TaleWorlds wrote stay TaleWorlds'. It
-        /// is also what makes an oath struck off stop counting at once, before
-        /// the purge has even run.
+        /// Two locks, and an entry has to pass both. The note that makes a
+        /// quarrel a vengeance is a private field, so it is not one of them.
+        ///
+        /// It was written since the campaign opened. The game dates its own
+        /// backstory quarrels years before that and adds none afterwards --
+        /// the Aserai who swore vengeance for a murdered kinsman did it in
+        /// 1080, and nothing in the game ever acts on that -- and an oath
+        /// struck off is dated to nought, so it stops counting before the
+        /// purge has even run.
+        ///
+        /// And it is one the game does not announce, which is what naming a
+        /// common soldier makes it (Swear). Every quarrel TaleWorlds writes
+        /// names a hero or nobody.
+        ///
+        /// Either lock keeps the feuds TaleWorlds wrote TaleWorlds' in the
+        /// campaign as shipped. Both, so that a mod which moves the calendar,
+        /// or writes quarrels of its own, cannot have this one collect a debt
+        /// nobody owes it -- or strike somebody else's line off the record.
         /// </summary>
         private static bool Read(LogEntry entry, CampaignTime opened, out Clan swore, out Clan against)
         {
@@ -198,6 +218,7 @@ namespace HeroesEvolve
             // the man who swears and its Insulter the man sworn against, as
             // the backstory fills them and as GetEncyclopediaText prints them.
             if (oath.Insultee == null || oath.Insulter == null) return false;
+            if (oath.IsVisibleNotification) return false;
 
             swore = oath.Insultee.Clan;
             against = oath.Insulter.Clan;
