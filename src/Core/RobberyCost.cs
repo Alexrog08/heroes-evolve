@@ -22,37 +22,21 @@ namespace HeroesEvolve.Core
     /// (PlunderRules.IsReprisal) is therefore still the game's own.
     ///
     /// Everyone who robs out of his own character pays it, lord and player
-    /// alike. A robbery that only a grudge explains is not charged at all,
-    /// and that difference is what keeps relation from feeding on itself
-    /// (PlunderRules.Motive).
+    /// alike. A robbery taken in vengeance, or one that only bad blood
+    /// explains, is not charged at all, and that difference is what keeps
+    /// relation from feeding on itself (PlunderRules.Motive).
+    ///
+    /// No circle has a floor. The first version stopped the two wide ones at
+    /// three charges each, on the reasoning that a kingdom's disapproval is
+    /// not a feud. It read wrongly from the other side -- the friends of a man
+    /// robbed for the tenth time holding the robber no lower than they did
+    /// after the third -- and it was taken out. A man who makes a career of
+    /// robbing one kingdom ends with all of it against him.
     /// </summary>
     public static class RobberyCost
     {
         /// <summary>A robbery against an execution.</summary>
         public const int ExecutionDivisor = 2;
-
-        /// <summary>
-        /// Where the cost with a victim's friends stops, and below it the cost
-        /// with his kingdom: three charges deep, each.
-        ///
-        /// The wide circles have a floor and the house itself has none. A
-        /// kingdom's disapproval is not a feud. It is charged to seven or
-        /// eight houses at a time for something done to one of them, and left
-        /// unbounded it would put a man who robbed twenty prisoners of one
-        /// realm at minus a hundred with houses he never touched -- well inside
-        /// the range where the game lets a captor execute him, which begins
-        /// below minus thirty (PlayerCaptivityCampaignBehavior.OnPrisonerTaken)
-        /// -- for an offence against somebody else. Three charges and it has
-        /// said what it has to say. The house he actually robbed is the one
-        /// that may hate him as deeply as he digs.
-        ///
-        /// Simulated over a map of seventy-two houses, the floors change
-        /// little in thirteen years (mean relation between houses -8.0 with
-        /// them, -8.6 without) and more in thirty, which is what a bound is
-        /// for.
-        /// </summary>
-        public const int FriendsFloor = -45;
-        public const int KingdomFloor = -15;
 
         /// <summary>
         /// What the act leaves on the robber's Mercy. Unchanged from when it
@@ -72,28 +56,14 @@ namespace HeroesEvolve.Core
         }
 
         /// <summary>
-        /// What may still be charged of a cost that stops at a floor: all of
-        /// it, the part that reaches the floor, or nothing once the relation
-        /// is already there.
-        /// </summary>
-        public static int Floored(int relation, int cost, int floor)
-        {
-            if (cost >= 0) return 0;
-            if (relation <= floor) return 0;
-
-            int room = floor - relation;
-            return cost < room ? room : cost;
-        }
-
-        /// <summary>
-        /// A relation after a grudge has been spent on a robbery: nearer zero
-        /// by the amount, and never past it.
+        /// The standing between two houses after one of them has taken
+        /// vengeance on the other: nearer nought by the amount, and never past
+        /// it.
         ///
         /// Never past it because a robbery is not a kindness. Two houses that
-        /// have had their answer are even, not friends. And a relation that
-        /// was not a grudge is left exactly as it stood: the robbery of a
-        /// known thief by an honourable man who had nothing against him
-        /// settles nothing, because there was nothing between them to settle.
+        /// have had their answer are even, not friends. The amount is what a
+        /// robbery costs with the robbed house, so one answer pays for one
+        /// offence and a house robbed twice is owed twice.
         /// </summary>
         public static int Settled(int relation, int amount)
         {

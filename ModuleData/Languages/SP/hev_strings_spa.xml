@@ -17,6 +17,8 @@
     <string id="hev_released_scavenged" text="Has rapiñado equipo sencillo del bagaje de tus captores al salir, de los mismos tipos que llevabas." />
     <string id="hev_of_faction" text="{NAME} de {FACTION}" />
     <string id="hev_released_given" text="Tus captores te despidieron con equipo sencillo para el camino, de los mismos tipos que llevabas." />
+    <string id="hev_strip_vengeance" text="Tu clan despojó a uno de los míos. Entrégame tus armas y tu armadura." />
+    <string id="hev_strip_vengeance_reply" text="Así que esta es la respuesta. Tómalas, pues, y que con esto quede zanjado entre tu clan y el mío." />
     <string id="hev_robbery_hurt" text="El robo ha dañado tu relación con {COUNT} {?IS_PLURAL}clanes{?}clan{\?}." />
   </strings>
 </base>

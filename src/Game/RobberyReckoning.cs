@@ -9,7 +9,7 @@ using HeroesEvolve.Core;
 namespace HeroesEvolve
 {
     /// <summary>
-    /// The bill for a robbery, and the receipt for one taken in answer.
+    /// The bill for a robbery, and the receipt for vengeance taken.
     ///
     /// Charged like an execution at half the price, to the same people the
     /// game charges an execution to and by the same tests, read off
@@ -32,17 +32,24 @@ namespace HeroesEvolve
     /// at the head of a party: they rob by their own characters
     /// (PlunderService), and it is his house that did it.
     ///
-    /// The other side of the same fact is the one exception here. Being robbed
-    /// never moves the player's standing with anybody. One number between two
-    /// houses cannot fall for the robber without falling for his victim, and
-    /// now that a low number makes the next robbery likelier
-    /// (PlunderRules.GrudgeDeadZone), charging the lord who strips the
-    /// player's man would raise the chance of his stripping the next one --
-    /// the victim paying for the offence. The game makes the same exception
-    /// for the same reason: CharacterRelationCampaignBehavior.OnRaidCompleted
-    /// charges a raider with the owner of the village he burnt unless the
-    /// owner is the player's clan. Between two AI houses the number falls for
-    /// both and nobody is there to mind; a feud is mutual.
+    /// The same is true of the player's house when it is the one robbed, and
+    /// it was not always. One number between two houses cannot fall for the
+    /// robber without falling for his victim, and while a low number alone made
+    /// the next robbery likelier, charging the lord who stripped the player's
+    /// man raised the chance of his stripping the next one -- the victim
+    /// paying for the offence -- so the player's house was left out, as the
+    /// game leaves it out of the cost of a raid
+    /// (CharacterRelationCampaignBehavior.OnRaidCompleted). That reason is
+    /// gone. A house that owes takes no courage from the bad blood it made
+    /// (PlunderRules.Claim.Owes), and the standing is now also what says a
+    /// vengeance is still outstanding: left unmoved, the player could be
+    /// robbed and never be owed anything. So his house is charged like any
+    /// other, and holds the claim like any other.
+    ///
+    /// The one thing still spared him is other people's quarrels. A lord who
+    /// robs the player's friend, or a lord of his kingdom, does not fall in
+    /// the player's own regard by decree. Whom he resents on a friend's behalf
+    /// is his to decide.
     /// </summary>
     public static class RobberyReckoning
     {
@@ -116,13 +123,12 @@ namespace HeroesEvolve
             Clan robbers = robber.Clan;
             Clan victims = victim.Clan;
 
-            // Whether the standings about to move are the player's own. When
-            // they are it is because his house did the robbing, which is the
-            // only way they should ever move here.
+            // Whether his house did the robbing, which decides the door the
+            // charge goes through and whether he is told.
             bool mine = robbers != null && robbers == Clan.PlayerClan;
 
-            // The house itself: no floor, because this one is the feud.
-            if (clanCost < 0 && (mine || victims != Clan.PlayerClan))
+            // The house itself, the player's included when it is the victim.
+            if (clanCost < 0)
             {
                 if (charge) Apply(robber, victim, clanCost, mine, true);
                 bill.Clan = clanCost;
@@ -136,34 +142,21 @@ namespace HeroesEvolve
                 if (clan == null || clan.IsEliminated || clan.IsBanditFaction) continue;
                 if (clan == robbers || clan == victims) continue;
 
-                // The same exception as above, for the other circles: the
-                // player does not come to dislike a lord by decree because
-                // that lord robbed a friend of his.
+                // Other people's quarrels: the player does not come to
+                // dislike a lord by decree because that lord robbed a friend
+                // of his.
                 if (!mine && clan == Clan.PlayerClan) continue;
 
                 Hero leader = clan.Leader;
                 if (leader == null || !leader.IsAlive || leader == victim || leader == robber) continue;
 
                 int cost;
-                int floor;
                 bool friend = victim.IsFriend(leader);
 
-                if (friend)
-                {
-                    cost = friendCost;
-                    floor = RobberyCost.FriendsFloor;
-                }
-                else if (realm != null && leader.MapFaction == realm && leader.IsLord)
-                {
-                    cost = kingdomCost;
-                    floor = RobberyCost.KingdomFloor;
-                }
-                else
-                {
-                    continue;
-                }
+                if (friend) cost = friendCost;
+                else if (realm != null && leader.MapFaction == realm && leader.IsLord) cost = kingdomCost;
+                else continue;
 
-                cost = RobberyCost.Floored(Standing(robber, leader), cost, floor);
                 if (cost >= 0) continue;
 
                 // Loud for a friend and quiet for a kingdom, which is the
@@ -223,8 +216,13 @@ namespace HeroesEvolve
         }
 
         /// <summary>
-        /// Spends the grudge between two houses on a robbery it caused, and
-        /// returns how much of it was spent.
+        /// Pays the standing between two houses back for a vengeance taken,
+        /// and returns how much was paid.
+        ///
+        /// Called only for a house that was owed (PlunderRules.Motive.
+        /// Vengeance): giving a house its standing back because it has been
+        /// robbed makes sense only if it robbed the other first, and the oath
+        /// is what says it did (VengeanceOaths).
         ///
         /// By the price of one robbery of that house, so that one answer
         /// settles one offence, and never past even (RobberyCost.Settled).
@@ -238,9 +236,8 @@ namespace HeroesEvolve
         /// come out of a robbery on better terms than even, and a lord would
         /// be learning charm by stripping his enemies.
         ///
-        /// This is the one place the player's standing moves for something
-        /// done to him, and it only ever moves up: the debt is his, and this
-        /// is it being paid.
+        /// Silent, therefore, and the player learns of it from the notice
+        /// that says his man was stripped in reprisal.
         /// </summary>
         public static int Settle(Hero captor, Hero prisoner)
         {

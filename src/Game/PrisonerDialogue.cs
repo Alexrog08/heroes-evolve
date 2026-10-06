@@ -152,35 +152,75 @@ namespace HeroesEvolve
                                   + "better within the month, and the next man I strip to his shirt "
                                   + "may well share your name.",
                                   null, null, 100, null);
+
+            // And the fourth, which is not a robbery at all. His clan stripped
+            // one of yours, your man swore vengeance for it, and this is you
+            // taking it: the same thing an AI lord does three captures in four
+            // when the oath is his (PlunderRules.VengeanceChance). It costs
+            // nothing -- no bill, no mark on your name -- and it pays the
+            // standing between the two houses back.
+            //
+            // Nobody mentions honour in this one, and that is the tell. The
+            // other three demands are all arguments about it, because in each
+            // of them the prisoner has a grievance. Here he has none and knows
+            // it. He does not protest; he recognises the answer, and asks only
+            // that it be the last of it -- which, for one robbery, it is.
+            starter.AddPlayerLine("hev_strip_prisoner_vengeance",
+                                  "hero_main_options",
+                                  "hev_strip_prisoner_vengeance_reply",
+                                  "{=hev_strip_vengeance}Your clan stripped one of mine. "
+                                  + "Hand over your arms and armour.",
+                                  CanStripInVengeance, null, 100, null);
+
+            starter.AddDialogLine("hev_strip_prisoner_vengeance_reply",
+                                  "hev_strip_prisoner_vengeance_reply",
+                                  Decide,
+                                  "{=hev_strip_vengeance_reply}So this is the answer. Take them, then, "
+                                  + "and let that be the end of it between your clan and mine.",
+                                  null, null, 100, null);
         }
 
         /// <summary>
-        /// Which of the three ways this robbery can be asked for.
+        /// Which of the four ways this can be asked for.
         ///
-        /// A stranger, a scoundrel, or a friend -- and they are tested in that
-        /// order of precedence rather than of decency, because friendship
-        /// outranks reputation. A man who is Devious and also at your side is
-        /// robbed as a friend and charged the full price; being crooked is not
-        /// the same as being crooked with you.
+        /// A debt, a friend, a scoundrel or a stranger, tested in that order.
+        /// A debt comes first because it changes what the act is: a house that
+        /// is owed is collecting, whoever the prisoner happens to be. Then
+        /// friendship outranks reputation -- a man who is Devious and also at
+        /// your side is robbed as a friend and charged the full price; being
+        /// crooked is not the same as being crooked with you.
         /// </summary>
         private enum Manner
         {
             Plain,
             Reprisal,
             Friend,
+            Vengeance,
         }
 
         /// <summary>
         /// How this particular prisoner is to be asked, read off him now.
         ///
-        /// Friendship first. The reprisal discount exists because a man had it
+        /// The oath first: if the last word between the two houses is one of
+        /// yours swearing vengeance on one of his, and the standing between
+        /// them is still below nought, you are owed (VengeanceOaths.Between).
+        /// That cannot be true of a friend, so the two never compete.
+        ///
+        /// Then friendship. The reprisal discount exists because a man had it
         /// coming, and a friend never has it coming, however poor his name
         /// elsewhere -- PlunderRules already holds that friendship restrains a
-        /// robbery, FriendshipShield being the strongest term in Circumstance.
+        /// robbery, FriendshipShield scaling his own doing down to nothing.
         /// </summary>
         private static Manner MannerFor(Hero hero)
         {
             if (hero == null) return Manner.Plain;
+
+            if (Hero.MainHero != null
+                && VengeanceOaths.Between(Hero.MainHero, hero) == PlunderRules.Claim.Owed)
+            {
+                return Manner.Vengeance;
+            }
+
             if (Hero.MainHero != null && hero.IsFriend(Hero.MainHero)) return Manner.Friend;
 
             if (PlunderRules.IsReprisal(hero.GetTraitLevel(DefaultTraits.Honor)))
@@ -194,6 +234,7 @@ namespace HeroesEvolve
         private static bool CanStripPlainly() { return CanStrip(Manner.Plain); }
         private static bool CanStripInReprisal() { return CanStrip(Manner.Reprisal); }
         private static bool CanStripAFriend() { return CanStrip(Manner.Friend); }
+        private static bool CanStripInVengeance() { return CanStrip(Manner.Vengeance); }
 
         /// <summary>
         /// Offered only for a lord you are actually holding, who still has
@@ -288,9 +329,32 @@ namespace HeroesEvolve
             int taken = PlunderService.Take(spoils, hero, out value);
             if (taken == 0) return;
 
-            // Chosen, and therefore paid for, and always in full: nobody drew
-            // for him, so there is no grudge to have done it in his place and
-            // every robbery of his is his own doing (PlunderRules.Motive).
+            // Owed, and collecting. Not a robbery of his own doing but the
+            // answer to one done to his house, so there is no bill, no mark on
+            // his name and no oath sworn against him -- only the standing
+            // between the two houses paid back, exactly as when an AI lord
+            // takes the same vengeance. Read before anything moves, because
+            // paying the standing back is what closes the claim.
+            Manner manner = MannerFor(hero);
+
+            if (manner == Manner.Vengeance)
+            {
+                int settled = RobberyReckoning.Settle(Hero.MainHero, hero);
+                RobberyTally.Avenged(settled);
+
+                Hero.MainHero.AddSkillXp(DefaultSkills.Roguery, PlunderService.RogueryXpFor(value));
+
+                ModLog.Info("PLUNDER by player prisoner=" + hero.Name
+                            + " prisonerHonor=" + hero.GetTraitLevel(DefaultTraits.Honor)
+                            + " pieces=" + taken + " worth=" + value
+                            + " motive=vengeance settled=" + settled
+                            + " roguery=" + PlunderService.RogueryXpFor(value));
+                return;
+            }
+
+            // Otherwise chosen, and therefore paid for, and always in full:
+            // nobody drew for him, so there is no bad blood to have done it in
+            // his place and the robbery is his own doing (PlunderRules.Motive).
             //
             // The same bill an AI lord's house is sent for the same act -- his
             // clan, his friends, his kingdom, at half the game's price for an
@@ -307,18 +371,22 @@ namespace HeroesEvolve
             // here -- an execution costs half against a dishonourable victim.
             // Read before the bill is sent, because the bill moves the very
             // relation that decides whether he was a friend.
-            bool reprisal = MannerFor(hero) == Manner.Reprisal;
+            bool reprisal = manner == Manner.Reprisal;
 
             RobberyReckoning.Bill bill = RobberyReckoning.Charge(Hero.MainHero, hero, reprisal);
             int honour = RobberyReckoning.ChargeName(reprisal);
             RobberyTally.Offence(bill.Spent, bill.Houses);
+
+            // And the man he robbed swears vengeance on him for it, as he
+            // would on anybody. From here his house is the one that is owed.
+            VengeanceOaths.Swear(hero, Hero.MainHero);
 
             Hero.MainHero.AddSkillXp(DefaultSkills.Roguery, PlunderService.RogueryXpFor(value));
 
             ModLog.Info("PLUNDER by player prisoner=" + hero.Name
                         + " prisonerHonor=" + hero.GetTraitLevel(DefaultTraits.Honor)
                         + " pieces=" + taken + " worth=" + value
-                        + " reprisal=" + reprisal
+                        + " motive=character reprisal=" + reprisal
                         + " " + bill.Describe()
                         + " honour=" + honour
                         + " roguery=" + PlunderService.RogueryXpFor(value));

@@ -17,6 +17,8 @@
     <string id="hev_released_scavenged" text="Çıkarken, seni esir alanların ağırlıklarından önceden taşıdığın türden basit teçhizat topladın." />
     <string id="hev_of_faction" text="{NAME} ({FACTION})" />
     <string id="hev_released_given" text="Seni esir alanlar, yol için önceden taşıdığın türden basit teçhizatla uğurladı." />
+    <string id="hev_strip_vengeance" text="Senin klanın benimkilerden birini soydu. Silahlarını ve zırhını teslim et." />
+    <string id="hev_strip_vengeance_reply" text="Demek cevabı bu. Al öyleyse, ve bu iş senin klanınla benimki arasında burada kapansın." />
     <string id="hev_robbery_hurt" text="Soygun, {COUNT} klanla ilişkilerini bozdu." />
   </strings>
 </base>

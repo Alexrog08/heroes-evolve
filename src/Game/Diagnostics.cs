@@ -1052,8 +1052,9 @@ namespace HeroesEvolve
         }
 
         /// <summary>
-        /// Where the houses of Calradia stand with one another, and what that
-        /// standing does to robbery. The census for one fear and one promise.
+        /// Where the houses of Calradia stand with one another, who has sworn
+        /// vengeance on whom, and what both do to robbery. The census for one
+        /// fear and one promise.
         ///
         /// The fear is that charging a robbery to three circles of houses sinks
         /// relation across the map, and relation between AI lords is not
@@ -1066,30 +1067,39 @@ namespace HeroesEvolve
         /// mostly on pairs at war; the last two are the ones that must not
         /// move. Simulated, a campaign's own drift takes the mean of all pairs
         /// to about -4 in thirteen years and this rule to about -8, with one
-        /// pair in eleven at minus thirty or worse against one in twenty.
+        /// pair in ten at minus thirty or worse against one in twenty.
         /// Numbers far below those in the kingdom or ruler lines are the fear
         /// come true.
         ///
-        /// The promise is that a grudge makes a robbery likelier without the
-        /// robberies of the whole map running away. perCapture says what the
-        /// rule does today to every capture that could happen between lords at
-        /// war: what a captor would do on his own character, what his grudge
-        /// and the prisoner's name add, and what the rule this replaced would
-        /// have done with the same standings. It is the one figure that cannot
-        /// be simulated, because it depends on how much bad blood a campaign
-        /// has made for itself -- its raids, its defections, its thirteen
-        /// years of war -- and it is the figure to set the slope by. total
-        /// well above half again own, in a long campaign, says the slope in
-        /// PlunderRules.GrudgeDeadZone is too steep for that campaign.
+        /// The promise is that a robbed house answers the house that robbed it
+        /// without the robberies of the whole map running away. oaths is the
+        /// ledger: how many vengeances are still in the game's log, between how
+        /// many pairs of houses, and how many of those are open -- the last
+        /// word between the two, with bad blood still standing. Open oaths
+        /// grow for years, because two houses have to meet before one can
+        /// collect; simulated, about two hundred by the thirteenth year.
+        ///
+        /// perCapture says what the rules do today to every capture that could
+        /// happen between lords at war: what a captor would do on his own
+        /// character, what bad blood and the prisoner's name add where nothing
+        /// is owed, what vengeance adds where something is, and what the rule
+        /// before all of this would have done with the same standings. grudge
+        /// is the one figure that cannot be simulated, because it depends on
+        /// how much bad blood a campaign has made for itself -- its raids, its
+        /// defections, its thirteen years of war -- and it is the figure to set
+        /// PlunderRules.GrudgeDeadZone by. vengeance is bounded by the oaths
+        /// and needs no setting.
         ///
         /// circles is how wide one robbery lands: how many houses count a
         /// given lord their friend, and how many share his kingdom. The player
         /// line is the same reading for him alone, with the lords at war with
-        /// him as captors and his own name beside it; belowMinus30 counts the
-        /// ones the game itself lets execute a captive they hold
-        /// (PlayerCaptivityCampaignBehavior.OnPrisonerTaken, two in a hundred
-        /// below that standing). session is what the robberies since the
-        /// campaign was loaded have cost and settled (RobberyTally).
+        /// him as captors and his own name beside it: sworn counts the houses
+        /// with an open oath against his, owedTo the ones his has an open oath
+        /// against, and belowMinus30 the captors the game itself lets execute
+        /// a captive they hold (PlayerCaptivityCampaignBehavior.
+        /// OnPrisonerTaken, two in a hundred below that standing). session is
+        /// what the robberies since the campaign was loaded have cost and
+        /// settled (RobberyTally).
         /// </summary>
         internal static List<string> Feuds()
         {
@@ -1113,10 +1123,16 @@ namespace HeroesEvolve
                 Count(honour, leader.GetTraitLevel(DefaultTraits.Honor));
             }
 
+            // The ledger, read once: for every pair of houses with an oath
+            // between them, which of the two swore last.
+            int sworn;
+            Dictionary<string, Clan> lastSworn = VengeanceOaths.LastSworn(out sworn);
+
             List<int> all = new List<int>();
             List<int> atWar = new List<int>();
             List<int> sameRealm = new List<int>();
             List<int> withRuler = new List<int>();
+            int openOaths = 0;
 
             for (int i = 0; i < houses.Count; i++)
             {
@@ -1138,6 +1154,12 @@ namespace HeroesEvolve
                     {
                         atWar.Add(standing);
                     }
+
+                    if (lastSworn.ContainsKey(VengeanceOaths.Pair(houses[i], houses[j]))
+                        && RobberyReckoning.Standing(one, houses[j].Leader) < 0)
+                    {
+                        openOaths++;
+                    }
                 }
 
                 Kingdom kingdom = houses[i].Kingdom;
@@ -1153,6 +1175,8 @@ namespace HeroesEvolve
             lines.Add("standing atWar       " + Percentiles(atWar) + " | " + Bands(atWar));
             lines.Add("standing sameKingdom " + Percentiles(sameRealm) + " | " + Bands(sameRealm));
             lines.Add("standing withRuler   " + Percentiles(withRuler) + " | " + Bands(withRuler));
+            lines.Add("oaths sworn=" + sworn + " pairsOfHouses=" + lastSworn.Count
+                      + " open=" + openOaths + " (player's house not counted in open)");
 
             // Every lord this mod may strip, and how many of each house are
             // known for what: minus two, minus one, and everybody else.
@@ -1190,8 +1214,8 @@ namespace HeroesEvolve
             // each counted once: this captor, a lord of that house.
             float rate = Settings.RobberyMultiplier();
             int[] levels = { -2, -1, 0 };
-            double own = 0, noName = 0, total = 0, old = 0;
-            long pairs = 0, moved = 0;
+            double own = 0, noName = 0, unowed = 0, total = 0, old = 0;
+            long pairs = 0, moved = 0, owedPairs = 0;
 
             foreach (Hero captor in lords)
             {
@@ -1217,9 +1241,26 @@ namespace HeroesEvolve
 
                     int standing = captor.GetRelation(house.Leader);
 
+                    // Which of the two houses is owed, off the ledger read
+                    // above and the standing the game stores between them.
+                    PlunderRules.Claim claim = PlunderRules.Claim.None;
+                    Clan swore;
+                    if (lastSworn.TryGetValue(VengeanceOaths.Pair(captor.Clan, house), out swore))
+                    {
+                        Clan against = swore == house ? captor.Clan : house;
+                        claim = PlunderRules.ClaimFor(swore.StringId, against.StringId,
+                                                      captor.Clan.StringId, house.StringId,
+                                                      RobberyReckoning.Standing(captor, house.Leader));
+                    }
+
+                    float vengeance = claim == PlunderRules.Claim.Owed
+                        ? PlunderRules.Vengeance(standing, PlunderRules.Kinship.None, Settings.RobberyRate)
+                        : 0f;
+
                     float plainOwn;
                     float plain = PlunderRules.Chance(false, h, m, g, c, roguery, standing,
-                                                      PlunderRules.Kinship.None, 0, rate, out plainOwn);
+                                                      PlunderRules.Kinship.None, 0, claim, rate,
+                                                      out plainOwn);
 
                     // What the rule before this one made of the same standing:
                     // enmity as a multiplier, one and a half at the bottom.
@@ -1236,16 +1277,20 @@ namespace HeroesEvolve
                         {
                             float unused;
                             chance = PlunderRules.Chance(false, h, m, g, c, roguery, standing,
-                                                         PlunderRules.Kinship.None, levels[k], rate,
+                                                         PlunderRules.Kinship.None, levels[k], claim, rate,
                                                          out unused);
                         }
+
+                        float final = vengeance > chance ? vengeance : chance;
 
                         pairs += n;
                         own += n * (double)plainOwn;
                         noName += n * (double)plain;
-                        total += n * (double)chance;
+                        unowed += n * (double)chance;
+                        total += n * (double)final;
                         old += n * (double)before;
-                        if (chance > plainOwn + 0.00001f) moved += n;
+                        if (final > plainOwn + 0.00001f) moved += n;
+                        if (vengeance > 0f) owedPairs += n;
                     }
                 }
             }
@@ -1253,10 +1298,12 @@ namespace HeroesEvolve
             lines.Add("perCapture atWar pairs=" + pairs
                       + " own=" + Share(own, pairs)
                       + " grudge=+" + Share(noName - own, pairs)
-                      + " justice=+" + Share(total - noName, pairs)
+                      + " justice=+" + Share(unowed - noName, pairs)
+                      + " vengeance=+" + Share(total - unowed, pairs)
                       + " total=" + Share(total, pairs)
                       + " | ruleBefore=" + Share(old, pairs)
-                      + " | movedByGrudgeOrName=" + Share(moved, pairs));
+                      + " | owed=" + Share(owedPairs, pairs)
+                      + " moved=" + Share(moved, pairs));
 
             // How wide one robbery lands, by the game's own two tests.
             List<int> friendHouses = new List<int>();
@@ -1287,7 +1334,17 @@ namespace HeroesEvolve
             Hero player = Hero.MainHero;
             IFaction banner = player.MapFaction;
             List<int> hisStanding = new List<int>();
-            foreach (Clan house in houses) hisStanding.Add(player.GetRelation(house.Leader));
+            int swornAgainstHim = 0, owedToHim = 0;
+
+            foreach (Clan house in houses)
+            {
+                Hero leader = house.Leader;
+                hisStanding.Add(player.GetRelation(leader));
+
+                PlunderRules.Claim claim = VengeanceOaths.Between(leader, player);
+                if (claim == PlunderRules.Claim.Owed) swornAgainstHim++;
+                else if (claim == PlunderRules.Claim.Owes) owedToHim++;
+            }
 
             double hisOwn = 0, hisTotal = 0;
             int captors = 0, executioners = 0;
@@ -1298,12 +1355,15 @@ namespace HeroesEvolve
                 if (banner == null || theirs == null || theirs == banner) continue;
                 if (!FactionManager.IsAtWarAgainstFaction(theirs, banner)) continue;
 
+                PlunderRules.Claim claim = VengeanceOaths.Between(captor, player);
+
                 float captorOwn;
-                float chance = PlunderService.ChanceFor(false, captor, player, out captorOwn);
+                float chance = PlunderService.ChanceFor(false, captor, player, claim, out captorOwn);
+                float vengeance = PlunderService.VengeanceFor(captor, player, claim);
 
                 captors++;
                 hisOwn += captorOwn;
-                hisTotal += chance;
+                hisTotal += vengeance > chance ? vengeance : chance;
                 if (captor.GetRelation(player) < -30) executioners++;
             }
 
@@ -1320,6 +1380,7 @@ namespace HeroesEvolve
             lines.Add("player honour=" + player.GetTraitLevel(DefaultTraits.Honor)
                       + " honourXp=" + honourXp
                       + " standing " + Percentiles(hisStanding) + " | " + Bands(hisStanding)
+                      + " | sworn=" + swornAgainstHim + " owedTo=" + owedToHim
                       + " | atWar captors=" + captors
                       + " own=" + Share(hisOwn, captors)
                       + " total=" + Share(hisTotal, captors)
@@ -1343,12 +1404,14 @@ namespace HeroesEvolve
 
             int standing = hero.GetRelation(player);
 
-            float own;
-            float chance = PlunderService.ChanceFor(false, hero, player, out own);
+            // Seen from his side: Owed is his house holding an oath against
+            // the player's, Owes is the other way round.
+            PlunderRules.Claim claim = VengeanceOaths.Between(hero, player);
 
-            bool hadItComing = PlunderRules.IsReprisal(hero.GetTraitLevel(DefaultTraits.Honor))
-                               && !hero.IsFriend(player);
-            RobberyReckoning.Bill bill = RobberyReckoning.Quote(player, hero, hadItComing);
+            float own;
+            float chance = PlunderService.ChanceFor(false, hero, player, claim, out own);
+            float vengeance = PlunderService.VengeanceFor(hero, player, claim);
+            if (vengeance > chance) chance = vengeance;
 
             StringBuilder text = new StringBuilder();
             text.Append(hero.Name)
@@ -1357,15 +1420,40 @@ namespace HeroesEvolve
                 .Append(", his Honor ").Append(hero.GetTraitLevel(DefaultTraits.Honor))
                 .Append(", yours ").Append(player.GetTraitLevel(DefaultTraits.Honor)).Append('.');
 
+            if (claim == PlunderRules.Claim.Owed)
+            {
+                text.Append("\nHis house has sworn vengeance on yours and is still owed.");
+            }
+            else if (claim == PlunderRules.Claim.Owes)
+            {
+                text.Append("\nYour house has sworn vengeance on his and is still owed.");
+            }
+            else
+            {
+                text.Append("\nNothing is owed between your houses.");
+            }
+
             text.Append("\nHolding you he strips you ").Append(Share(chance, 1))
-                .Append(" of the time; ").Append(Share(own, 1)).Append(" is his own character, ")
-                .Append(Share(PlunderRules.Grudge(standing), 1)).Append(" of his restraint is worn by the grudge");
+                .Append(" of the time; ").Append(Share(own, 1)).Append(" is his own character");
+            if (vengeance > 0f) text.Append(", the rest vengeance");
             if (standing < -30) text.Append(". The game itself lets him execute a captive he holds at this standing");
             text.Append('.');
 
-            text.Append("\nStripping him would cost you ").Append(bill.Describe())
-                .Append(" honour=").Append(RobberyReckoning.NamePrice(hadItComing))
-                .Append(hadItComing ? " (half: he has no honour and is no friend of yours)." : ".");
+            if (claim == PlunderRules.Claim.Owes)
+            {
+                text.Append("\nStripping him would be vengeance: it costs you nothing and pays the standing back.");
+            }
+            else
+            {
+                bool hadItComing = PlunderRules.IsReprisal(hero.GetTraitLevel(DefaultTraits.Honor))
+                                   && !hero.IsFriend(player);
+                RobberyReckoning.Bill bill = RobberyReckoning.Quote(player, hero, hadItComing);
+
+                text.Append("\nStripping him would cost you ").Append(bill.Describe())
+                    .Append(" honour=").Append(RobberyReckoning.NamePrice(hadItComing))
+                    .Append(hadItComing ? " (half: he has no honour and is no friend of yours)" : "")
+                    .Append(", and he would swear vengeance for it.");
+            }
 
             return text.ToString();
         }

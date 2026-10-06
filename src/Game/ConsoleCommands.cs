@@ -66,6 +66,42 @@ namespace HeroesEvolve
         }
 
         /// <summary>
+        /// Puts a named lord on record as having stripped the player, without
+        /// touching anybody's gear. This MODIFIES the campaign: his house is
+        /// sent the bill for a robbery of the player, and the player swears
+        /// vengeance on him, exactly as PlunderService does when an AI lord
+        /// robs him out of his own character.
+        ///
+        /// It exists because that is the one half of the feud a player cannot
+        /// stage for himself. Being owed takes being captured by a lord who
+        /// then happens to rob, one capture in sixteen; this makes the
+        /// vengeance branch of PrisonerDialogue reachable in a minute. The
+        /// other half needs no command -- strip a prisoner and he swears.
+        /// Meant for a throwaway save.
+        /// </summary>
+        [CommandLineFunctionality.CommandLineArgumentFunction("test_oath", "hev")]
+        public static string TestOath(List<string> args)
+        {
+            if (Campaign.Current == null) return "hev: no campaign is running.";
+
+            Hero hero = FindHero(args);
+            if (hero == null) return Usage("hev.test_oath", args);
+
+            if (hero == Hero.MainHero || hero.Clan == null || hero.Clan == Clan.PlayerClan)
+            {
+                return "hev: name a lord of another clan.";
+            }
+
+            RobberyReckoning.Bill bill = RobberyReckoning.Charge(hero, Hero.MainHero, false);
+            VengeanceOaths.Swear(Hero.MainHero, hero);
+
+            ModLog.Info("TESTOATH robber=" + hero.Name + " " + bill.Describe());
+
+            return "hev: " + hero.Name + " is on record as having stripped you (" + bill.Describe() + ").\n"
+                   + Diagnostics.FeudWith(hero);
+        }
+
+        /// <summary>
         /// What the purchase engine would do for a hero in the town the player
         /// is standing in. Reads only -- nothing is bought and no gold moves.
         /// </summary>

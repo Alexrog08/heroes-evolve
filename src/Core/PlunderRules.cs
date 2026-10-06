@@ -163,14 +163,17 @@ namespace HeroesEvolve.Core
         /// Bad blood wears a man's restraint away, and at its worst leaves him
         /// none.
         ///
+        /// This is bad blood in general, whatever made it: the friend of a
+        /// man who was robbed, a kingdom that has watched it done to its own
+        /// six times over, a house whose villages were burnt. It is not how a
+        /// robbed house answers the house that robbed it. That one has sworn
+        /// vengeance and does not wait on a curve (VengeanceChance).
+        ///
         /// Enmity used to multiply: one and a half times the chance at minus a
-        /// hundred. That put a lord of average character at 7.2% against the
-        /// house that had robbed his own, at minus thirty, from 6.2% against a
-        /// stranger -- a difference nobody could have told from the saddle, and
-        /// a robbery that is answered by nothing has no price. A multiplier was
-        /// also the wrong shape. It left an honourable man an honourable man
-        /// however he had been wronged, when taking back from the house that
-        /// took from yours is not a thing honour forbids.
+        /// hundred, which took a lord of average character from 6.2% to 7.2%
+        /// at minus thirty -- a difference nobody could have told from the
+        /// saddle. A multiplier was also the wrong shape. It left an honourable
+        /// man an honourable man however he had been provoked.
         ///
         /// So the grudge works on what holds him back instead. Whatever share
         /// of his restraint it has worn away, he robs as though that share were
@@ -190,26 +193,22 @@ namespace HeroesEvolve.Core
         /// all four traits, in a normal campaign:
         ///
         ///      0    6.2%   a stranger
-        ///    -15    8.7%   the kingdom of the men you robbed, at its floor
-        ///    -30   16.0%   the house you robbed
-        ///    -60   30.6%   the house you robbed twice
+        ///    -15    8.7%   the friend of a man you robbed
+        ///    -30   16.0%   his kingdom, once you have robbed six of its lords
+        ///    -60   30.6%
         ///   -100   50.0%   as sure as a bandit
         ///
-        /// The slope is the gentler of two that were simulated over thirty
-        /// years of seventy-two houses. Left unhalved by the campaign's rate it
-        /// gave 27% at minus thirty and added as many robberies of grudge as
-        /// there were robberies of character from the first year. This one
-        /// adds a quarter as many in the first year and about three quarters
-        /// by the twentieth, and then stops climbing.
-        ///
-        /// How many it adds is the one thing the simulation cannot settle,
-        /// because it depends on how much bad blood a campaign makes for
-        /// itself -- raids, defections, a decade of war -- and with three times
-        /// the game's own share of that the same slope was still climbing at
-        /// thirty years. Neither slope feeds on itself (Motive says why), but
-        /// both convert whatever enmity the map already holds into robberies.
-        /// So the census prints the conversion for the campaign it is run in
-        /// (FEUD perCapture), and that line is what this constant answers to.
+        /// Simulated over thirty years of seventy-two houses, it adds six to
+        /// nine robberies a year to some twenty of character, and holds there.
+        /// What it adds in a real campaign is the one thing a simulation
+        /// cannot settle, because it depends on how much bad blood that
+        /// campaign makes for itself -- raids, defections, a decade of war --
+        /// and with three times the game's own share of it the same slope gave
+        /// twenty-seven a year by the thirtieth. It does not feed on itself
+        /// (Motive says why), but it does turn whatever enmity the map already
+        /// holds into robberies. So the census prints the conversion for the
+        /// campaign it is run in (FEUD perCapture), and that line is what this
+        /// constant answers to.
         /// </summary>
         public const int GrudgeDeadZone = 10;
         public const int GrudgeFull = 100;
@@ -252,6 +251,34 @@ namespace HeroesEvolve.Core
         /// </summary>
         public const float JusticePerLevel = 0.3f;
 
+        /// <summary>
+        /// How surely a house takes back from the house that robbed it: three
+        /// captures in four.
+        ///
+        /// Not a matter of character, which is why it is a number of its own
+        /// and not a term in Disposition. A lord who would not rob one stranger
+        /// in sixty still takes his own back from the house that took it, and
+        /// a brute is no surer of it than he is. It is also not scaled by
+        /// NormalRate. That constant says how often character robs in a
+        /// normal campaign; a debt is collected or it is not. The campaign's
+        /// own dial still scales it, so setting robbery to nothing stops this
+        /// with the rest.
+        ///
+        /// High, because it can afford to be. A curve steep enough to make a
+        /// robbed house a real danger to its robber also made every pair of
+        /// houses with bad blood between them rob one another, for reasons
+        /// that had nothing to do with robbery, and doubled the robberies
+        /// between lords. An oath is owed by one house to one other for one act, so
+        /// this answers at most once for each robbery of character and can be
+        /// as sure as it likes. Simulated: two a year in the first year of a
+        /// campaign, a dozen by the thirteenth, against twenty robberies of
+        /// character -- most oaths wait years for the two houses to meet.
+        ///
+        /// Three in four rather than always, so that being taken by a house
+        /// that has sworn against yours is a bad day and not a foregone one.
+        /// </summary>
+        public const float VengeanceChance = 0.75f;
+
         /// <summary>A clansman is family enough to be a rare victim.</summary>
         public const float ClanFactor = 0.25f;
 
@@ -286,15 +313,35 @@ namespace HeroesEvolve.Core
         }
 
         /// <summary>
+        /// The same, for two houses neither of which has sworn against the
+        /// other.
+        /// </summary>
+        public static float Chance(bool captorIsBandit, int honor, int mercy, int generosity, int calculating,
+                                   int roguery, int relation, Kinship kinship, int prisonerHonor,
+                                   float multiplier, out float ownDoing)
+        {
+            return Chance(captorIsBandit, honor, mercy, generosity, calculating, roguery, relation,
+                          kinship, prisonerHonor, Claim.None, multiplier, out ownDoing);
+        }
+
+        /// <summary>
         /// The chance this captor strips this prisoner, from zero to one, and
         /// the part of it that is his own doing.
         ///
-        /// Two numbers, because a robbery has two possible causes and they are
-        /// priced differently (Motive). ownDoing is what his character does to
-        /// a man he has nothing against, friendship still counting in the
-        /// prisoner's favour. The return value adds what bad blood wears away
-        /// of the rest: his own with the prisoner's house (Grudge), and for an
-        /// honourable captor the prisoner's own name (Justice).
+        /// Two numbers, because a robbery has more than one possible cause and
+        /// they are priced differently (Motive). ownDoing is what his character
+        /// does to a man he has nothing against, friendship still counting in
+        /// the prisoner's favour. The return value adds what bad blood wears
+        /// away of the rest: his own with the prisoner's house (Grudge), and
+        /// for an honourable captor the prisoner's own name (Justice).
+        ///
+        /// A house that owes takes no courage from the bad blood it made. When
+        /// the prisoner's house is the one that has sworn vengeance
+        /// (Claim.Owes), the grudge between them is not the captor's to act on
+        /// and his own character is all that speaks. Without that the robber
+        /// would be likelier to rob his victim's house a second time for
+        /// having robbed it a first, and would do it for nothing. What a house
+        /// that is owed does is not here at all: see Vengeance.
         ///
         /// The multiplier scales both alike, so a campaign's one dial still
         /// means what it says. At its normal setting a brute, a bandit and the
@@ -306,7 +353,7 @@ namespace HeroesEvolve.Core
         /// </summary>
         public static float Chance(bool captorIsBandit, int honor, int mercy, int generosity, int calculating,
                                    int roguery, int relation, Kinship kinship, int prisonerHonor,
-                                   float multiplier, out float ownDoing)
+                                   Claim claim, float multiplier, out float ownDoing)
         {
             ownDoing = 0f;
 
@@ -330,7 +377,8 @@ namespace HeroesEvolve.Core
 
             // His friend's bad name is still his friend's: the same shield
             // that stays his hand stays his sense of justice.
-            float worn = Grudge(relation) + Justice(honor, prisonerHonor) * shield;
+            float worn = (claim == Claim.Owes ? 0f : Grudge(relation))
+                         + Justice(honor, prisonerHonor) * shield;
             if (worn > 1f) worn = 1f;
 
             ownDoing = Clamp(own * blood * multiplier);
@@ -348,6 +396,16 @@ namespace HeroesEvolve.Core
             if (depth >= GrudgeFull) return 1f;
 
             return (depth - GrudgeDeadZone) / (float)(GrudgeFull - GrudgeDeadZone);
+        }
+
+        /// <summary>
+        /// The chance a captor whose house is owed takes it back from this
+        /// prisoner. Blood still counts, and the rate is the campaign's dial
+        /// alone. See VengeanceChance.
+        /// </summary>
+        public static float Vengeance(int relation, Kinship kinship, float rate)
+        {
+            return Clamp(VengeanceChance * Blood(relation, kinship) * rate);
         }
 
         /// <summary>
@@ -536,40 +594,92 @@ namespace HeroesEvolve.Core
         }
 
         /// <summary>
+        /// Which of two houses has sworn vengeance on the other, seen from the
+        /// captor's side.
+        ///
+        /// A standing between two houses is one number and both of them wear
+        /// it, so it cannot say who wronged whom -- and everything that makes
+        /// an answer an answer depends on exactly that. Giving a house its
+        /// standing back because it has just been robbed only makes sense if
+        /// it robbed the other first. So the direction is kept where the game
+        /// keeps such things: a robbed lord swears vengeance on the man who
+        /// robbed him, and the oath is written in the game's own log, as the
+        /// game writes the oaths of its own backstory (VengeanceOaths).
+        ///
+        /// The oath says who; the standing says whether anything is still
+        /// outstanding. A house is owed while the last oath between the two is
+        /// its own and the standing between them is below nought. Taking
+        /// vengeance pays the standing back a robbery's worth, and so does
+        /// anything else that mends it -- a prisoner let go, a marriage -- and
+        /// when it is back at nought the oath is history. The last oath and
+        /// not a count of them, because what has been answered is not written
+        /// down: if the two houses have robbed each other in turn, the one
+        /// wronged most recently is the one with something left to answer.
+        /// </summary>
+        public enum Claim
+        {
+            /// <summary>Nothing outstanding between the two houses.</summary>
+            None,
+
+            /// <summary>The captor's house is owed by the prisoner's.</summary>
+            Owed,
+
+            /// <summary>The captor's house owes the prisoner's.</summary>
+            Owes
+        }
+
+        /// <summary>
+        /// Reads the last oath between two houses as a claim. lastSworn is the
+        /// house that swore it and lastAgainst the house it was sworn on; both
+        /// null when there has never been one.
+        /// </summary>
+        public static Claim ClaimFor(string lastSworn, string lastAgainst,
+                                     string captorHouse, string prisonerHouse, int standing)
+        {
+            if (standing >= 0) return Claim.None;
+            if (string.IsNullOrEmpty(captorHouse) || string.IsNullOrEmpty(prisonerHouse)) return Claim.None;
+            if (captorHouse == prisonerHouse) return Claim.None;
+
+            if (lastSworn == captorHouse && lastAgainst == prisonerHouse) return Claim.Owed;
+            if (lastSworn == prisonerHouse && lastAgainst == captorHouse) return Claim.Owes;
+            return Claim.None;
+        }
+
+        /// <summary>
         /// Why a robbery happened, which is what decides its price.
         ///
-        /// One draw is read against two bars. Under the lower, his character
-        /// alone accounts for it -- he would have robbed a stranger on the same
-        /// draw -- and the act is his own doing, charged in full (RobberyCost).
-        /// Between the two, only the grudge explains it: a robbery that would
-        /// not have happened had there been no bad blood. That one is an answer
-        /// rather than an offence. It costs him nothing, and it spends the
-        /// grudge that caused it (RobberyCost.Settled).
+        /// Character: he would have robbed a stranger on the same draw. His own
+        /// doing, charged in full (RobberyCost), and the prisoner swears
+        /// vengeance for it.
         ///
-        /// This is the whole defence against relation feeding on itself, and it
-        /// is arithmetic rather than tuning. Were a robbery of grudge charged
-        /// like any other, bad blood would raise the chance of robbery and
-        /// robbery would deepen the bad blood, between every two houses at
-        /// once. Charging only the lower bar means the relation a captor is
-        /// expected to lose at a capture is his own chance times the price --
-        /// and his own chance does not contain the relation. However deep a
-        /// feud runs it adds nothing to itself. It can only be spent.
+        /// Vengeance: his house was owed by the prisoner's and has taken it
+        /// back. An answer and not an offence. It costs him nothing, nobody
+        /// swears anything, and the standing between the two houses is paid
+        /// back by what a robbery costs (RobberyCost.Settled).
+        ///
+        /// Grudge: he was owed nothing, but bad blood or the prisoner's name
+        /// wore away what would have stopped him. Free as well, and it settles
+        /// nothing, because there was no debt of his to settle.
+        ///
+        /// Only the first is charged, and that is the whole defence against
+        /// relation feeding on itself. It is arithmetic rather than tuning.
+        /// Were every robbery charged, bad blood would raise the chance of
+        /// robbery and robbery would deepen the bad blood, between every two
+        /// houses at once. Charging his own doing alone means the relation a
+        /// captor is expected to lose at a capture is his own chance times the
+        /// price -- and his own chance does not contain the relation. However
+        /// deep a feud runs it adds nothing to itself; the vengeance it leads
+        /// to can only pay it down.
         ///
         /// Simulated over thirty years of seventy-two houses: one pair of
         /// houses in six at minus thirty or worse, against nearly one in two
         /// when all four of the game's circles were charged as relation with
-        /// no such rule. And with the grudge spent by each answer the robberies
-        /// of grudge levelled off, where left unspent they were still climbing
-        /// in the thirtieth year.
-        ///
-        /// The draw cannot say who started it, and is not asked to. A grudge is
-        /// one number between two houses and both of them wear it. What the
-        /// draw does know is whether this robbery needed the grudge, and one
-        /// that did is the grudge being used up, whichever of the two lit it.
+        /// no such rule.
         ///
         /// The player is never drawn for. He robs by choosing to
-        /// (PrisonerDialogue), so every robbery of his is his own doing by
-        /// definition and is charged as one.
+        /// (PrisonerDialogue), so a robbery of his is his own doing by
+        /// definition -- unless his house is the one that is owed, when it is
+        /// vengeance for him exactly as it would be for anybody.
         /// </summary>
         public enum Motive
         {
@@ -579,8 +689,11 @@ namespace HeroesEvolve.Core
             /// <summary>His own doing: his character accounts for it without help.</summary>
             Character,
 
-            /// <summary>Only the grudge accounts for it.</summary>
-            Grudge
+            /// <summary>Bad blood or the prisoner's name accounts for it, and no debt.</summary>
+            Grudge,
+
+            /// <summary>His house was owed, and took it back.</summary>
+            Vengeance
         }
 
         /// <summary>Reads one draw against the two bars Chance returns.</summary>
@@ -588,6 +701,21 @@ namespace HeroesEvolve.Core
         {
             if (chance <= 0f || draw > chance) return Motive.None;
             return draw <= ownDoing ? Motive.Character : Motive.Grudge;
+        }
+
+        /// <summary>
+        /// The same, for a captor whose house may be owed. vengeance is
+        /// nought when it is not, and then this is the plain reading. When it
+        /// is, every robbery is vengeance whatever would otherwise have caused
+        /// it: a man collecting a debt is not also committing an offence, even
+        /// if he is the sort who would have robbed the prisoner anyway.
+        /// </summary>
+        public static Motive Judge(float draw, float ownDoing, float chance, float vengeance)
+        {
+            if (vengeance <= 0f) return Judge(draw, ownDoing, chance);
+
+            float bar = vengeance > chance ? vengeance : chance;
+            return draw <= bar ? Motive.Vengeance : Motive.None;
         }
 
         /// <summary>

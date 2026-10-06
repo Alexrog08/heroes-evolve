@@ -178,9 +178,9 @@ namespace HeroesEvolve.Tests
             Check.True(PlunderRules.Grudge(-500) == 1f, "however far past the bottom the number goes");
 
             int stranger = Percent(0, 0, 0, 0, 0, 0, Stranger);
-            int robbedOnce = Percent(0, 0, 0, 0, 0, -30, Stranger);
-            int robbedTwice = Percent(0, 0, 0, 0, 0, -60, Stranger);
-            Check.True(stranger < robbedOnce && robbedOnce < robbedTwice, "a deeper feud is a likelier robbery");
+            int disliked = Percent(0, 0, 0, 0, 0, -30, Stranger);
+            int hated = Percent(0, 0, 0, 0, 0, -60, Stranger);
+            Check.True(stranger < disliked && disliked < hated, "deeper bad blood is a likelier robbery");
             Check.Equal(100, Percent(0, 0, 0, 0, 0, -100, Stranger), "an average lord, a full grudge: certain");
 
             // The point of working on restraint rather than multiplying
@@ -190,17 +190,19 @@ namespace HeroesEvolve.Tests
             Check.Equal(2, Percent(1, 1, 1, 1, 0, 0, Stranger), "a decent man almost never robs a stranger");
             Check.Equal(100, Percent(1, 1, 1, 1, 0, -100, Stranger), "and does not spare the house he is at feud with");
 
-            // The figures the rule was chosen for, in a normal campaign.
+            // The figures the store page prints, in a normal campaign. These
+            // are bad blood with nothing owed: the house actually robbed has
+            // sworn vengeance and is on a bar of its own (RobberyCostTests).
             int own;
             Check.Equal(6, Percent(0, 0, 0, 0, 0, 0, PlunderRules.NormalRate, out own), "a stranger, 6%");
             Check.Equal(9, Percent(0, 0, 0, 0, -15, 0, PlunderRules.NormalRate, out own),
-                        "a kingdom at its floor, 9%");
+                        "the friend of a man you robbed, 9%");
             Check.Equal(16, Percent(0, 0, 0, 0, -30, 0, PlunderRules.NormalRate, out own),
-                        "the house you robbed, 16%");
+                        "his kingdom after six robberies, 16%");
             Check.Equal(31, Percent(0, 0, 0, 0, -60, 0, PlunderRules.NormalRate, out own),
-                        "the house you robbed twice, 31%");
+                        "at minus sixty, 31%");
             Check.Equal(50, Percent(0, 0, 0, 0, -100, 0, PlunderRules.NormalRate, out own),
-                        "and the deepest feud is as sure as a bandit, no surer");
+                        "and the deepest enmity is as sure as a bandit, no surer");
 
             // His own doing does not move with any of it. This is the half of
             // the rule that keeps relation from feeding on itself: what he is
