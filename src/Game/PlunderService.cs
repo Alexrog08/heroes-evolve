@@ -206,10 +206,10 @@ namespace HeroesEvolve
 
             if (motive == PlunderRules.Motive.Vengeance)
             {
-                VengeanceOaths.Fulfil(captor, prisoner);
+                bool struck = VengeanceOaths.Fulfil(captor, prisoner);
 
                 RobberyTally.Avenged();
-                return " motive=vengeance";
+                return " motive=vengeance oathStruck=" + struck;
             }
 
             if (motive == PlunderRules.Motive.Justice)
@@ -219,10 +219,10 @@ namespace HeroesEvolve
             }
 
             int cost = RobberyReckoning.Charge(captor, prisoner, HadItComing(captor, prisoner));
-            VengeanceOaths.Swear(prisoner, captor);
+            bool sworn = VengeanceOaths.Swear(prisoner, captor);
 
             RobberyTally.Offence();
-            return " motive=character standing=" + cost;
+            return " motive=character standing=" + cost + " oathSworn=" + sworn;
         }
 
         /// <summary>

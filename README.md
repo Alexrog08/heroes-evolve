@@ -76,6 +76,7 @@ The developer console only opens with `cheat_mode = 1` in `engine_config.txt`.
 | `hev.test_repair <hero>` | Reproduces the come-of-age bug on a hero, then repairs it |
 | `hev.test_robbery [hero]` | Robs a hero, or one lord of every culture with no name given |
 | `hev.test_oath <hero>` | Puts a lord on record as having stripped you, so that your clan is owed |
+| `hev.test_plan` | Prints the console lines that stage the robbery tests, with names from the campaign you have loaded |
 | `hev.test_release` | Shows the notice a freed player gets |
 
 The `test_` commands change the campaign. Use a throwaway save.

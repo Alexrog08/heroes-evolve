@@ -338,7 +338,7 @@ namespace HeroesEvolve
 
             if (manner == Manner.Vengeance)
             {
-                VengeanceOaths.Fulfil(Hero.MainHero, hero);
+                bool struck = VengeanceOaths.Fulfil(Hero.MainHero, hero);
                 RobberyTally.Avenged();
 
                 Hero.MainHero.AddSkillXp(DefaultSkills.Roguery, PlunderService.RogueryXpFor(value));
@@ -346,7 +346,7 @@ namespace HeroesEvolve
                 ModLog.Info("PLUNDER by player prisoner=" + hero.Name
                             + " prisonerHonor=" + hero.GetTraitLevel(DefaultTraits.Honor)
                             + " pieces=" + taken + " worth=" + value
-                            + " motive=vengeance"
+                            + " motive=vengeance oathStruck=" + struck
                             + " roguery=" + PlunderService.RogueryXpFor(value));
                 return;
             }
@@ -376,7 +376,7 @@ namespace HeroesEvolve
 
             // And the man he robbed swears vengeance on him for it, as he
             // would on anybody. From here his house is owed one robbery.
-            VengeanceOaths.Swear(hero, Hero.MainHero);
+            bool sworn = VengeanceOaths.Swear(hero, Hero.MainHero);
 
             Hero.MainHero.AddSkillXp(DefaultSkills.Roguery, PlunderService.RogueryXpFor(value));
 
@@ -385,6 +385,7 @@ namespace HeroesEvolve
                         + " pieces=" + taken + " worth=" + value
                         + " motive=character reprisal=" + reprisal
                         + " standing=" + cost
+                        + " oathSworn=" + sworn
                         + " honour=" + honour
                         + " roguery=" + PlunderService.RogueryXpFor(value));
         }

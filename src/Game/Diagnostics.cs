@@ -1081,12 +1081,16 @@ namespace HeroesEvolve
         /// another. A robbery of character costs the robber's house much
         /// what it always cost, with the one house he robbed, and vengeance
         /// and justice cost nothing, so the standing lines should drift only
-        /// as the campaign drifts them: simulated, a mean near -4 across all
-        /// pairs at thirteen years with one pair in twenty at minus thirty or
-        /// worse. Relation between AI lords is not decoration -- clans leave
-        /// kingdoms on it, armies cost influence by it, marriages and
-        /// alliances are refused over it -- which is why the lines are kept
-        /// although nothing here is meant to move them.
+        /// as the campaign drifts them. Where they start is the campaign's
+        /// own affair and varies a great deal: read on the day this rule was
+        /// first loaded, three campaigns had 3.0%, 8.3% and 12.5% of all
+        /// pairs at minus thirty or worse, and the lowest and the highest of
+        /// those were both twenty years old. So the figure to watch is a
+        /// campaign against itself, week on week. Relation between AI lords
+        /// is not decoration -- clans leave kingdoms on it, armies cost
+        /// influence by it, marriages and alliances are refused over it --
+        /// which is why the lines are kept although nothing here is meant to
+        /// move them.
         ///
         /// The player line is the same reading for him alone, with the lords
         /// at war with him as captors and his own name beside it:

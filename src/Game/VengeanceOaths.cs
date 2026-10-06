@@ -57,12 +57,14 @@ namespace HeroesEvolve
         /// never needed the sentence. Naming a common soldier of his people
         /// keeps it out of the feed; the player is told in a line of the
         /// mod's own when the oath concerns his house.
+        ///
+        /// False when nothing was sworn, for the log line of the robbery.
         /// </summary>
-        public static void Swear(Hero victim, Hero robber)
+        public static bool Swear(Hero victim, Hero robber)
         {
-            if (victim == null || robber == null || victim == robber) return;
-            if (victim.Clan == null || robber.Clan == null || victim.Clan == robber.Clan) return;
-            if (Campaign.Current == null || Campaign.Current.LogEntryHistory == null) return;
+            if (victim == null || robber == null || victim == robber) return false;
+            if (victim.Clan == null || robber.Clan == null || victim.Clan == robber.Clan) return false;
+            if (Campaign.Current == null || Campaign.Current.LogEntryHistory == null) return false;
 
             CharacterInsultedLogEntry oath = new CharacterInsultedLogEntry(
                 victim, robber, Subject(victim), ActionNotes.VengeanceQuarrel);
@@ -71,6 +73,7 @@ namespace HeroesEvolve
             RobberyTally.Oath();
 
             Tell(oath, victim, robber);
+            return true;
         }
 
         /// <summary>
@@ -85,7 +88,10 @@ namespace HeroesEvolve
 
         /// <summary>
         /// Strikes one oath off: the oldest the captor's house holds against
-        /// the prisoner's. False when it held none.
+        /// the prisoner's. False when it held none, and false when the oath
+        /// is still in the log afterwards -- looked for rather than assumed,
+        /// because a vengeance that left its oath standing would be taken
+        /// again at the next capture and nothing else would ever show it.
         ///
         /// The log has no door for taking an entry out -- DeleteLogAtIndex is
         /// internal -- but it has two public ones that do it between them.
@@ -108,6 +114,12 @@ namespace HeroesEvolve
 
             LogEntry.AddLogEntry(oath, CampaignTime.Zero);
             Campaign.Current.LogEntryHistory.DeleteOutdatedLogs();
+
+            MBReadOnlyList<LogEntry> logs = Logs();
+            for (int i = logs.Count - 1; i >= 0; i--)
+            {
+                if (logs[i] == oath) return false;
+            }
 
             return true;
         }

@@ -94,12 +94,36 @@ namespace HeroesEvolve
                 return "hev: name a lord of another clan.";
             }
 
-            VengeanceOaths.Swear(Hero.MainHero, hero);
+            bool sworn = VengeanceOaths.Swear(Hero.MainHero, hero);
 
-            ModLog.Info("TESTOATH robber=" + hero.Name);
+            ModLog.Info("TESTOATH robber=" + hero.Name + " oathSworn=" + sworn);
 
             return "hev: " + hero.Name + " is on record as having stripped you.\n"
                    + Diagnostics.FeudWith(hero);
+        }
+
+        /// <summary>
+        /// The console lines that stage the three robbery tests, with this
+        /// campaign's own names in them: a lord to rob, a kinsman of his to
+        /// collect for it, somebody of the player's to collect from, and a
+        /// lord of another house to be owed by. Reads only -- it is the lines
+        /// it prints that change things, and those are the game's own cheat
+        /// and hev.test_oath. See RobberyTestPlan.
+        /// </summary>
+        [CommandLineFunctionality.CommandLineArgumentFunction("test_plan", "hev")]
+        public static string TestPlan(List<string> args)
+        {
+            if (Campaign.Current == null) return "hev: no campaign is running.";
+
+            try
+            {
+                return RobberyTestPlan.Describe();
+            }
+            catch (System.Exception ex)
+            {
+                ModLog.Error("TESTPLAN failed: " + ex.GetType().Name + " " + ex.Message);
+                return "hev: could not write the plan (" + ex.GetType().Name + "). See hev.log.";
+            }
         }
 
         /// <summary>
