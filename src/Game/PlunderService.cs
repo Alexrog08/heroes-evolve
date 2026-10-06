@@ -25,12 +25,12 @@ namespace HeroesEvolve
     /// and his house wears the consequence. A robbery that was his own doing
     /// costs it standing with the house he robbed (RobberyReckoning), and the
     /// prisoner swears vengeance for it (VengeanceOaths). A house that has
-    /// sworn takes it back three captures in four, and that robbery costs
-    /// nothing and strikes the oath off (PlunderRules.Motive). The player is
-    /// the one exception in both directions. He is never made to rob anybody,
-    /// because nothing should be deciding that for him, and his own standing
-    /// never falls for having been robbed, because being robbed is not an act
-    /// of his. Relations in this game are the player's to earn.
+    /// sworn takes it back when it next holds one of theirs, and that robbery
+    /// costs nothing and strikes the oath off (PlunderRules.Motive). The
+    /// player is the one exception in both directions. He is never made to
+    /// rob anybody, because nothing should be deciding that for him, and his
+    /// own standing never falls for having been robbed, because being robbed
+    /// is not an act of his. Relations in this game are the player's to earn.
     /// </summary>
     public static class PlunderService
     {

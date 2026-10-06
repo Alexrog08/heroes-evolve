@@ -212,35 +212,35 @@ namespace HeroesEvolve.Core
         public const float JusticePerLevel = 0.3f;
 
         /// <summary>
-        /// How surely a house takes back from the house that robbed it: three
-        /// captures in four.
+        /// How surely a house takes back from the house that robbed it:
+        /// always.
         ///
         /// A robbed lord swears vengeance on the man who robbed him
         /// (VengeanceOaths), and from then on his house is owed one robbery
         /// by the other. This is the chance it collects when it holds one of
         /// theirs. Collecting strikes the oath off, so one robbery is answered
-        /// at most once, and that is what lets the number be high.
+        /// at most once, and that is what lets the answer be certain.
         ///
         /// Not a matter of character, which is why it is a number of its own
         /// and not a term in Disposition. A lord who would not rob one
         /// stranger in sixty still takes his own back from the house that
-        /// took it, and a brute is no surer of it than he is. It is also not
-        /// scaled by NormalRate. That constant says how often character robs
-        /// in a normal campaign; a debt is collected or it is not. The
-        /// campaign's own dial still scales it, so setting robbery to nothing
-        /// stops this with the rest.
+        /// took it. It is also not scaled by NormalRate. That constant says
+        /// how often character robs in a normal campaign; a debt is collected
+        /// or it is not. The campaign's own dial still scales it, so half the
+        /// dial is half the captures, and setting robbery to nothing stops
+        /// this with the rest.
         ///
-        /// Simulated over thirty years of seventy-two houses, against about
-        /// twenty robberies of character a year: three vengeances in the
-        /// first year, nine in the thirteenth, and about a dozen at most,
-        /// because most oaths wait years for the two houses to meet and the
-        /// game forgets one after twenty. The standing between houses ends
-        /// within a tenth of a point of where it ends without this rule.
-        ///
-        /// Three in four rather than always, so that being taken by a house
-        /// that has sworn against yours is a bad day and not a foregone one.
+        /// For one version it was three captures in four, so that being taken
+        /// by a house that had sworn against yours would be a bad day and not
+        /// a foregone one. The author's answer was that a vengeance which may
+        /// not come is not one. Simulated over thirty years of seventy-two
+        /// houses, against about twenty robberies of character a year,
+        /// certainty adds two or three vengeances a year to what three in
+        /// four gave -- three in the first year, twelve in the thirteenth,
+        /// fourteen at most -- and leaves fewer oaths waiting. The standing
+        /// between houses ends where it ended.
         /// </summary>
-        public const float VengeanceChance = 0.75f;
+        public const float VengeanceChance = 1f;
 
         /// <summary>A clansman is family enough to be a rare victim.</summary>
         public const float ClanFactor = 0.25f;

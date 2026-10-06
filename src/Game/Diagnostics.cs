@@ -1063,8 +1063,8 @@ namespace HeroesEvolve
         /// so two houses that have each robbed the other are two. The count
         /// grows for years, because two houses have to meet before one can
         /// collect, and levels off when the oldest oaths begin to lapse:
-        /// simulated, about a hundred and seventy by the thirteenth year and
-        /// about two hundred and thirty from the twentieth. quarrelsLeftAlone
+        /// simulated, about a hundred and forty by the thirteenth year and
+        /// about two hundred from the twentieth. quarrelsLeftAlone
         /// is the quarrels in the same log that are not this mod's and are
         /// never read as debts: the vengeances TaleWorlds has a murdered
         /// Aserai lord's kinsmen swear before the campaign opens, a handful

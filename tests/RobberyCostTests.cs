@@ -38,13 +38,15 @@ namespace HeroesEvolve.Tests
         {
             const PlunderRules.Kinship Stranger = PlunderRules.Kinship.None;
 
-            // Three captures in four, whoever he is and however little he
-            // cares for robbery, at the dial's normal setting.
-            Check.True(PlunderRules.Vengeance(0, Stranger, 1f) == PlunderRules.VengeanceChance,
-                       "a house that is owed collects three times in four");
+            // For certain, whoever he is and however little he cares for
+            // robbery, at the dial's normal setting.
+            Check.True(PlunderRules.Vengeance(0, Stranger, 1f) == 1f,
+                       "a house that is owed always collects");
             Check.True(PlunderRules.Vengeance(0, Stranger, 0f) == 0f,
                        "the campaign's dial still switches it off with everything else");
-            Check.True(PlunderRules.Vengeance(0, Stranger, 2f) == 1f, "and at double it is certain, not more");
+            Check.True(PlunderRules.Vengeance(0, Stranger, 0.5f) == 0.5f,
+                       "and turns it down with everything else");
+            Check.True(PlunderRules.Vengeance(0, Stranger, 2f) == 1f, "and past certain there is nothing");
 
             // A debt is a debt: how the two houses stand does not enter into
             // it, either way.
@@ -62,15 +64,19 @@ namespace HeroesEvolve.Tests
 
             // Owed: every robbery is vengeance, including the ones his
             // character would have done anyway.
-            Check.True(PlunderRules.Judge(0.02f, 0.06f, 0.10f, 0.75f) == PlunderRules.Motive.Vengeance,
+            Check.True(PlunderRules.Judge(0.02f, 0.06f, 0.10f, 1f) == PlunderRules.Motive.Vengeance,
                        "a man collecting a debt is not also committing an offence");
-            Check.True(PlunderRules.Judge(0.70f, 0.06f, 0.10f, 0.75f) == PlunderRules.Motive.Vengeance,
-                       "vengeance reaches far past what his character would do");
-            Check.True(PlunderRules.Judge(0.80f, 0.06f, 0.10f, 0.75f) == PlunderRules.Motive.None,
-                       "and one capture in four the prisoner still keeps his arms");
+            Check.True(PlunderRules.Judge(0.9999f, 0.06f, 0.10f, 1f) == PlunderRules.Motive.Vengeance,
+                       "and no draw lets the prisoner keep his arms");
+
+            // With the dial turned down a debt is as unsure as everything else.
+            Check.True(PlunderRules.Judge(0.40f, 0.03f, 0.05f, 0.5f) == PlunderRules.Motive.Vengeance,
+                       "at half the dial, vengeance reaches half the captures");
+            Check.True(PlunderRules.Judge(0.60f, 0.03f, 0.05f, 0.5f) == PlunderRules.Motive.None,
+                       "and in the other half the prisoner keeps his arms");
 
             // A brute who is owed is no less sure than his own appetite.
-            Check.True(PlunderRules.Judge(0.90f, 0.95f, 0.95f, 0.75f) == PlunderRules.Motive.Vengeance,
+            Check.True(PlunderRules.Judge(0.90f, 0.95f, 0.95f, 0.5f) == PlunderRules.Motive.Vengeance,
                        "the higher of the two bars is the one that counts");
 
             // Not owed: the plain reading, unchanged.

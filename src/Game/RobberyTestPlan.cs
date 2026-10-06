@@ -155,9 +155,9 @@ namespace HeroesEvolve
 
             if (collector != null && mineToLose != null)
             {
-                lines.Add("2) House " + collector.Clan.Name + " collects from yours, three times in four"
+                lines.Add("2) House " + collector.Clan.Name + " collects from yours"
                           + (alreadySworn ? " (its oath is sworn)" : " (once test 1 is done)")
-                          + ". Repeat the line until it does:");
+                          + ":");
                 lines.Add("   campaign.add_prisoner_to_party " + Ref(mineToLose, names)
                           + " | " + Ref(collector, names));
             }

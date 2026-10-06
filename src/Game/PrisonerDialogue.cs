@@ -155,8 +155,8 @@ namespace HeroesEvolve
 
             // And the fourth, which is not a robbery at all. His clan stripped
             // one of yours, your man swore vengeance for it, and this is you
-            // taking it: the same thing an AI lord does three captures in four
-            // when the oath is his (PlunderRules.VengeanceChance). It costs
+            // taking it: the same thing an AI lord does whenever the oath is
+            // his (PlunderRules.VengeanceChance). It costs
             // nothing -- no standing, no mark on your name -- and it strikes
             // the oath off.
             //
