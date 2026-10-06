@@ -42,7 +42,7 @@ namespace HeroesEvolve
             starter.AddDialogLine("hev_strip_prisoner_reply",
                                   "hev_strip_prisoner_reply",
                                   Decide,
-                                  "{=hev_strip_reply}You would take the arms off a beaten man? "
+                                  "{=hev_strip_reply}You would take the arms off a beaten foe? "
                                   + "This dishonours you. Take them, then. My clan will hear of it, "
                                   + "and so will yours.",
                                   null, null, 100, null);

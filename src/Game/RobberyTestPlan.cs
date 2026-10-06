@@ -143,10 +143,10 @@ namespace HeroesEvolve
 
             if (victim != null)
             {
-                lines.Add("1) You rob him (" + victim.Clan.Name + ", Honor "
+                lines.Add("1) You rob " + victim.Name + " (" + victim.Clan.Name + ", Honor "
                           + victim.GetTraitLevel(DefaultTraits.Honor) + "):");
                 lines.Add("   campaign.add_prisoner_to_party " + Ref(victim, names) + " | " + player);
-                lines.Add("   then talk to him and demand his arms.");
+                lines.Add("   then talk to your prisoner and demand the arms.");
             }
             else
             {
@@ -178,7 +178,7 @@ namespace HeroesEvolve
                 if (alreadyOwed) lines.Add("   (your house already holds an oath against them)");
                 else lines.Add("   hev.test_oath " + debtor.Name);
                 lines.Add("   campaign.add_prisoner_to_party " + Ref(debtor, names) + " | " + player);
-                lines.Add("   then talk to him: the demand should be the vengeance one.");
+                lines.Add("   then talk to your prisoner: the demand should be the vengeance one.");
             }
             else
             {

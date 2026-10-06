@@ -5,13 +5,13 @@
   </tags>
   <strings>
     <string id="hev_strip" text="Rendez-moi vos armes et votre armure." />
-    <string id="hev_strip_reply" text="Vous dépouilleriez de ses armes un homme vaincu ? Cela vous déshonore. Prenez-les, donc. Mon clan l’apprendra, et le vôtre aussi." />
+    <string id="hev_strip_reply" text="Vous dépouilleriez de ses armes quelqu’un que vous avez déjà vaincu ? Cela vous déshonore. Prenez-les, donc. Mon clan l’apprendra, et le vôtre aussi." />
     <string id="hev_strip_reprisal" text="Il n’y a en vous aucun honneur que je puisse offenser. Rendez-moi vos armes et votre armure." />
     <string id="hev_strip_reprisal_reply" text="Parlez-moi d’honneur quand vous aurez fini de me dépouiller. Prenez donc tout — j’en aurai de meilleures avant un mois, et le prochain que je laisserai en chemise portera peut-être votre nom." />
     <string id="hev_strip_friend" text="Ne le prenez pas personnellement. Rendez-moi vos armes et votre armure." />
     <string id="hev_strip_friend_reply" text="De n’importe qui j’aurais attendu cela, mais pas de vous. Prenez-les, donc. Je n’ai plus rien à vous dire." />
-    <string id="hev_robbed" text="{VICTIM} a été dépouillé de ses armes et de son armure par {CAPTOR}." />
-    <string id="hev_robbed_reprisal" text="{VICTIM} a été dépouillé de ses armes et de son armure par {CAPTOR}, en représailles." />
+    <string id="hev_robbed" text="{VICTIM} a perdu ses armes et son armure aux mains de {CAPTOR}." />
+    <string id="hev_robbed_reprisal" text="{VICTIM} a perdu ses armes et son armure aux mains de {CAPTOR}, en représailles." />
     <string id="hev_strip_take" text="Je les prends." />
     <string id="hev_strip_leave" text="Gardez-les, alors." />
     <string id="hev_released_scavenged" text="En partant, vous avez récupéré de l'équipement sommaire dans les bagages de vos geôliers, des mêmes sortes que ce que vous portiez." />
