@@ -22,8 +22,7 @@ after a battle.
 | Skills grow | Three hidden talents — combat, management, seafaring — decide how fast each hero learns and where he stops. |
 | Shopping | Lords buy better versions of what they already carry, with their clan's money, capped by their skills. |
 | Caravans | A caravan master arms himself from a commission you set. |
-| Robbery | Captors may strip their prisoners, on a roll weighted by character. A robbed man comes back in basic gear of the same kinds he carried. |
-| Vengeance | Whoever is robbed swears vengeance, and that clan strips the robber's people in return when it captures one. One robbery, one answer. |
+| Robbery | Captors may strip their prisoners, on a roll weighted by character. A robbed man comes back in basic gear of the same kinds he carried, and his clan swears vengeance: it strips the robber's people in return when it captures one. |
 
 The full description, with every figure, is in
 [docs/store-description.bbcode](docs/store-description.bbcode). The diagrams are
