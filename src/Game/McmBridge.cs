@@ -53,9 +53,11 @@ namespace HeroesEvolve
         /// and Pull copies it over Settings on every load. This is the same
         /// thing done for the screen that has no object to copy from.
         ///
-        /// Null until the screen has been built.
+        /// Null until the screen has been built. The modules as ids and not as
+        /// one line of text: a line is split on spaces when it is read back,
+        /// and a module's id is a folder name, which may have one.
         /// </summary>
-        private static string _gearModules;
+        private static string[] _gearModules;
         private static string _gearItems;
 
         /// <summary>
@@ -237,7 +239,7 @@ namespace HeroesEvolve
         /// <summary>Writes down what the mod-gear screen holds. See _gearModules.</summary>
         private static void RememberGear()
         {
-            _gearModules = string.Join(", ", Settings.ExcludedModuleIds());
+            _gearModules = Settings.ExcludedModuleIds();
             _gearItems = Settings.ExcludedItemsText();
         }
 
@@ -251,7 +253,12 @@ namespace HeroesEvolve
         {
             if (_gearModules == null) return;
 
-            Settings.SetExcludedModules(_gearModules);
+            Settings.SetExcludedModules("");
+            for (int i = 0; i < _gearModules.Length; i++)
+            {
+                Settings.SetModuleExcluded(_gearModules[i], true);
+            }
+
             Settings.SetExcludedItems(_gearItems);
 
             ModLog.Info("MCM excluded-gear screen kept across the load: "
