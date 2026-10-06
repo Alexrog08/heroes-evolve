@@ -35,6 +35,30 @@ namespace HeroesEvolve
         private static bool _gearModsBound;
 
         /// <summary>
+        /// What the mod-gear screen holds, written down here because nothing
+        /// else keeps it for longer than one campaign.
+        ///
+        /// The screen owns no state: its tick boxes read and write Settings.
+        /// MCM stores their values in a file of its own and hands them back
+        /// once, when the screen is registered -- and it refuses a second
+        /// registration, so that is the first campaign of a sitting and never
+        /// again. Settings.Load, meanwhile, runs on every campaign load and
+        /// puts both lists back to what settings.xml says, which for a player
+        /// with MCM is nothing. So loading a second save without leaving the
+        /// game emptied them: every excluded mod was back on the shelves, the
+        /// screen showed its boxes unticked, and pressing Done there saved
+        /// them that way. A player reported exactly that.
+        ///
+        /// The main screen never had the fault, because MCM keeps its object
+        /// and Pull copies it over Settings on every load. This is the same
+        /// thing done for the screen that has no object to copy from.
+        ///
+        /// Null until the screen has been built.
+        /// </summary>
+        private static string _gearModules;
+        private static string _gearItems;
+
+        /// <summary>
         /// Copies MCM's stored values into Settings and keeps them there.
         ///
         /// Called after Settings.Load, so MCM wins where both have an opinion.
@@ -68,6 +92,11 @@ namespace HeroesEvolve
         {
             McmSettings settings = McmSettings.Instance;
             if (settings == null) throw new InvalidOperationException("MCM holds no settings instance");
+
+            // The mod-gear screen's lists first, so that what Pull reports as
+            // changed and what it checks the item list against are the lists
+            // the player ticked and not the ones Settings.Load just put back.
+            RestoreGear();
 
             // Always copy; subscribe once. MCM keeps one settings instance for
             // the process, so subscribing again would fire Pull twice for every
@@ -126,7 +155,9 @@ namespace HeroesEvolve
         ///
         /// Every control reads and writes Settings directly through ProxyRef,
         /// so this screen owns no state of its own and cannot drift from the
-        /// lists settings.xml carries for players without MCM.
+        /// lists settings.xml carries for players without MCM. What it holds
+        /// is written down beside it all the same, because Settings forgets
+        /// it on every campaign load: see _gearModules.
         /// </summary>
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static void BindGearMods()
@@ -191,7 +222,41 @@ namespace HeroesEvolve
             });
 
             builder.BuildAsGlobal().Register();
-            ModLog.Info("MCM excluded-gear screen built; " + mods.Count + " installed gear mods listed");
+
+            // Registering is when MCM hands back what it stored, through the
+            // setters above. Written down here as well, for the player who
+            // has stored nothing yet: his lists are settings.xml's, and they
+            // are the screen's from now on.
+            RememberGear();
+
+            ModLog.Info("MCM excluded-gear screen built; " + mods.Count + " installed gear mods listed, "
+                        + Settings.ExcludedModuleIds().Length + " excluded, "
+                        + Settings.ExcludedIds().Length + " single items");
+        }
+
+        /// <summary>Writes down what the mod-gear screen holds. See _gearModules.</summary>
+        private static void RememberGear()
+        {
+            _gearModules = string.Join(", ", Settings.ExcludedModuleIds());
+            _gearItems = Settings.ExcludedItemsText();
+        }
+
+        /// <summary>
+        /// Puts the mod-gear screen's lists back into Settings after
+        /// Settings.Load has replaced them with settings.xml's. Nothing to do
+        /// before the screen exists: MCM restores them itself when it is
+        /// registered.
+        /// </summary>
+        private static void RestoreGear()
+        {
+            if (_gearModules == null) return;
+
+            Settings.SetExcludedModules(_gearModules);
+            Settings.SetExcludedItems(_gearItems);
+
+            ModLog.Info("MCM excluded-gear screen kept across the load: "
+                        + Settings.ExcludedModuleIds().Length + " mods excluded, "
+                        + Settings.ExcludedIds().Length + " single items");
         }
 
         /// <summary>
@@ -203,6 +268,7 @@ namespace HeroesEvolve
         private static void ExcludeModule(string moduleId, bool excluded)
         {
             Settings.SetModuleExcluded(moduleId, excluded);
+            RememberGear();
             ItemCatalog.ResetSession();
         }
 
@@ -214,6 +280,7 @@ namespace HeroesEvolve
         private static void ExcludeItems(string ids)
         {
             Settings.SetExcludedItems(ids);
+            RememberGear();
             ItemCatalog.ResetSession();
         }
 

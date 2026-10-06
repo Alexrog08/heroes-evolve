@@ -370,7 +370,12 @@ namespace HeroesEvolve
 
 
         /// <summary>
-        /// Loads settings.xml if it is there. Called once, from OnSubModuleLoad.
+        /// Loads settings.xml if it is there. Called on every campaign load
+        /// (HeroLoadoutBehavior.RegisterEvents), so that a file edited between
+        /// two saves is read without restarting the game -- which also means
+        /// everything here is put back to the file each time, and whatever an
+        /// options screen holds has to be copied over it again afterwards
+        /// (McmBridge.Attach).
         /// </summary>
         public static void Load()
         {
