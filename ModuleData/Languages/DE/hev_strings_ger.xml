@@ -19,6 +19,5 @@
     <string id="hev_released_given" text="Deine Häscher gaben dir einfache Ausrüstung für den Weg mit, von derselben Art wie zuvor." />
     <string id="hev_strip_vengeance" text="Euer Klan hat einen der Meinen ausgeplündert. Gebt mir Eure Waffen und Eure Rüstung." />
     <string id="hev_strip_vengeance_reply" text="Das ist also die Antwort. Nehmt sie also, und damit sei es zwischen Eurem Klan und meinem abgegolten." />
-    <string id="hev_robbery_hurt" text="Der Raub hat dein Ansehen bei {COUNT} {?IS_PLURAL}Klans{?}Klan{\?} beschädigt." />
   </strings>
 </base>

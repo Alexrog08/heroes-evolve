@@ -24,22 +24,21 @@ namespace HeroesEvolve
     /// (LordConversationsCampaignBehavior.GetReasonForEnmity). The game writes
     /// them itself, in BackstoryCampaignBehavior.OnNewGameCreated: when one
     /// Aserai lord has murdered another before the campaign opens, the young
-    /// men of the dead man's clan each swear vengeance on the killer, and the
-    /// clan's standing with him falls by seventy-five. A robbery here does the
-    /// same two things at half an execution's price (RobberyReckoning), with
-    /// the same record.
+    /// men of the dead man's clan each swear vengeance on the killer.
     ///
-    /// So the oath is the game's and so is its upkeep. It is saved with the
-    /// campaign and survives a reload, it expires by the game's own weekly
-    /// purge (Campaign.OnWeeklyTick, LogEntryHistory.DeleteOutdatedLogs), and
-    /// a campaign that has had this mod removed loads as it always did, with
-    /// some sworn vengeances left in its history.
+    /// So the oath is the whole ledger, and it is the game's. One oath is one
+    /// robbery owed. It is sworn when a man is robbed (Swear), it is what
+    /// makes his house dangerous to the robber's (Owed), and it is struck off
+    /// when the house collects (Fulfil). Nothing else is consulted: not the
+    /// standing between the two houses, which goes on meaning whatever it
+    /// meant, and not a count kept anywhere else. It is saved with the
+    /// campaign and survives a reload, an oath nobody collects lapses by the
+    /// game's own weekly purge, and a campaign that has had this mod removed
+    /// loads as it always did, with some sworn vengeances left in its history.
     ///
-    /// What the log cannot hold is that an oath has been answered: entries
-    /// can be added and never taken out, and a second entry to say "settled"
-    /// would print as a second quarrel. So the oath says who and the standing
-    /// between the houses says whether anything is still outstanding
-    /// (PlunderRules.Claim).
+    /// The encyclopedia therefore shows exactly what is outstanding. A man's
+    /// page lists who has sworn against him and whom he has sworn against,
+    /// and a line disappears the day it is answered.
     /// </summary>
     public static class VengeanceOaths
     {
@@ -75,78 +74,103 @@ namespace HeroesEvolve
         }
 
         /// <summary>
-        /// Which of the two houses has something to answer for, seen from the
-        /// captor's side. The last oath between them decides, read newest
-        /// first, and only while their standing is below nought.
+        /// Whether the captor's house holds an oath against the prisoner's:
+        /// somebody of the one swore vengeance on somebody of the other, and
+        /// nobody has collected it yet.
         /// </summary>
-        public static PlunderRules.Claim Between(Hero captor, Hero prisoner)
+        public static bool Owed(Hero captor, Hero prisoner)
         {
-            if (captor == null || prisoner == null) return PlunderRules.Claim.None;
-
-            Clan mine = captor.Clan;
-            Clan theirs = prisoner.Clan;
-            if (mine == null || theirs == null || mine == theirs) return PlunderRules.Claim.None;
-
-            // The cheap half first: most pairs of houses have nothing
-            // outstanding, and the log need not be read to know it.
-            int standing = RobberyReckoning.Standing(captor, prisoner);
-            if (standing >= 0) return PlunderRules.Claim.None;
-
-            MBReadOnlyList<LogEntry> logs = Logs();
-            if (logs == null) return PlunderRules.Claim.None;
-
-            CampaignTime opened = CampaignOpened();
-
-            for (int i = logs.Count - 1; i >= 0; i--)
-            {
-                Clan sworn, against;
-                if (!Read(logs[i], opened, out sworn, out against)) continue;
-
-                bool thisPair = (sworn == mine && against == theirs) || (sworn == theirs && against == mine);
-                if (!thisPair) continue;
-
-                return PlunderRules.ClaimFor(sworn.StringId, against.StringId,
-                                             mine.StringId, theirs.StringId, standing);
-            }
-
-            return PlunderRules.Claim.None;
+            return Oldest(captor, prisoner) != null;
         }
 
         /// <summary>
-        /// Every pair of houses with an oath between them, and which of the
-        /// two swore last. For the census: sworn is every oath still in the
-        /// log.
+        /// Strikes one oath off: the oldest the captor's house holds against
+        /// the prisoner's. False when it held none.
+        ///
+        /// The log has no door for taking an entry out -- DeleteLogAtIndex is
+        /// internal -- but it has two public ones that do it between them.
+        /// LogEntry.AddLogEntry with a date re-dates the entry it is handed,
+        /// and LogEntryHistory.DeleteOutdatedLogs is the purge the game runs
+        /// every week, which drops whatever has outlived its keep. Dated to
+        /// the beginning of time the oath is twenty years stale at once, and
+        /// the purge takes it and the second reference re-dating left behind.
+        /// All the purge can otherwise remove is what the game would have
+        /// removed by the end of the week anyway.
+        ///
+        /// The oldest first, so that a house robbed twice is answered for the
+        /// earlier robbery before the later one and no oath is left to lapse
+        /// behind a newer one.
         /// </summary>
-        internal static Dictionary<string, Clan> LastSworn(out int sworn)
+        public static bool Fulfil(Hero captor, Hero prisoner)
+        {
+            CharacterInsultedLogEntry oath = Oldest(captor, prisoner);
+            if (oath == null) return false;
+
+            LogEntry.AddLogEntry(oath, CampaignTime.Zero);
+            Campaign.Current.LogEntryHistory.DeleteOutdatedLogs();
+
+            return true;
+        }
+
+        /// <summary>
+        /// Every oath outstanding, counted by who swore against whom: the key
+        /// is Key(swore, against). For the census, which wants all of it at
+        /// one reading rather than one pair at a time.
+        /// </summary>
+        internal static Dictionary<string, int> Outstanding(out int sworn)
         {
             sworn = 0;
-            Dictionary<string, Clan> last = new Dictionary<string, Clan>();
+            Dictionary<string, int> owed = new Dictionary<string, int>();
 
             MBReadOnlyList<LogEntry> logs = Logs();
-            if (logs == null) return last;
+            if (logs == null) return owed;
 
             CampaignTime opened = CampaignOpened();
 
-            // Oldest first, so that a later oath between the same two houses
-            // overwrites an earlier one.
             for (int i = 0; i < logs.Count; i++)
             {
                 Clan swore, against;
                 if (!Read(logs[i], opened, out swore, out against)) continue;
 
+                string key = Key(swore, against);
+                int count;
+                owed.TryGetValue(key, out count);
+                owed[key] = count + 1;
                 sworn++;
-                last[Pair(swore, against)] = swore;
             }
 
-            return last;
+            return owed;
         }
 
-        /// <summary>One key for two houses, whichever way round they are named.</summary>
-        internal static string Pair(Clan one, Clan other)
+        /// <summary>The house that swore, then the house it swore against.</summary>
+        internal static string Key(Clan swore, Clan against)
         {
-            string a = one != null ? one.StringId : "";
-            string b = other != null ? other.StringId : "";
-            return string.CompareOrdinal(a, b) <= 0 ? a + "|" + b : b + "|" + a;
+            return (swore != null ? swore.StringId : "") + ">" + (against != null ? against.StringId : "");
+        }
+
+        private static CharacterInsultedLogEntry Oldest(Hero captor, Hero prisoner)
+        {
+            if (captor == null || prisoner == null) return null;
+
+            Clan mine = captor.Clan;
+            Clan theirs = prisoner.Clan;
+            if (mine == null || theirs == null || mine == theirs) return null;
+
+            MBReadOnlyList<LogEntry> logs = Logs();
+            if (logs == null) return null;
+
+            CampaignTime opened = CampaignOpened();
+
+            // The log is kept oldest first.
+            for (int i = 0; i < logs.Count; i++)
+            {
+                Clan swore, against;
+                if (!Read(logs[i], opened, out swore, out against)) continue;
+
+                if (swore == mine && against == theirs) return (CharacterInsultedLogEntry)logs[i];
+            }
+
+            return null;
         }
 
         /// <summary>
@@ -157,7 +181,9 @@ namespace HeroesEvolve
         /// makes one a vengeance is a private field, so it is not read; the
         /// date is. The game dates its own backstory quarrels years before
         /// the campaign begins and adds none afterwards, so anything later is
-        /// one of ours -- and the feuds TaleWorlds wrote stay TaleWorlds'.
+        /// one of ours -- and the feuds TaleWorlds wrote stay TaleWorlds'. It
+        /// is also what makes an oath struck off stop counting at once, before
+        /// the purge has even run.
         /// </summary>
         private static bool Read(LogEntry entry, CampaignTime opened, out Clan swore, out Clan against)
         {
@@ -192,9 +218,9 @@ namespace HeroesEvolve
             }
             catch
             {
-                // Without it every quarrel in the log counts, which errs
-                // toward honouring the oaths the game wrote itself.
-                return CampaignTime.Zero;
+                // Without it every quarrel in the log counts except the ones
+                // struck off, which are dated to nought and so are before it.
+                return CampaignTime.Hours(1f);
             }
         }
 
@@ -219,6 +245,12 @@ namespace HeroesEvolve
         /// On either side. An oath sworn against his house is the warning that
         /// matters most -- it is who will be looking for him -- and one sworn
         /// by his house is how he learns he has something to collect.
+        ///
+        /// Held a frame, like the news of the robbery it follows
+        /// (PendingNotices). That line is queued before this one, so the two
+        /// print in the order they happened; sent at once, the oath would be
+        /// on screen before the robbery it answers, and before the capture
+        /// that led to both.
         /// </summary>
         private static void Tell(CharacterInsultedLogEntry oath, Hero victim, Hero robber)
         {
@@ -227,8 +259,7 @@ namespace HeroesEvolve
 
             try
             {
-                InformationManager.DisplayMessage(
-                    new InformationMessage(oath.GetEncyclopediaText().ToString(), Colors.Red));
+                PendingNotices.Queue(oath.GetEncyclopediaText().ToString(), Colors.Red);
             }
             catch
             {

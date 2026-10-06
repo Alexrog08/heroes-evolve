@@ -71,13 +71,12 @@ namespace HeroesEvolve.Tests
             Check.True(Percent(-1, 0, 0, 0, 0, -80, Stranger) > Percent(-1, 0, 0, 0, 0, 0, Stranger),
                        "and a man he hates is robbed more readily");
 
-            // Friendship shields absolutely, and bad blood does the opposite
-            // thing rather than the opposite amount: it does not multiply what
-            // he would do, it wears away what stops him. See
-            // BadBloodWearsRestraintAway.
+            // Friendship shields absolutely; enmity only aggravates. Being hated
+            // does not make a man twice the thief that being liked makes him
+            // none.
             int neutral = Percent(-1, -1, -1, -1, 0, 0, Stranger);
             int hated = Percent(-1, -1, -1, -1, 0, -100, Stranger);
-            Check.Equal(100, hated, "a full grudge leaves him no restraint at all");
+            Check.True(hated > neutral && hated < neutral * 2, "enmity aggravates by half, not double");
 
             // --- blood ---
             Check.Equal(0, Percent(-2, -2, -2, -2, 300, 0, PlunderRules.Kinship.Immediate),
@@ -142,7 +141,7 @@ namespace HeroesEvolve.Tests
 
             ReprisalFollowsTheExecutionModel();
             TheDieIsCastOncePerPair();
-            BadBloodWearsRestraintAway();
+            HisOwnDoingIsWhatItAlwaysWas();
             AThiefIsKnownToHonourableMen();
             OneDrawTwoBars();
         }
@@ -159,85 +158,51 @@ namespace HeroesEvolve.Tests
             return (int)(chance * 100f + 0.5f);
         }
 
-        private static void BadBloodWearsRestraintAway()
+        private static void HisOwnDoingIsWhatItAlwaysWas()
         {
             const PlunderRules.Kinship Stranger = PlunderRules.Kinship.None;
 
-            // Dislike is not yet a grudge. A raided village, two characters
-            // that grate: none of that strips a prisoner.
-            Check.True(PlunderRules.Grudge(0) == 0f, "no bad blood, no grudge");
-            Check.True(PlunderRules.Grudge(-PlunderRules.GrudgeDeadZone) == 0f, "nor at the edge of the dead zone");
-            Check.True(PlunderRules.Grudge(40) == 0f, "and goodwill is certainly not one");
-            Check.Equal(Percent(0, 0, 0, 0, 0, 0, Stranger),
-                        Percent(0, 0, 0, 0, 0, -PlunderRules.GrudgeDeadZone, Stranger),
-                        "inside the dead zone a man is robbed as a stranger is");
-
-            // From there, deeper is likelier, all the way to certainty.
-            Check.True(PlunderRules.Grudge(-PlunderRules.GrudgeDeadZone - 1) > 0f, "one step past it is a grudge");
-            Check.True(PlunderRules.Grudge(-PlunderRules.GrudgeFull) == 1f, "and at the bottom it is complete");
-            Check.True(PlunderRules.Grudge(-500) == 1f, "however far past the bottom the number goes");
-
-            int stranger = Percent(0, 0, 0, 0, 0, 0, Stranger);
-            int disliked = Percent(0, 0, 0, 0, 0, -30, Stranger);
-            int hated = Percent(0, 0, 0, 0, 0, -60, Stranger);
-            Check.True(stranger < disliked && disliked < hated, "deeper bad blood is a likelier robbery");
-            Check.Equal(100, Percent(0, 0, 0, 0, 0, -100, Stranger), "an average lord, a full grudge: certain");
-
-            // The point of working on restraint rather than multiplying
-            // appetite: the men with the least appetite are moved the most.
-            // An upright lord who would rob one stranger in sixty robs the
-            // house he has a blood feud with every time.
-            Check.Equal(2, Percent(1, 1, 1, 1, 0, 0, Stranger), "a decent man almost never robs a stranger");
-            Check.Equal(100, Percent(1, 1, 1, 1, 0, -100, Stranger), "and does not spare the house he is at feud with");
-
-            // The figures the store page prints, in a normal campaign. These
-            // are bad blood with nothing owed: the house actually robbed has
-            // sworn vengeance and is on a bar of its own (RobberyCostTests).
-            int own;
-            Check.Equal(6, Percent(0, 0, 0, 0, 0, 0, PlunderRules.NormalRate, out own), "a stranger, 6%");
-            Check.Equal(9, Percent(0, 0, 0, 0, -15, 0, PlunderRules.NormalRate, out own),
-                        "the friend of a man you robbed, 9%");
-            Check.Equal(16, Percent(0, 0, 0, 0, -30, 0, PlunderRules.NormalRate, out own),
-                        "his kingdom after six robberies, 16%");
-            Check.Equal(31, Percent(0, 0, 0, 0, -60, 0, PlunderRules.NormalRate, out own),
-                        "at minus sixty, 31%");
-            Check.Equal(50, Percent(0, 0, 0, 0, -100, 0, PlunderRules.NormalRate, out own),
-                        "and the deepest enmity is as sure as a bandit, no surer");
-
-            // His own doing does not move with any of it. This is the half of
-            // the rule that keeps relation from feeding on itself: what he is
-            // charged for is what his character did, and his character does
-            // not contain the grudge.
-            int ownAtPeace, ownAtFeud;
-            Percent(-1, 0, 0, 0, 0, 0, 1f, out ownAtPeace);
-            Percent(-1, 0, 0, 0, -90, 0, 1f, out ownAtFeud);
-            Check.Equal(ownAtPeace, ownAtFeud, "a feud adds nothing to what is his own doing");
-
-            int ownWithFriend;
-            Percent(-1, 0, 0, 0, 50, 0, 1f, out ownWithFriend);
-            Check.True(ownWithFriend < ownAtPeace && ownWithFriend > 0, "though goodwill still takes from it");
-
-            // And the whole is never less than the part.
+            // The second number is the first, for a prisoner with no name
+            // against him: nothing about a captor's own doing was changed by
+            // giving the function something else to add to it. Checked across
+            // the whole range rather than at the figures somebody thought of.
+            bool same = true;
             bool ordered = true;
             int[] traits = { -2, -1, 0, 1, 2 };
-            int[] relations = { -150, -100, -60, -30, -11, -10, 0, 30, 100 };
+            int[] relations = { -150, -100, -60, -30, -10, 0, 30, 100 };
+            PlunderRules.Kinship[] kin =
+            {
+                PlunderRules.Kinship.None, PlunderRules.Kinship.Clan, PlunderRules.Kinship.Immediate
+            };
+
             foreach (int t in traits)
             {
                 foreach (int r in relations)
                 {
-                    foreach (int p in traits)
+                    foreach (PlunderRules.Kinship k in kin)
                     {
+                        float plain = PlunderRules.Chance(false, t, t, t, t, 120, r, k, PlunderRules.NormalRate);
+
                         float ownDoing;
-                        float chance = PlunderRules.Chance(false, t, t, t, t, 120, r, Stranger, p, 1f,
-                                                           out ownDoing);
-                        if (ownDoing < 0f || ownDoing > chance || chance > 1f) ordered = false;
+                        float noName = PlunderRules.Chance(false, t, t, t, t, 120, r, k, 0,
+                                                           PlunderRules.NormalRate, out ownDoing);
+                        if (noName != plain || ownDoing != plain) same = false;
+
+                        foreach (int p in traits)
+                        {
+                            float chance = PlunderRules.Chance(false, t, t, t, t, 120, r, k, p,
+                                                               PlunderRules.NormalRate, out ownDoing);
+                            if (ownDoing != plain) same = false;
+                            if (ownDoing < 0f || ownDoing > chance || chance > 1f) ordered = false;
+                        }
                     }
                 }
             }
-            Check.True(ordered, "his own doing is always a part of the chance, never more than it");
 
-            // Blood still counts for something inside a feud, and bandits are
-            // outside all of this.
+            Check.True(same, "his own doing is the chance this rule always gave, whoever the prisoner is");
+            Check.True(ordered, "and is always a part of the whole, never more than it");
+
+            // Bandits are outside all of it.
             float banditOwn;
             float bandit = PlunderRules.Chance(true, 0, 0, 0, 0, 0, -100, Stranger, -2,
                                                PlunderRules.NormalRate, out banditOwn);
@@ -277,9 +242,25 @@ namespace HeroesEvolve.Tests
             Check.Equal(0, Percent(1, 0, 0, 0, 100, -2, PlunderRules.NormalRate, out own),
                         "and a friend is not stripped for his reputation");
 
-            // Reputation and a feud add up, to certainty and no further.
-            Check.Equal(100, Percent(1, 0, 0, 0, -80, -2, 1f, out own),
-                        "a thief he also has a feud with is stripped for certain");
+            // Hating the thief besides adds nothing to the justice of it. His
+            // own doing rises as enmity always raised it; the share his name
+            // wears away is the same.
+            int ownAtPeace, ownAtOdds;
+            int atPeace = Percent(1, 0, 0, 0, 0, -2, 1f, out ownAtPeace);
+            int atOdds = Percent(1, 0, 0, 0, -80, -2, 1f, out ownAtOdds);
+            Check.True(ownAtOdds > ownAtPeace, "enmity raises his own doing, as it did");
+            Check.True(atOdds > atPeace && atOdds < 100, "and justice does not turn hatred into certainty");
+
+            // A clansman's bad name is a family matter first.
+            float kinOwn;
+            float kinsman = PlunderRules.Chance(false, 1, 0, 0, 0, 0, 0, PlunderRules.Kinship.Clan, -2,
+                                                1f, out kinOwn);
+            float outsider = PlunderRules.Chance(false, 1, 0, 0, 0, 0, 0, PlunderRules.Kinship.None, -2,
+                                                 1f, out kinOwn);
+            Check.True(kinsman > 0f && kinsman < outsider, "a thief of his own house is stripped less readily");
+            Check.True(PlunderRules.Chance(false, 1, 0, 0, 0, 0, 0, PlunderRules.Kinship.Immediate, -2,
+                                           1f, out kinOwn) == 0f,
+                       "and his own son not at all");
 
             // The paragon again: no thief's name makes a robber of him.
             Check.Equal(0, Percent(2, 2, 2, 2, -100, -2, 1f, out own),
@@ -297,33 +278,33 @@ namespace HeroesEvolve.Tests
                        "under the lower bar it is his own doing");
             Check.True(PlunderRules.Judge(0.05f, 0.05f, 0.20f) == PlunderRules.Motive.Character,
                        "the bar itself included");
-            Check.True(PlunderRules.Judge(0.10f, 0.05f, 0.20f) == PlunderRules.Motive.Grudge,
-                       "between the two only the grudge explains it");
-            Check.True(PlunderRules.Judge(0.20f, 0.05f, 0.20f) == PlunderRules.Motive.Grudge,
+            Check.True(PlunderRules.Judge(0.10f, 0.05f, 0.20f) == PlunderRules.Motive.Justice,
+                       "between the two only the prisoner's name explains it");
+            Check.True(PlunderRules.Judge(0.20f, 0.05f, 0.20f) == PlunderRules.Motive.Justice,
                        "up to and including the upper bar");
             Check.True(PlunderRules.Judge(0.21f, 0.05f, 0.20f) == PlunderRules.Motive.None,
                        "and past it nobody is robbed");
 
-            // No grudge: the bars are one, and there is no second motive.
+            // No thief in front of him: the bars are one, and there is no
+            // second motive.
             Check.True(PlunderRules.Judge(0.05f, 0.06f, 0.06f) == PlunderRules.Motive.Character,
-                       "with no bad blood every robbery is his own doing");
+                       "against an honest prisoner every robbery is his own doing");
 
-            // A captor who would never rob unprovoked can still rob in answer.
             Check.True(PlunderRules.Judge(0.0f, 0f, 0f) == PlunderRules.Motive.None,
                        "no chance, no robbery, whatever the draw");
 
             // Over many draws the two motives come out in the proportions the
             // bars promise, which is the claim the pricing rests on.
-            int character = 0, grudge = 0, none = 0;
+            int character = 0, justice = 0, none = 0;
             for (int i = 0; i < 1000; i++)
             {
                 PlunderRules.Motive motive = PlunderRules.Judge(i / 1000f, 0.0625f, 0.16f);
                 if (motive == PlunderRules.Motive.Character) character++;
-                else if (motive == PlunderRules.Motive.Grudge) grudge++;
+                else if (motive == PlunderRules.Motive.Justice) justice++;
                 else none++;
             }
             Check.Equal(63, character, "his own doing as often as his character says");
-            Check.Equal(98, grudge, "the grudge accounting for the rest of the robberies");
+            Check.Equal(98, justice, "the prisoner's name accounting for the rest of the robberies");
             Check.Equal(839, none, "and most prisoners still keeping their arms");
         }
 

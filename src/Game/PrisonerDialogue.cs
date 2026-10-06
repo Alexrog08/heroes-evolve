@@ -53,9 +53,9 @@ namespace HeroesEvolve
             // The demand used to be the act: the prisoner's answer carried the
             // robbery as its consequence, so by the time he had told you what
             // it would cost, it had cost it. That was tolerable at twelve
-            // relation and a scratch on Honor. It is not at the price of half
-            // an execution -- his clan, his friends, his kingdom, and half a
-            // level of your name (RobberyReckoning).
+            // relation and a scratch on Honor. It is not at half a level of
+            // your name (RobberyReckoning) and his house sworn to take it back
+            // from yours (VengeanceOaths).
             //
             // The game asks the same question the same way. Its own "Off with
             // your head!" does not kill anybody: the lord protests that the
@@ -157,8 +157,8 @@ namespace HeroesEvolve
             // one of yours, your man swore vengeance for it, and this is you
             // taking it: the same thing an AI lord does three captures in four
             // when the oath is his (PlunderRules.VengeanceChance). It costs
-            // nothing -- no bill, no mark on your name -- and it pays the
-            // standing between the two houses back.
+            // nothing -- no standing, no mark on your name -- and it strikes
+            // the oath off.
             //
             // Nobody mentions honour in this one, and that is the tell. The
             // other three demands are all arguments about it, because in each
@@ -185,10 +185,11 @@ namespace HeroesEvolve
         ///
         /// A debt, a friend, a scoundrel or a stranger, tested in that order.
         /// A debt comes first because it changes what the act is: a house that
-        /// is owed is collecting, whoever the prisoner happens to be. Then
-        /// friendship outranks reputation -- a man who is Devious and also at
-        /// your side is robbed as a friend and charged the full price; being
-        /// crooked is not the same as being crooked with you.
+        /// is owed is collecting, whoever the prisoner happens to be -- a
+        /// friend included, as it is for an AI lord (PlunderRules.Vengeance).
+        /// Then friendship outranks reputation -- a man who is Devious and
+        /// also at your side is robbed as a friend and charged the full
+        /// price; being crooked is not the same as being crooked with you.
         /// </summary>
         private enum Manner
         {
@@ -201,10 +202,9 @@ namespace HeroesEvolve
         /// <summary>
         /// How this particular prisoner is to be asked, read off him now.
         ///
-        /// The oath first: if the last word between the two houses is one of
-        /// yours swearing vengeance on one of his, and the standing between
-        /// them is still below nought, you are owed (VengeanceOaths.Between).
-        /// That cannot be true of a friend, so the two never compete.
+        /// The oath first: if somebody of your house has sworn vengeance on
+        /// somebody of his and nobody has collected it, you are owed
+        /// (VengeanceOaths.Owed).
         ///
         /// Then friendship. The reprisal discount exists because a man had it
         /// coming, and a friend never has it coming, however poor his name
@@ -215,8 +215,7 @@ namespace HeroesEvolve
         {
             if (hero == null) return Manner.Plain;
 
-            if (Hero.MainHero != null
-                && VengeanceOaths.Between(Hero.MainHero, hero) == PlunderRules.Claim.Owed)
+            if (Hero.MainHero != null && VengeanceOaths.Owed(Hero.MainHero, hero))
             {
                 return Manner.Vengeance;
             }
@@ -330,36 +329,36 @@ namespace HeroesEvolve
             if (taken == 0) return;
 
             // Owed, and collecting. Not a robbery of his own doing but the
-            // answer to one done to his house, so there is no bill, no mark on
-            // his name and no oath sworn against him -- only the standing
-            // between the two houses paid back, exactly as when an AI lord
-            // takes the same vengeance. Read before anything moves, because
-            // paying the standing back is what closes the claim.
+            // answer to one done to his house, so there is no standing lost,
+            // no mark on his name and no oath sworn against him -- only one
+            // oath struck off, exactly as when an AI lord takes the same
+            // vengeance. Read before anything moves, because the charge below
+            // moves the very relation that decides whether a man is a friend.
             Manner manner = MannerFor(hero);
 
             if (manner == Manner.Vengeance)
             {
-                int settled = RobberyReckoning.Settle(Hero.MainHero, hero);
-                RobberyTally.Avenged(settled);
+                VengeanceOaths.Fulfil(Hero.MainHero, hero);
+                RobberyTally.Avenged();
 
                 Hero.MainHero.AddSkillXp(DefaultSkills.Roguery, PlunderService.RogueryXpFor(value));
 
                 ModLog.Info("PLUNDER by player prisoner=" + hero.Name
                             + " prisonerHonor=" + hero.GetTraitLevel(DefaultTraits.Honor)
                             + " pieces=" + taken + " worth=" + value
-                            + " motive=vengeance settled=" + settled
+                            + " motive=vengeance"
                             + " roguery=" + PlunderService.RogueryXpFor(value));
                 return;
             }
 
-            // Otherwise chosen, and therefore paid for, and always in full:
-            // nobody drew for him, so there is no bad blood to have done it in
-            // his place and the robbery is his own doing (PlunderRules.Motive).
+            // Otherwise chosen, and therefore paid for, and always as his own
+            // doing: nobody drew for him, so there is no telling his character
+            // from the prisoner's name the way a draw tells an AI lord's
+            // (PlunderRules.Motive).
             //
-            // The same bill an AI lord's house is sent for the same act -- his
-            // clan, his friends, his kingdom, at half the game's price for an
-            // execution -- and beside it the one thing only the player has to
-            // lose, his name. It is the house that hears of it, not his
+            // The same standing an AI lord's house loses for the same act, with
+            // the house he robbed, and beside it the one thing only the player
+            // has to lose, his name. It is the house that hears of it, not his
             // relatives: an earlier comment here said the cost "spread to his
             // relatives" on the strength of an argument to
             // ChangeRelationAction.ApplyPlayerRelation that the game accepts
@@ -369,16 +368,14 @@ namespace HeroesEvolve
             // Half of it when the man had it coming, which is the game's own
             // arithmetic for the same situation and not a courtesy invented
             // here -- an execution costs half against a dishonourable victim.
-            // Read before the bill is sent, because the bill moves the very
-            // relation that decides whether he was a friend.
             bool reprisal = manner == Manner.Reprisal;
 
-            RobberyReckoning.Bill bill = RobberyReckoning.Charge(Hero.MainHero, hero, reprisal);
+            int cost = RobberyReckoning.Charge(Hero.MainHero, hero, reprisal);
             int honour = RobberyReckoning.ChargeName(reprisal);
-            RobberyTally.Offence(bill.Spent, bill.Houses);
+            RobberyTally.Offence();
 
             // And the man he robbed swears vengeance on him for it, as he
-            // would on anybody. From here his house is the one that is owed.
+            // would on anybody. From here his house is owed one robbery.
             VengeanceOaths.Swear(hero, Hero.MainHero);
 
             Hero.MainHero.AddSkillXp(DefaultSkills.Roguery, PlunderService.RogueryXpFor(value));
@@ -387,7 +384,7 @@ namespace HeroesEvolve
                         + " prisonerHonor=" + hero.GetTraitLevel(DefaultTraits.Honor)
                         + " pieces=" + taken + " worth=" + value
                         + " motive=character reprisal=" + reprisal
-                        + " " + bill.Describe()
+                        + " standing=" + cost
                         + " honour=" + honour
                         + " roguery=" + PlunderService.RogueryXpFor(value));
         }

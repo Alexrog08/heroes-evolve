@@ -45,9 +45,10 @@ namespace HeroesEvolve
 
         /// <summary>
         /// A named lord against the player, both ways: how likely he is to
-        /// strip the player if he holds him, how much of that is his grudge,
-        /// and what stripping him would cost. With no name, the census lines
-        /// for every house. Reads only -- no standing moves.
+        /// strip the player if he holds him, how much of that is his own
+        /// character, what is sworn between the two houses, and what
+        /// stripping him would cost. With no name, the census lines for every
+        /// house. Reads only -- nothing moves.
         /// </summary>
         [CommandLineFunctionality.CommandLineArgumentFunction("feud", "hev")]
         public static string Feud(List<string> args)
@@ -67,10 +68,11 @@ namespace HeroesEvolve
 
         /// <summary>
         /// Puts a named lord on record as having stripped the player, without
-        /// touching anybody's gear. This MODIFIES the campaign: his house is
-        /// sent the bill for a robbery of the player, and the player swears
-        /// vengeance on him, exactly as PlunderService does when an AI lord
-        /// robs him out of his own character.
+        /// touching anybody's gear. This MODIFIES the campaign: the player
+        /// swears vengeance on him, exactly as PlunderService has him do when
+        /// an AI lord robs him out of his own character. Nothing else moves,
+        /// there or here -- being robbed never costs the player's house its
+        /// standing (RobberyReckoning.Charge).
         ///
         /// It exists because that is the one half of the feud a player cannot
         /// stage for himself. Being owed takes being captured by a lord who
@@ -92,12 +94,11 @@ namespace HeroesEvolve
                 return "hev: name a lord of another clan.";
             }
 
-            RobberyReckoning.Bill bill = RobberyReckoning.Charge(hero, Hero.MainHero, false);
             VengeanceOaths.Swear(Hero.MainHero, hero);
 
-            ModLog.Info("TESTOATH robber=" + hero.Name + " " + bill.Describe());
+            ModLog.Info("TESTOATH robber=" + hero.Name);
 
-            return "hev: " + hero.Name + " is on record as having stripped you (" + bill.Describe() + ").\n"
+            return "hev: " + hero.Name + " is on record as having stripped you.\n"
                    + Diagnostics.FeudWith(hero);
         }
 

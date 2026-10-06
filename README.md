@@ -72,7 +72,7 @@ The developer console only opens with `cheat_mode = 1` in `engine_config.txt`.
 | `hev.census` | Writes a survey of every lord in the campaign to the log |
 | `hev.dry_run <hero>` | Shows what the mod would do for a hero, without changing anything |
 | `hev.market <hero>` | Shows what a hero would buy in the town you are in |
-| `hev.feud [hero]` | Shows how likely a lord is to strip you and what stripping him would cost, or where every house stands with no name given |
+| `hev.feud [hero]` | Shows how likely a lord is to strip you, what is sworn between your houses and what stripping him would cost; the census lines for every house with no name given |
 | `hev.test_repair <hero>` | Reproduces the come-of-age bug on a hero, then repairs it |
 | `hev.test_robbery [hero]` | Robs a hero, or one lord of every culture with no name given |
 | `hev.test_oath <hero>` | Puts a lord on record as having stripped you, so that your clan is owed |

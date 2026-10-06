@@ -1,41 +1,45 @@
 namespace HeroesEvolve.Core
 {
     /// <summary>
-    /// What a robbery costs the house that did it, in the game's own coin.
+    /// What a robbery costs the man who did it, apart from the vengeance sworn
+    /// on him for it (VengeanceOaths).
     ///
-    /// Half an execution. The game prices killing a prisoner in
-    /// ExecutionRelationModel -- sixty with his clan, thirty with each of his
-    /// friends, ten with every lord of his kingdom, and a thousand of the
-    /// killer's Honor -- and taking his arms is the lesser act of the same
-    /// kind: a breach of the customs of war against a man who cannot answer
-    /// it. So the figures are read from that model while the campaign runs
-    /// and halved here rather than written down a second time, and a mod
-    /// that reprices executions reprices this with them.
+    /// Two prices, and only one of them is new. His house loses standing with
+    /// the house he robbed, much as it always has. And the player, who alone
+    /// has a name that moves, loses half of what the game takes from it for
+    /// an execution -- read from the game's own model while the campaign
+    /// runs, so a mod that reprices executions reprices this with them.
     ///
-    /// Three of the model's four circles are charged as relation. The fourth,
-    /// every honourable noble on the map, is charged as reputation instead;
-    /// PlunderRules.JusticePerLevel says why.
-    ///
-    /// The model halves its own prices when the dead man had no honour, and
-    /// those halved figures are the ones read for a prisoner of the same
-    /// sort. The discount this mod has always given for robbing a scoundrel
-    /// (PlunderRules.IsReprisal) is therefore still the game's own.
-    ///
-    /// Everyone who robs out of his own character pays it, lord and player
-    /// alike. A robbery taken in vengeance, or one that only bad blood
-    /// explains, is not charged at all, and that difference is what keeps
-    /// relation from feeding on itself (PlunderRules.Motive).
-    ///
-    /// No circle has a floor. The first version stopped the two wide ones at
-    /// three charges each, on the reasoning that a kingdom's disapproval is
-    /// not a feud. It read wrongly from the other side -- the friends of a man
-    /// robbed for the tenth time holding the robber no lower than they did
-    /// after the third -- and it was taken out. A man who makes a career of
-    /// robbing one kingdom ends with all of it against him.
+    /// Both are halved against a prisoner without honour who is not the
+    /// robber's friend, which is the game's own discount for the same case
+    /// (PlunderRules.IsReprisal).
     /// </summary>
     public static class RobberyCost
     {
-        /// <summary>A robbery against an execution.</summary>
+        /// <summary>
+        /// Standing with the robbed man's house.
+        ///
+        /// Twelve, which is what the player paid before any of this. An AI
+        /// lord paid ten, and paid it whoever the prisoner was, for no reason
+        /// anybody wrote down; one figure and one discount serve both now
+        /// (PlunderRules.AfterReprisal). For an AI lord it comes to much what
+        /// it was: about one prisoner in five has no honour, and twelve four
+        /// times in five with six the fifth is 10.8.
+        ///
+        /// For two versions that never shipped it was a great deal more:
+        /// thirty with his clan, fifteen with each of his friends and five
+        /// with every house of his kingdom, half the game's price for an
+        /// execution. That was built to make the people a robbery wrongs
+        /// likelier to rob the robber, when the standing between two houses
+        /// was the only thing there was to carry a grievance. The oath
+        /// carries it now, exactly and in one direction, and the wide charge
+        /// had a price of its own: simulated over thirteen years it doubled
+        /// the pairs of houses at minus thirty or worse, where this leaves
+        /// the map within a tenth of a point of where the old ten left it.
+        /// </summary>
+        public const int Standing = -12;
+
+        /// <summary>A robbery against an execution, for what it does to a name.</summary>
         public const int ExecutionDivisor = 2;
 
         /// <summary>
@@ -53,24 +57,6 @@ namespace HeroesEvolve.Core
             // Integer division truncates toward zero: a price never grows and
             // never changes sign on the way through.
             return executionPenalty / ExecutionDivisor;
-        }
-
-        /// <summary>
-        /// The standing between two houses after one of them has taken
-        /// vengeance on the other: nearer nought by the amount, and never past
-        /// it.
-        ///
-        /// Never past it because a robbery is not a kindness. Two houses that
-        /// have had their answer are even, not friends. The amount is what a
-        /// robbery costs with the robbed house, so one answer pays for one
-        /// offence and a house robbed twice is owed twice.
-        /// </summary>
-        public static int Settled(int relation, int amount)
-        {
-            if (relation >= 0 || amount <= 0) return relation;
-
-            int settled = relation + amount;
-            return settled > 0 ? 0 : settled;
         }
     }
 }
