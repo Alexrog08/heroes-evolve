@@ -2,7 +2,8 @@
 
 In vanilla, AI lords keep the same equipment and skills from 18 until they die.
 This mod makes them develop: they gain skills over the years, buy their own gear
-in town markets, and take it off each other after a battle.
+in town markets, and take it off each other after a battle. A clan that is
+robbed takes its vengeance.
 
 Every system can be switched off on its own. Nothing is written to your save, and
 the mod is safe to add to a campaign in progress or remove from one.
@@ -84,21 +85,29 @@ slots that held something get something.
 [*]Rags are not worth stealing, so a man already at the bottom is left alone.
 [*]You are told when anyone in your clan or kingdom is robbed, and when one of
 them does the robbing. On the field or in a cell, naming who did it.
-[*]Costs you 12 relation with his clan and half a level of your honour. A
-dishonourable prisoner costs half, a friend costs full. AI lords who rob pay
-the same relation.
-[*]The man you rob swears vengeance, and his clan takes it: three times in four
-when any of them captures you or anyone of your clan. His encyclopedia page and
-yours both say so until it is taken.
-[*]One robbery, one answer. Vengeance costs nothing, settles that robbery and
-is never itself avenged. A good relation does not stop it.
-[*]It works both ways. If a lord strips one of yours, your clan is owed: your
-companions collect on their own, and you can do it yourself at no cost.
-[*]Lose your honour and honourable lords strip you as a matter of justice.
 [*]To do it: hold him prisoner in your party or in a settlement your clan owns,
 talk to him, choose [i]"Hand over your arms and armour."[/i] He answers before
 anything is taken, and you can still change your mind.
 [/list]
+
+[h2]Vengeance[/h2]
+[list]
+[*]Robbing a prisoner costs you 12 relation with that clan and half a level of
+your honour. A dishonourable prisoner costs half, a friend costs full. AI lords
+who rob pay the same relation.
+[*]Whoever you rob swears vengeance, and the whole clan takes it up. Three times
+in four, when any of them captures you or anyone of your clan, they strip their
+prisoner in return.
+[*]One robbery, one answer. Vengeance costs nothing, settles that robbery and
+is never itself avenged. A good relation does not stop it.
+[*]The oath shows on both lords' encyclopedia pages until it is collected.
+[*]It works both ways. If a lord strips one of yours, your clan is owed: your
+companions collect on their own, and you can do it yourself at no cost.
+[*]AI clans do the same to each other.
+[*]Lose your honour and honourable lords strip you as a matter of justice.
+[/list]
+
+[h2]How often lords rob[/h2]
 
 An AI captor's chance comes from his character. Each trait on its own, with the
 other three neutral, at default settings:
@@ -119,12 +128,12 @@ Then adjusted: Roguery up to +50% at 300. Relation +100 = never, -100 = +50%.
 Clansmen x0.25. Close family never, unless relation is under -50. Bandits ignore
 all of it and sit at a flat 50%.
 
-Two things are not character. A clan that has sworn vengeance strips 75% of the
-time, whoever its captor is. And an honourable lord, 3.4% against a stranger,
-strips a prisoner of Honour -1 17.4% of the time and one of Honour -2 31.4%.
+Two figures are not character. A clan owed vengeance strips 75% of the time,
+whoever its captor is. An honourable lord strips a prisoner of Honour -1 17.4%
+of the time, and one of Honour -2 31.4%.
 
-One slider, [b]How often lords rob[/b], multiplies every figure above. It runs
-0 to 2 and ships at 1.00.
+The slider of that name multiplies every figure above. It runs 0 to 2 and ships
+at 1.00.
 
 [code]
 0.00   no AI lord robs -- you can still rob in conversation
