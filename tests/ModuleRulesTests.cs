@@ -12,6 +12,28 @@ namespace HeroesEvolve.Tests
             Empty();
             Naming();
             Unknown();
+            Describing();
+        }
+
+        private static void Describing()
+        {
+            // What the log says of the list. A count alone was what it said
+            // before, and a count cannot be checked against the boxes a player
+            // believes he ticked: the report that asked for this could only be
+            // answered by knowing which.
+            Check.Equal("0", ModuleRules.Describe(null), "no list is none");
+            Check.Equal("0", ModuleRules.Describe(new string[0]), "and so is an empty one");
+            Check.Equal("1 [BensUltimateArmory]",
+                        ModuleRules.Describe(new string[] { "BensUltimateArmory" }),
+                        "one name is counted and named");
+            Check.Equal("2 [OneArmoury, AnotherArmoury]",
+                        ModuleRules.Describe(new string[] { "OneArmoury", "AnotherArmoury" }),
+                        "two are named in the order he entered them");
+
+            // A module's id is a folder name and may carry a space. The
+            // brackets are what keep it one name to whoever reads the line.
+            Check.Equal("1 [Some Armoury]", ModuleRules.Describe(new string[] { "Some Armoury" }),
+                        "a name with a space in it stays whole");
         }
 
         private static void Empty()

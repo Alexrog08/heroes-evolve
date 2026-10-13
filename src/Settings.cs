@@ -454,7 +454,10 @@ namespace HeroesEvolve
                    + " robberyRate=" + RobberyRate
                    + " caravanGearShare=" + CaravanGearShare
                    + " excludedItems=" + _excludedItems.Length
-                   + " excludedModules=" + _excludedModules.Length;
+                   // Last, and by name: see ModuleRules.Describe. The single
+                   // items stay a count here because each is already printed
+                   // on a line of its own (ItemCatalog.ReportUnknownExclusions).
+                   + " excludedModules=" + Core.ModuleRules.Describe(_excludedModules);
         }
 
         /// <summary>

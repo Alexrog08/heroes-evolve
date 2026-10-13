@@ -274,9 +274,22 @@ namespace HeroesEvolve
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static void ExcludeModule(string moduleId, bool excluded)
         {
+            bool was = Settings.IsModuleExcluded(moduleId);
+
             Settings.SetModuleExcluded(moduleId, excluded);
             RememberGear();
             ItemCatalog.ResetSession();
+
+            // Only a box that moved. MCM writes every box when it registers
+            // the screen, ticked or not, and one line per installed gear mod
+            // at every start would bury the ones that say something. What is
+            // left is each box MCM handed back ticked, and each one the player
+            // moves afterwards -- which the log could not show at all before:
+            // SETTINGS changed belongs to the main screen (see Pull).
+            if (was != excluded)
+            {
+                ModLog.Info("EXCLUDED mod " + moduleId + (excluded ? " ticked" : " unticked"));
+            }
         }
 
         /// <summary>

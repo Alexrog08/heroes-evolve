@@ -99,6 +99,7 @@ namespace HeroesEvolve
 
             ModLog.Info("SETTINGS in force: " + Settings.Describe());
             ItemCatalog.ReportUnknownExclusions();
+            ItemModules.ReportExclusions();
 
             // One branch a tick, and nothing else unless a line is waiting.
             // The robbery notice has to print after the game's own capture

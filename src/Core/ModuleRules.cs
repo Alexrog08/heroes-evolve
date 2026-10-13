@@ -79,5 +79,23 @@ namespace HeroesEvolve.Core
 
             return false;
         }
+
+        /// <summary>
+        /// The list as the log prints it: how many, and which.
+        ///
+        /// The log used to give the count alone, and a count answers nothing
+        /// when a player writes that the mods he excluded are still being
+        /// bought. Whether the list holds the modules he believes he ticked is
+        /// the first thing to settle, and "2" does not settle it.
+        ///
+        /// In brackets because a module's id is a folder name and may carry a
+        /// space, and this sits on a line of key=value pairs split on spaces.
+        /// </summary>
+        public static string Describe(string[] excludedModules)
+        {
+            if (!Any(excludedModules)) return "0";
+
+            return excludedModules.Length + " [" + string.Join(", ", excludedModules) + "]";
+        }
     }
 }

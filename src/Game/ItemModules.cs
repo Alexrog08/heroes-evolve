@@ -114,6 +114,105 @@ namespace HeroesEvolve
         }
 
         /// <summary>
+        /// The module an item is counted under, for a log line: "?" for one no
+        /// file declares, which is what a smithed blade is and what an item
+        /// added from code is.
+        /// </summary>
+        public static string LabelOf(ItemObject item)
+        {
+            if (item == null) return "?";
+
+            string module = ModuleOf(item.StringId);
+            return string.IsNullOrEmpty(module) ? "?" : module;
+        }
+
+        /// <summary>
+        /// Says what each excluded module amounts to in this installation, and
+        /// which gear mods were left in.
+        ///
+        /// The module list fails as quietly as the item list does (see
+        /// ItemCatalog.ReportUnknownExclusions), and in more ways. A box ticked
+        /// for a mod since replaced by another build of itself under a new
+        /// folder name excludes nothing, and the new folder arrives unticked.
+        /// A pack split over three modules is excluded a third at a time. And
+        /// an item belongs to the first module that declares it, so a pack
+        /// loaded under a patch that redeclares it is counted as the patch's.
+        /// Each of those reads, to the player, as "I excluded it and they buy
+        /// it anyway" -- which is the report this was written for, and which
+        /// could not be answered from a log that only said how many.
+        ///
+        /// So: every excluded id with the gear it covers here, and every gear
+        /// mod he did not exclude with what it brings. Silent when nothing is
+        /// excluded, like everything else that would have to read the files.
+        /// </summary>
+        public static void ReportExclusions()
+        {
+            try
+            {
+                if (!Settings.AnyModuleExcluded()) return;
+
+                // No catalogue to count against is not a complaint. The next
+                // campaign load asks again.
+                List<GearModule> gear = GearModules();
+                if (gear == null) return;
+
+                string[] excluded = Settings.ExcludedModuleIds();
+                for (int i = 0; i < excluded.Length; i++)
+                {
+                    string id = excluded[i];
+                    int items = GearOf(gear, id);
+
+                    int declared;
+                    _declaredBy.TryGetValue(id, out declared);
+
+                    // The gear list leaves the game's own modules out, so
+                    // their count here would read as nothing when it is most
+                    // of the world. Said as what it is instead.
+                    string verdict;
+                    if (!IsInstalled(id)) verdict = " IS NOT INSTALLED";
+                    else if (_official.Contains(id)) verdict = " is the game's own, items=" + declared;
+                    else if (items > 0) verdict = " gear=" + items;
+                    else verdict = " COVERS NO GEAR HERE, items it is first to declare=" + declared;
+
+                    ModLog.Info("EXCLUDED mod " + id + verdict);
+                }
+
+                StringBuilder kept = new StringBuilder();
+                for (int i = 0; i < gear.Count; i++)
+                {
+                    if (Settings.IsModuleExcluded(gear[i].Id)) continue;
+                    kept.Append(' ').Append(gear[i].Id).Append('=').Append(gear[i].Items);
+                }
+
+                ModLog.Info("EXCLUDED gear mods left in:" + (kept.Length > 0 ? kept.ToString() : " none"));
+            }
+            catch
+            {
+                // A diagnostic must never be the thing that takes a campaign down.
+            }
+        }
+
+        private static int GearOf(List<GearModule> gear, string moduleId)
+        {
+            for (int i = 0; i < gear.Count; i++)
+            {
+                if (string.Equals(gear[i].Id, moduleId, StringComparison.OrdinalIgnoreCase)) return gear[i].Items;
+            }
+
+            return 0;
+        }
+
+        private static bool IsInstalled(string moduleId)
+        {
+            for (int i = 0; i < _installed.Count; i++)
+            {
+                if (string.Equals(_installed[i], moduleId, StringComparison.OrdinalIgnoreCase)) return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
         /// Every active module and how many items it declares, for the census.
         ///
         /// This is the discovery half of the feature. A player cannot exclude a

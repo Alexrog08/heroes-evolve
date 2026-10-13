@@ -94,6 +94,7 @@ namespace HeroesEvolve
             ReportMarkets();
             ReportQuality();
             ReportHeadroom(clanWeight, skillWeight, minimumTier);
+            ReportExcludedGear();
             ReportShopping(clanWeight, skillWeight, minimumTier);
             PurchaseWatch.Report(clanWeight, skillWeight, minimumTier);
             List<Hero> broken = ReportHeroes();
@@ -3482,6 +3483,107 @@ namespace HeroesEvolve
                 text.Append(' ').Append(kinds[i]).Append('=').Append(ItemCatalog.BestBuyableTier(kinds[i]));
             }
             ModLog.Info(text.ToString());
+
+            // And what the same numbers would be had he excluded nothing, when
+            // he has excluded something. Never lower than the line above, and
+            // higher only for a kind whose best tier an excluded pack held
+            // alone -- which is where lords now aim lower instead of waiting
+            // on a piece nobody will sell them. For as long as the scan forgot
+            // excluded modules the two lines were always the same.
+            if (Settings.ExcludedIds().Length == 0 && !Settings.AnyModuleExcluded()) return;
+
+            StringBuilder before = new StringBuilder("CATALOGCAP beforeExclusions");
+            for (int i = 0; i < kinds.Length; i++)
+            {
+                before.Append(' ').Append(kinds[i]).Append('=')
+                      .Append(ItemCatalog.BestBuyableTierBeforeExclusions(kinds[i]));
+            }
+            ModLog.Info(before.ToString());
+        }
+
+        /// <summary>
+        /// What the player has excluded, and how much of it lords are wearing
+        /// all the same.
+        ///
+        /// Written for a report that the excluded mods "are still being
+        /// bought", from a player looking at lords in the armour he had ticked
+        /// away. There are two ways to be looking at that, and he cannot tell
+        /// them apart from where he stands: the mod sold it to them, or they
+        /// had it already. Excluding stops a lord buying a piece or being
+        /// handed one. It takes nothing off his back, so a pack that dresses
+        /// lords itself -- or a campaign started before the box was ticked --
+        /// leaves them in it, and a lord in the best piece there is never has
+        /// a reason to change it.
+        ///
+        /// So the pieces are counted where they are worn. The number is not a
+        /// fault and is not expected to be zero. What it must not do is climb
+        /// while the list stands, other than by a lord the game has newly made
+        /// and dressed: every purchase is logged with the module it is counted
+        /// under for as long as anything is excluded (PurchaseService), and
+        /// none of them should name a module on the list.
+        /// </summary>
+        private static void ReportExcludedGear()
+        {
+            if (Settings.ExcludedIds().Length == 0 && !Settings.AnyModuleExcluded())
+            {
+                ModLog.Info("EXCLUDED nothing");
+                return;
+            }
+
+            ItemModules.ReportExclusions();
+
+            int lords = 0, wearing = 0, pieces = 0;
+            List<string> samples = new List<string>();
+
+            foreach (Hero hero in Hero.AllAliveHeroes)
+            {
+                try
+                {
+                    if (!HeroFilter.IsEligibleToShop(hero) || hero.BattleEquipment == null) continue;
+                    lords++;
+
+                    int his = 0;
+                    for (int i = 0; i < SlotSnapshot.WeaponSlotCount; i++)
+                    {
+                        his += ExcludedPiece(hero, SlotMapping.WeaponSlot(i), samples);
+                    }
+                    foreach (EquipmentIndex slot in SlotMapping.ArmorSlots)
+                    {
+                        his += ExcludedPiece(hero, slot, samples);
+                    }
+                    his += ExcludedPiece(hero, EquipmentIndex.Horse, samples);
+                    his += ExcludedPiece(hero, EquipmentIndex.HorseHarness, samples);
+
+                    if (his == 0) continue;
+                    wearing++;
+                    pieces += his;
+                }
+                catch
+                {
+                    // One unreadable hero must not cost the survey.
+                }
+            }
+
+            ModLog.Info("EXCLUDED worn lords=" + lords + " wearingExcluded=" + wearing + " pieces=" + pieces);
+            if (samples.Count > 0) ModLog.Info("EXCLUDED worn sample " + string.Join(" ", samples.ToArray()));
+        }
+
+        /// <summary>
+        /// One if the slot holds a piece the player has excluded, noting the
+        /// first few by name: who, where, what, and whose.
+        /// </summary>
+        private static int ExcludedPiece(Hero hero, EquipmentIndex slot, List<string> samples)
+        {
+            ItemObject item = hero.BattleEquipment[slot].Item;
+            if (item == null || !ItemCatalog.IsExcludedByPlayer(item)) return 0;
+
+            if (samples.Count < 8)
+            {
+                samples.Add(hero.Name + ":" + SlotMapping.NameOf(slot) + "=" + item.StringId
+                            + "(" + ItemModules.LabelOf(item) + ")");
+            }
+
+            return 1;
         }
 
         /// <summary>

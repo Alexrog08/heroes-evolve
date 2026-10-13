@@ -109,12 +109,33 @@ namespace HeroesEvolve
                         + " hero=" + heroPart + " clan=" + clanPart
                         + " sold=" + (displaced.Item != null ? displaced.Item.StringId : "<nothing>")
                         + " grade=" + ItemGrade.NameOf(MarketScanner.GradeOf(offer.Element))
-                        + " soldGrade=" + ItemGrade.NameOf(MarketScanner.GradeOf(displaced)));
+                        + " soldGrade=" + ItemGrade.NameOf(MarketScanner.GradeOf(displaced))
+                        + BoughtFrom(offer.Item));
 
             PurchaseWatch.RecordPurchase(hero, slot, displaced, offer.Element,
                                          PurchaseWatch.ForQuality(hero, displaced, offer));
 
             return true;
+        }
+
+        /// <summary>
+        /// Which module the piece is counted under, for the BUY line, while
+        /// the player has any module excluded.
+        ///
+        /// Only then, for two reasons. It is the one time the answer is in
+        /// doubt: "they are buying what I excluded" is settled by reading what
+        /// each purchase is counted as, and a purchase counted under an
+        /// excluded module would be this mod's fault where one counted under a
+        /// patch or under nothing is the installation's. And finding it out
+        /// means reading every module's files, which a campaign with nothing
+        /// excluded is promised never to do on account of an item (see
+        /// ItemModules).
+        /// </summary>
+        private static string BoughtFrom(ItemObject item)
+        {
+            if (!Settings.AnyModuleExcluded()) return "";
+
+            return " mod=" + ItemModules.LabelOf(item);
         }
 
         /// <summary>
