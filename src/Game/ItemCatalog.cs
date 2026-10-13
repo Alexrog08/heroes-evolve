@@ -285,10 +285,30 @@ namespace HeroesEvolve
         /// </summary>
         public static int BestBuyableTier(ItemObject.ItemTypeEnum type)
         {
-            if (_bestBuyable == null) _bestBuyable = ScanBestBuyable();
+            if (_bestBuyable == null) _bestBuyable = ScanBestBuyable(true);
 
             int tier;
             return _bestBuyable != null && _bestBuyable.TryGetValue(type, out tier) ? tier : 0;
+        }
+
+        /// <summary>
+        /// The same, as it would stand had the player excluded nothing: no
+        /// single item and no module. The census prints it beside the real
+        /// figure, and nothing else asks.
+        ///
+        /// The two differ only where an excluded pack held the best tier of a
+        /// kind on its own, which is exactly where the real figure matters. A
+        /// lord's armour is bought worst piece first against that figure, so a
+        /// best that nobody will sell him is a piece he waits on for ever with
+        /// the rest held back behind it. Seeing the pair is how a reader knows
+        /// an exclusion lowered what lords aim for instead of stalling them.
+        /// </summary>
+        public static int BestBuyableTierBeforeExclusions(ItemObject.ItemTypeEnum type)
+        {
+            if (_bestBeforeExclusions == null) _bestBeforeExclusions = ScanBestBuyable(false);
+
+            int tier;
+            return _bestBeforeExclusions != null && _bestBeforeExclusions.TryGetValue(type, out tier) ? tier : 0;
         }
 
         /// <summary>
@@ -298,12 +318,19 @@ namespace HeroesEvolve
         public static void ResetSession()
         {
             _bestBuyable = null;
+            _bestBeforeExclusions = null;
             _ordinaryMissileSpeed = null;
         }
 
         private static Dictionary<ItemObject.ItemTypeEnum, int> _bestBuyable;
+        private static Dictionary<ItemObject.ItemTypeEnum, int> _bestBeforeExclusions;
 
-        private static Dictionary<ItemObject.ItemTypeEnum, int> ScanBestBuyable()
+        /// <summary>
+        /// playerExclusions is false for the census's comparison alone. The
+        /// game's own refusals -- the incendiaries, the stealth arrows -- are
+        /// left out either way: they are not a choice anybody made.
+        /// </summary>
+        private static Dictionary<ItemObject.ItemTypeEnum, int> ScanBestBuyable(bool playerExclusions)
         {
             // No item list yet is not a catalogue with nothing in it. Left
             // unscanned, so the first question asked in a campaign scans.
@@ -325,7 +352,14 @@ namespace HeroesEvolve
                 // best: exclude the only tier-6 cape, leave the cap at 6, and a
                 // lord in a tier-3 cape waits for ever on a piece nobody will
                 // sell him, with the rest of his armour held back behind it.
-                if (IsRefused(item)) continue;
+                //
+                // A whole pack excluded by its module is the same case a
+                // hundred times over, and for a while it was not treated as
+                // one: this line asked about the item list and the shelves
+                // asked about the modules as well, so a player who ticked an
+                // armoury kept its best tier as every lord's target. Both
+                // questions are IsRefused's now, and there is one place to ask.
+                if (playerExclusions ? IsRefused(item) : IsRefusedByRule(item)) continue;
 
                 int tier = (int)item.Tier + 1;
                 if (tier < 1) continue;
@@ -425,13 +459,12 @@ namespace HeroesEvolve
             // ItemTiers enum (Tier1 = 0 .. Tier6 = 5). Convert rather than letting the
             // two vocabularies meet raw.
             if ((int)item.Tier + 1 > maxTier) return false;
-            if (IsRefused(item)) return false;
 
-            // A whole gear pack kept out by name, when the player has asked for
-            // one. Last because it is the only line here that can touch the
-            // disk, and it does not touch it at all until something is
-            // excluded. See ModuleRules.
-            if (ItemModules.Refuses(item)) return false;
+            // Last because it is the only line here that can touch the disk:
+            // a whole gear pack kept out by name is part of this question, and
+            // answering it means knowing which module declared the item. It
+            // does not touch the disk at all until something is excluded.
+            if (IsRefused(item)) return false;
 
             return true;
         }
@@ -658,23 +691,52 @@ namespace HeroesEvolve
         /// Everything this mod will not put in a lord's hands, whatever its
         /// tier and whatever he can afford.
         ///
-        /// Two layers answering two different questions. IsIncendiary is a rule
-        /// about the game's own data and needs no maintenance. Settings.
-        /// IsExcluded is the player's own list, because this mod shops in a
-        /// catalogue it does not control: any mod can add an outlier, and the
-        /// honest tool for "not in MY campaign" is a line in settings.xml, not
-        /// a judgement baked in here.
+        /// Two layers answering two different questions. IsRefusedByRule is
+        /// about the game's own data and needs no maintenance. The player's
+        /// own exclusions are the other, because this mod shops in a catalogue
+        /// it does not control: any mod can add an outlier, and the honest
+        /// tool for "not in MY campaign" is the player's say, not a judgement
+        /// baked in here.
         ///
         /// Consulted from PassesMarketFilters, which PassesCommonFilters calls
         /// in turn, so a refused item cannot arrive through the back door of a
-        /// free grant either.
+        /// free grant either -- and from the scan of the best tier on sale,
+        /// which is the reason every part of the question lives here. The
+        /// module half used to be asked beside this by one caller and not by
+        /// the other.
         /// </summary>
         public static bool IsRefused(ItemObject item)
         {
             if (item == null) return true;
-            if (IsIncendiary(item)) return true;
-            if (IsSlowMissile(item)) return true;
-            return Settings.IsExcluded(item.StringId);
+            if (IsRefusedByRule(item)) return true;
+            return IsExcludedByPlayer(item);
+        }
+
+        /// <summary>
+        /// What this mod refuses whoever is playing: incendiaries and stealth
+        /// ammunition. See IsIncendiary and IsSlowMissile.
+        /// </summary>
+        private static bool IsRefusedByRule(ItemObject item)
+        {
+            return IsIncendiary(item) || IsSlowMissile(item);
+        }
+
+        /// <summary>
+        /// What this player has struck from his campaign: one item by its id,
+        /// or everything a module shipped.
+        ///
+        /// Public for the census, which counts the pieces lords are wearing
+        /// that he has excluded. Those are not a fault. Excluding stops a lord
+        /// buying or being handed a piece; it takes nothing off his back.
+        ///
+        /// The module last, because it is the only half that can read a file,
+        /// and it reads none until a module is excluded. See ModuleRules.
+        /// </summary>
+        public static bool IsExcludedByPlayer(ItemObject item)
+        {
+            if (item == null) return false;
+            if (Settings.IsExcluded(item.StringId)) return true;
+            return ItemModules.Refuses(item);
         }
 
         /// <summary>
