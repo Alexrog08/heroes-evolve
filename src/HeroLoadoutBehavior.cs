@@ -69,6 +69,7 @@ namespace HeroesEvolve
             McmBridge.Attach();
 
             Diagnostics.ResetSession();
+            HeroesEvolve.Api.HeroesEvolveEvents.ResetSession();
             CaravanWatch.ResetSession();
             CaravanPurse.ResetSession();
             PurchaseWatch.ResetSession();

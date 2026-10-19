@@ -8,6 +8,7 @@ using TaleWorlds.CampaignSystem.Settlements;
 using TaleWorlds.Core;
 using TaleWorlds.Library;
 using TaleWorlds.Localization;
+using HeroesEvolve.Api;
 using HeroesEvolve.Core;
 
 namespace HeroesEvolve
@@ -117,7 +118,8 @@ namespace HeroesEvolve
             if (spoils == null) return 0;
 
             int value;
-            int taken = Take(spoils, prisoner, out value);
+            List<StolenPiece> pieces = new List<StolenPiece>();
+            int taken = Take(spoils, prisoner, out value, pieces);
             if (taken == 0) return 0;
 
             // A person if there is one, the band itself if there is not.
@@ -137,24 +139,10 @@ namespace HeroesEvolve
             // when the captor is the player is in PrisonerDialogue, where he
             // chose it; he cannot reach this line, the guard above returns
             // before it.
-            string reckoning = Reckon(captor, prisoner, motive);
+            bool collected, sworn;
+            string reckoning = Reckon(captor, prisoner, motive, out collected, out sworn);
 
-            if (captor != null)
-            {
-                Reward(captor, value);
-
-                // And then he tries it on. Taking a man's harness and never
-                // looking at it would be odd; the market's own rules decide
-                // whether any of it suits him, which usually it does not.
-                //
-                // Safe to hand the whole roster over because SpoilsFor only ever
-                // returns a baggage train. It used to be able to return a
-                // settlement, and the fitting -- which reads everything it is
-                // given as "the pile he just took" -- then dressed the owner out
-                // of his own town's shelves, eleven pieces at a time.
-                LootFitting.Equip(captor, spoils.ItemRoster,
-                                  Settings.ClanWeight, Settings.SkillWeight, Settings.MinimumTier);
-            }
+            if (captor != null) Reward(captor, value);
 
             // Honor on both sides, because it is the trait the whole feature
             // turns on and neither the census nor the game's own UI puts it
@@ -163,6 +151,10 @@ namespace HeroesEvolve
             // whether robbing him back would be a reprisal. Without these two
             // numbers a line like "chance=8%" cannot be checked against the
             // model that produced it.
+            //
+            // And the pieces by id. A count and a worth were all it gave once,
+            // and when a player asked which of his things a band had carried
+            // off, the log could not say.
             ModLog.Info("PLUNDER captor=" + (captor != null ? captor.Name.ToString() : "bandits")
                         + " captorHonor=" + (captor != null
                             ? captor.GetTraitLevel(DefaultTraits.Honor).ToString() : "-")
@@ -175,7 +167,30 @@ namespace HeroesEvolve
                         + " vengeance=" + (int)(vengeance * 100f) + "%"
                         + reckoning
                         + " pieces=" + taken
-                        + " worth=" + value);
+                        + " worth=" + value
+                        + " items=" + ItemsOf(pieces));
+
+            // The robbery is whole now -- gear moved, standing charged, oath
+            // sworn or struck -- so it can be told to other mods. Before the
+            // fitting, which is news of its own (StolenPieceWorn).
+            HeroesEvolveEvents.RaiseHeroRobbed(captor, spoils, prisoner, motive, captor == null,
+                                               pieces, value, collected, sworn);
+
+            if (captor != null)
+            {
+                // And then he tries it on. Taking a man's harness and never
+                // looking at it would be odd; the market's own rules decide
+                // whether any of it suits him, which usually it does not.
+                //
+                // Safe to hand the whole roster over because SpoilsFor only ever
+                // returns a baggage train. It used to be able to return a
+                // settlement, and the fitting -- which reads everything it is
+                // given as "the pile he just took" -- then dressed the owner out
+                // of his own town's shelves, eleven pieces at a time.
+                LootFitting.Equip(captor, spoils.ItemRoster,
+                                  Settings.ClanWeight, Settings.SkillWeight, Settings.MinimumTier,
+                                  pieces);
+            }
 
             return taken;
         }
@@ -196,8 +211,12 @@ namespace HeroesEvolve
         /// (RobberyReckoning.Charge), and the prisoner swears vengeance for it
         /// (VengeanceOaths.Swear).
         /// </summary>
-        private static string Reckon(Hero captor, Hero prisoner, PlunderRules.Motive motive)
+        private static string Reckon(Hero captor, Hero prisoner, PlunderRules.Motive motive,
+                                     out bool collected, out bool sworn)
         {
+            collected = false;
+            sworn = false;
+
             if (captor == null)
             {
                 RobberyTally.Bandit();
@@ -206,10 +225,10 @@ namespace HeroesEvolve
 
             if (motive == PlunderRules.Motive.Vengeance)
             {
-                bool struck = VengeanceOaths.Fulfil(captor, prisoner);
+                collected = VengeanceOaths.Fulfil(captor, prisoner);
 
                 RobberyTally.Avenged();
-                return " motive=vengeance oathStruck=" + struck;
+                return " motive=vengeance oathStruck=" + collected;
             }
 
             if (motive == PlunderRules.Motive.Justice)
@@ -219,7 +238,7 @@ namespace HeroesEvolve
             }
 
             int cost = RobberyReckoning.Charge(captor, prisoner, HadItComing(captor, prisoner));
-            bool sworn = VengeanceOaths.Swear(prisoner, captor);
+            sworn = VengeanceOaths.Swear(prisoner, captor);
 
             RobberyTally.Offence();
             return " motive=character standing=" + cost + " oathSworn=" + sworn;
@@ -319,6 +338,7 @@ namespace HeroesEvolve
 
             int robbed = 0;
             int worth = 0;
+            List<StolenPiece> haul = new List<StolenPiece>();
 
             for (int i = 0; i < prisoners.Count; i++)
             {
@@ -357,14 +377,17 @@ namespace HeroesEvolve
                 if (motive == PlunderRules.Motive.None) continue;
 
                 int value;
-                int taken = Take(party.Party, prisoner, out value);
+                List<StolenPiece> pieces = new List<StolenPiece>();
+                int taken = Take(party.Party, prisoner, out value, pieces);
                 if (taken == 0) continue;
 
                 robbed += taken;
                 worth += value;
+                haul.AddRange(pieces);
 
                 int relation = visitor.GetRelation(prisoner);
-                string reckoning = Reckon(visitor, prisoner, motive);
+                bool collected, sworn;
+                string reckoning = Reckon(visitor, prisoner, motive, out collected, out sworn);
 
                 ModLog.Info("PLUNDER captor=" + visitor.Name
                             + " captorHonor=" + visitor.GetTraitLevel(DefaultTraits.Honor)
@@ -378,7 +401,13 @@ namespace HeroesEvolve
                             + reckoning
                             + " pieces=" + taken
                             + " worth=" + value
+                            + " items=" + ItemsOf(pieces)
                             + " at=" + settlement.Name);
+
+                // Whole, as on the field. His party is the one standing in
+                // the settlement, so the place it reports is the keep.
+                HeroesEvolveEvents.RaiseHeroRobbed(visitor, party.Party, prisoner, motive, false,
+                                                   pieces, value, collected, sworn);
 
                 // Same news, other route. A man robbed in a cell is robbed
                 // exactly as a man robbed on the field, so the player hears
@@ -394,7 +423,8 @@ namespace HeroesEvolve
 
             Reward(visitor, worth);
             LootFitting.Equip(visitor, party.Party.ItemRoster,
-                              Settings.ClanWeight, Settings.SkillWeight, Settings.MinimumTier);
+                              Settings.ClanWeight, Settings.SkillWeight, Settings.MinimumTier,
+                              haul);
 
             return robbed;
         }
@@ -731,6 +761,17 @@ namespace HeroesEvolve
         /// </summary>
         public static int Take(PartyBase captorParty, Hero prisoner, out int value)
         {
+            return Take(captorParty, prisoner, out value, null);
+        }
+
+        /// <summary>
+        /// The same, writing each piece down as it goes: what, from which
+        /// slot, worth how much, and whose. For the log line and for the mods
+        /// listening (HeroesEvolve.Api), which are told the pieces themselves
+        /// and not a count of them. pieces may be null when nobody asks.
+        /// </summary>
+        public static int Take(PartyBase captorParty, Hero prisoner, out int value, List<StolenPiece> pieces)
+        {
             int taken = 0;
             value = 0;
 
@@ -745,14 +786,14 @@ namespace HeroesEvolve
 
             for (int i = 0; i < SlotSnapshot.WeaponSlotCount; i++)
             {
-                taken += TakeSlot(loot, prisoner, SlotMapping.WeaponSlot(i), ref value);
+                taken += TakeSlot(loot, prisoner, SlotMapping.WeaponSlot(i), ref value, pieces);
             }
             foreach (EquipmentIndex slot in SlotMapping.ArmorSlots)
             {
-                taken += TakeSlot(loot, prisoner, slot, ref value);
+                taken += TakeSlot(loot, prisoner, slot, ref value, pieces);
             }
-            taken += TakeSlot(loot, prisoner, EquipmentIndex.Horse, ref value);
-            taken += TakeSlot(loot, prisoner, EquipmentIndex.HorseHarness, ref value);
+            taken += TakeSlot(loot, prisoner, EquipmentIndex.Horse, ref value, pieces);
+            taken += TakeSlot(loot, prisoner, EquipmentIndex.HorseHarness, ref value, pieces);
 
             // Every robbery in the mod comes through here -- field, cells and
             // the player's own conversation alike -- so this is the one place
@@ -762,7 +803,8 @@ namespace HeroesEvolve
             return taken;
         }
 
-        private static int TakeSlot(ItemRoster loot, Hero prisoner, EquipmentIndex slot, ref int value)
+        private static int TakeSlot(ItemRoster loot, Hero prisoner, EquipmentIndex slot, ref int value,
+                                    List<StolenPiece> pieces)
         {
             EquipmentElement worn = prisoner.BattleEquipment[slot];
             if (!Takeable(worn)) return 0;
@@ -770,7 +812,9 @@ namespace HeroesEvolve
             // ItemValue rather than Item.Value: it accounts for the modifier, so
             // a fine sword is worth more to take than a rusty one of the same
             // make, which is the whole idea.
-            value += worn.ItemValue;
+            int worth = worn.ItemValue;
+            value += worth;
+            if (pieces != null) pieces.Add(new StolenPiece(worn, slot, worth, prisoner));
 
             prisoner.BattleEquipment[slot] = EquipmentElement.Invalid;
             loot.AddToCounts(worn, 1);
@@ -782,6 +826,18 @@ namespace HeroesEvolve
             Rags.Replace(prisoner, slot, worn.Item);
 
             return 1;
+        }
+
+        /// <summary>
+        /// The pieces of one robbery by item id, for the PLUNDER line.
+        /// </summary>
+        internal static string ItemsOf(List<StolenPiece> pieces)
+        {
+            if (pieces == null || pieces.Count == 0) return "none";
+
+            string[] ids = new string[pieces.Count];
+            for (int i = 0; i < pieces.Count; i++) ids[i] = pieces[i].ItemId ?? "?";
+            return string.Join(",", ids);
         }
 
         /// <summary>

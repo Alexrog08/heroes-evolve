@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using HeroesEvolve.Api;
 using HeroesEvolve.Core;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.Actions;
@@ -325,7 +327,8 @@ namespace HeroesEvolve
             PartyBase spoils = PartyBase.MainParty != null ? PartyBase.MainParty : holder;
 
             int value;
-            int taken = PlunderService.Take(spoils, hero, out value);
+            List<StolenPiece> pieces = new List<StolenPiece>();
+            int taken = PlunderService.Take(spoils, hero, out value, pieces);
             if (taken == 0) return;
 
             // Owed, and collecting. Not a robbery of his own doing but the
@@ -347,7 +350,15 @@ namespace HeroesEvolve
                             + " prisonerHonor=" + hero.GetTraitLevel(DefaultTraits.Honor)
                             + " pieces=" + taken + " worth=" + value
                             + " motive=vengeance oathStruck=" + struck
-                            + " roguery=" + PlunderService.RogueryXpFor(value));
+                            + " roguery=" + PlunderService.RogueryXpFor(value)
+                            + " items=" + PlunderService.ItemsOf(pieces));
+
+                // Told like any other robbery: the player is not special. The
+                // pieces went to his party, and the place is found from it --
+                // the keep, when he is standing in one to talk to the man.
+                HeroesEvolveEvents.RaiseHeroRobbed(Hero.MainHero, spoils, hero,
+                                                   PlunderRules.Motive.Vengeance, false,
+                                                   pieces, value, struck, false);
                 return;
             }
 
@@ -387,7 +398,12 @@ namespace HeroesEvolve
                         + " standing=" + cost
                         + " oathSworn=" + sworn
                         + " honour=" + honour
-                        + " roguery=" + PlunderService.RogueryXpFor(value));
+                        + " roguery=" + PlunderService.RogueryXpFor(value)
+                        + " items=" + PlunderService.ItemsOf(pieces));
+
+            HeroesEvolveEvents.RaiseHeroRobbed(Hero.MainHero, spoils, hero,
+                                               PlunderRules.Motive.Character, false,
+                                               pieces, value, false, sworn);
         }
 
     }

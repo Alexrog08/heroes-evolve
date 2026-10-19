@@ -3,6 +3,7 @@ using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.LogEntries;
 using TaleWorlds.Core;
 using TaleWorlds.Library;
+using HeroesEvolve.Api;
 using HeroesEvolve.Core;
 
 namespace HeroesEvolve
@@ -73,6 +74,7 @@ namespace HeroesEvolve
             RobberyTally.Oath();
 
             Tell(oath, victim, robber);
+            HeroesEvolveEvents.RaiseOathSworn(victim, robber);
             return true;
         }
 
@@ -112,6 +114,12 @@ namespace HeroesEvolve
             CharacterInsultedLogEntry oath = Oldest(captor, prisoner);
             if (oath == null) return false;
 
+            // Read before the entry goes: who swore it and on whom, which are
+            // seldom the captor and the prisoner themselves. The debt is
+            // between houses, and a listener wants both pairs.
+            Hero swearer = oath.Insultee;
+            Hero against = oath.Insulter;
+
             LogEntry.AddLogEntry(oath, CampaignTime.Zero);
             Campaign.Current.LogEntryHistory.DeleteOutdatedLogs();
 
@@ -121,6 +129,7 @@ namespace HeroesEvolve
                 if (logs[i] == oath) return false;
             }
 
+            HeroesEvolveEvents.RaiseOathCollected(swearer, against, captor, prisoner);
             return true;
         }
 

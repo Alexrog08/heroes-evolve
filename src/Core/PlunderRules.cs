@@ -568,6 +568,30 @@ namespace HeroesEvolve.Core
             Vengeance
         }
 
+        /// <summary>
+        /// A robbery's motive as other mods are told it: "character",
+        /// "justice", "vengeance", "bandits", or "none".
+        ///
+        /// Text rather than the enum, because the mods that listen subscribe
+        /// by reflection without referencing this assembly, and to read an
+        /// enum of ours they would need its type. A word also stays put if the
+        /// enum is ever reordered. A band is "bandits" whatever the draw said:
+        /// it robs at a flat rate and has no character to speak of (see
+        /// BanditChance), which is the thing a listener most needs to know.
+        /// </summary>
+        public static string MotiveName(Motive motive, bool bandit)
+        {
+            if (bandit) return "bandits";
+
+            switch (motive)
+            {
+                case Motive.Character: return "character";
+                case Motive.Justice: return "justice";
+                case Motive.Vengeance: return "vengeance";
+                default: return "none";
+            }
+        }
+
         /// <summary>Reads one draw against the two bars Chance returns.</summary>
         public static Motive Judge(float draw, float ownDoing, float chance)
         {

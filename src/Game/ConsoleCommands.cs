@@ -103,6 +103,27 @@ namespace HeroesEvolve
         }
 
         /// <summary>
+        /// Listens to every public event (HeroesEvolve.Api) the way another mod
+        /// would -- found by name and bound by reflection -- and writes each
+        /// notice to hev.log as an APIPROBE line, so a test save shows exactly
+        /// what a bridge is handed. Run again to stop; it lasts until the game
+        /// closes. Purchases are frequent, so leave it off otherwise.
+        /// </summary>
+        [CommandLineFunctionality.CommandLineArgumentFunction("api_probe", "hev")]
+        public static string ApiProbeCommand(List<string> args)
+        {
+            try
+            {
+                return "hev: API probe " + Api.ApiProbe.Toggle() + ".";
+            }
+            catch (System.Exception ex)
+            {
+                ModLog.Error("APIPROBE failed: " + ex.GetType().Name + " " + ex.Message);
+                return "hev: API probe failed (" + ex.GetType().Name + "). See hev.log.";
+            }
+        }
+
+        /// <summary>
         /// The console lines that stage the three robbery tests, with this
         /// campaign's own names in them: a lord to rob, a kinsman of his to
         /// collect for it, somebody of the player's to collect from, and a

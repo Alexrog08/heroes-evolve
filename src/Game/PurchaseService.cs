@@ -115,6 +115,12 @@ namespace HeroesEvolve
             PurchaseWatch.RecordPurchase(hero, slot, displaced, offer.Element,
                                          PurchaseWatch.ForQuality(hero, displaced, offer));
 
+            // Paid for, worn, and the old piece sold: told to the mods
+            // listening. The game hears nothing of a purchase made this way,
+            // since the piece goes straight onto the hero.
+            HeroesEvolve.Api.HeroesEvolveEvents.RaiseGearBought(hero, offer.Item, slot, displaced.Item,
+                                                                offer.Price, settlement);
+
             return true;
         }
 

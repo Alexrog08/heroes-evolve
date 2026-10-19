@@ -80,6 +80,7 @@ namespace HeroesEvolve
             ReportAuthoredTalent();
             ReportTraits();
             ReportFeuds();
+            ModLog.Info(HeroesEvolve.Api.HeroesEvolveEvents.Describe());
             ReportAllSkills();
             ReportGaps();
             ReportNaval();

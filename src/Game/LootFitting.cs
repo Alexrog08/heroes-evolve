@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.Roster;
 using TaleWorlds.Core;
+using HeroesEvolve.Api;
 
 namespace HeroesEvolve
 {
@@ -37,8 +38,14 @@ namespace HeroesEvolve
         /// <summary>
         /// Puts on whatever of this pile suits him. Returns how many pieces he
         /// kept.
+        ///
+        /// justTaken is what the robbery that called this has just put in the
+        /// pile, and whose each piece was. A piece he puts on from that list
+        /// is told to the mods listening (StolenPieceWorn) with its former
+        /// owner; anything else in his baggage is his own, and is not news.
         /// </summary>
-        public static int Equip(Hero hero, ItemRoster loot, float clanWeight, float skillWeight, int minimumTier)
+        public static int Equip(Hero hero, ItemRoster loot, float clanWeight, float skillWeight, int minimumTier,
+                                IList<StolenPiece> justTaken = null)
         {
             if (hero == null || hero.BattleEquipment == null || loot == null) return 0;
             if (!HeroFilter.IsEligibleToShop(hero)) return 0;
@@ -46,6 +53,7 @@ namespace HeroesEvolve
             int ceiling = HeroAdapter.ReadCeiling(hero, HeroAdapter.ReadSkills(hero),
                                                   clanWeight, skillWeight, minimumTier);
             int worn = 0;
+            HashSet<int> told = justTaken != null && justTaken.Count > 0 ? new HashSet<int>() : null;
 
             for (int pass = 0; pass < MaxPieces; pass++)
             {
@@ -59,6 +67,8 @@ namespace HeroesEvolve
 
                 if (!Wear(hero, loot, fit)) break;
                 worn++;
+
+                TellIfStolen(hero, fit, justTaken, told);
             }
 
             if (worn > 0)
@@ -67,6 +77,33 @@ namespace HeroesEvolve
             }
 
             return worn;
+        }
+
+        /// <summary>
+        /// Whether the piece he just put on is one the robbery took, and if so
+        /// whose. Matched on the item and its modifier, so a fine helm is not
+        /// mistaken for a plain one of the same make, and each stolen piece is
+        /// told at most once: two identical swords taken off two prisoners are
+        /// two pieces with two owners.
+        /// </summary>
+        private static void TellIfStolen(Hero hero, ShoppingTrip.Candidate fit, IList<StolenPiece> justTaken,
+                                         HashSet<int> told)
+        {
+            if (justTaken == null || told == null) return;
+
+            EquipmentElement put = fit.Offer.Element;
+            for (int i = 0; i < justTaken.Count; i++)
+            {
+                if (told.Contains(i)) continue;
+
+                EquipmentElement stolen = justTaken[i].Element;
+                if (stolen.Item != put.Item || stolen.ItemModifier != put.ItemModifier) continue;
+
+                told.Add(i);
+
+                HeroesEvolveEvents.RaiseStolenPieceWorn(hero, put.Item, fit.Slot, justTaken[i].Owner);
+                return;
+            }
         }
 
         /// <summary>

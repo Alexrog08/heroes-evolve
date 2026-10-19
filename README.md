@@ -78,10 +78,44 @@ The developer console only opens with `cheat_mode = 1` in `engine_config.txt`.
 | `hev.test_oath <hero>` | Puts a lord on record as having stripped you, so that your clan is owed |
 | `hev.test_plan` | Prints the console lines that stage the robbery tests, with names from the campaign you have loaded |
 | `hev.test_release` | Shows the notice a freed player gets |
+| `hev.api_probe` | Listens to the events below the way another mod would and logs every one; run again to stop |
 
 The `test_` commands change the campaign. Use a throwaway save.
 
 The log is at `%LOCALAPPDATA%\Mount and Blade II Bannerlord\logs\hev.log`.
+
+## Events for other mods
+
+Heroes Evolve saves nothing, so what it does leaves no record a mod could read afterwards. It raises public events instead, from `HeroesEvolve.Api.HeroesEvolveEvents`:
+
+| Event | When | Argument |
+|---|---|---|
+| `HeroRobbed` | A prisoner was stripped: by a lord, a band, the player in conversation, or of the player | `HeroRobbedArgs`: `Robber` (null for bandits), `RobberParty`, `RobberPartyName`, `RobberClan`, `Victim`, `Motive` (`"character"`, `"justice"`, `"vengeance"`, `"bandits"`), `Pieces` (each with `Item`, `ItemId`, `Slot`, `Value`), `TotalValue`, `NearestSettlement`, `CollectedOath`, `SworeOath` |
+| `OathSworn` | A robbed man swore vengeance on his robber; during that robbery, before its `HeroRobbed` | `OathSwornArgs`: `Swearer`, `Against` |
+| `OathCollected` | A house collected an oath by stripping someone of the house it was sworn against; before that robbery's `HeroRobbed` | `OathCollectedArgs`: `Swearer`, `Against`, `Collector`, `Payer` |
+| `StolenPieceWorn` | A lord put on a piece he had just taken off a prisoner; after that robbery's `HeroRobbed` | `StolenPieceWornArgs`: `Wearer`, `Item`, `Slot`, `PreviousOwner` |
+| `GearBought` | A hero bought battle gear in a town (lords, companions, caravan masters; frequent) | `GearBoughtArgs`: `Buyer`, `Item`, `Slot`, `Replaced`, `Price`, `Town`, `Tier`, `ReplacedTier` (1 to 6, 0 for none) |
+
+What you can rely on:
+
+- Names never change. New data arrives as new properties, and `ApiVersion` (an `int` constant, now 1) goes up when anything is added.
+- Every event is raised once what it reports is complete, synchronously, so `CampaignTime.Now` is when it happened.
+- Each subscriber is called on its own. One that throws costs only its own notice; the failure is written to `hev.log`.
+- The player is treated like anybody else.
+
+You do not need to reference this mod. Subscribe by reflection with a method that takes `object`, and read the properties by name:
+
+```csharp
+Type events = Type.GetType("HeroesEvolve.Api.HeroesEvolveEvents, HeroesEvolve");
+if (events != null)
+{
+    EventInfo robbed = events.GetEvent("HeroRobbed");
+    MethodInfo handler = typeof(MyBridge).GetMethod("OnHeroRobbed");   // public static void OnHeroRobbed(object e)
+    robbed.AddEventHandler(null, Delegate.CreateDelegate(robbed.EventHandlerType, handler));
+}
+```
+
+`hev.api_probe` subscribes exactly this way and logs what each event carries.
 
 ## License
 
