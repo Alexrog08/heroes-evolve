@@ -47,6 +47,14 @@ namespace HeroesEvolve
         public bool OwnCulture;
 
         /// <summary>
+        /// Set on the offer a hero took when it was not the market's first:
+        /// he liked it better than the best he could pay for, and it was
+        /// nearly as good. See MarketTaste. For the BUY line and the census;
+        /// left out of the constructor because only the choosing sets it.
+        /// </summary>
+        public bool ByTaste;
+
+        /// <summary>
         /// Every field, culture included. OwnCulture was once left to be set after
         /// construction, and nothing ever set it: the scanners worked out the
         /// culture, used it for the upgrade gate, and dropped it, so every offer

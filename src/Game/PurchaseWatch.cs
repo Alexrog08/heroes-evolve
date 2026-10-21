@@ -64,6 +64,9 @@ namespace HeroesEvolve
         private static int _boughtOfNoCulture;
         private static int _boughtForeign;
         private static int _boughtWithNoPreference;
+        private static int _boughtByTaste;
+        private static readonly Dictionary<string, Dictionary<string, int>> _itemsBySlot =
+            new Dictionary<string, Dictionary<string, int>>();
         private static readonly Dictionary<string, int> _mountFamilyChanges = new Dictionary<string, int>();
         private static readonly Dictionary<string, int> _classChanges = new Dictionary<string, int>();
         private static readonly Dictionary<string, int> _typeChanges = new Dictionary<string, int>();
@@ -99,6 +102,8 @@ namespace HeroesEvolve
             _boughtOfNoCulture = 0;
             _boughtForeign = 0;
             _boughtWithNoPreference = 0;
+            _boughtByTaste = 0;
+            _itemsBySlot.Clear();
             _mountFamilyChanges.Clear();
             _classChanges.Clear();
             _typeChanges.Clear();
@@ -181,13 +186,29 @@ namespace HeroesEvolve
         /// was, and whether quality is what made the purchase an upgrade at all.
         /// </summary>
         public static void RecordPurchase(Hero hero, EquipmentIndex slot, EquipmentElement sold,
-                                          EquipmentElement bought, bool forQuality)
+                                          EquipmentElement bought, bool forQuality, bool byTaste = false)
         {
             try
             {
                 Stamp();
                 _pieces++;
                 Bump(_bySlot, SlotMapping.NameOf(slot));
+                if (byTaste) _boughtByTaste++;
+
+                // Which pieces, slot by slot, for the variety line: whether a
+                // slot's purchases spread across what the shelves offer or pile
+                // onto one piece.
+                if (bought.Item != null && bought.Item.StringId != null)
+                {
+                    string slotName = SlotMapping.NameOf(slot);
+                    Dictionary<string, int> items;
+                    if (!_itemsBySlot.TryGetValue(slotName, out items))
+                    {
+                        items = new Dictionary<string, int>();
+                        _itemsBySlot[slotName] = items;
+                    }
+                    Bump(items, bought.Item.StringId);
+                }
                 _boughtByGrade[ItemGrade.Index(MarketScanner.GradeOf(bought))]++;
                 if (forQuality) _boughtForQuality++;
                 if (sold.Item != null && ItemGrade.IsDamaged(MarketScanner.GradeOf(sold))) _boughtOverDamaged++;
@@ -345,6 +366,30 @@ namespace HeroesEvolve
             ModLog.Info("CULTURE shoppersWhoseCultureIsNotTheirClans=" + differ + " of " + shoppers);
         }
 
+        /// <summary>
+        /// How a count of pieces spreads: the total, how many different
+        /// pieces, and the three commonest with their shares. Shared with the
+        /// census of what lords wear (Diagnostics), so both read alike.
+        /// </summary>
+        internal static string Spread(Dictionary<string, int> counts)
+        {
+            int total = 0;
+            foreach (KeyValuePair<string, int> pair in counts) total += pair.Value;
+            if (total == 0) return "n=0";
+
+            List<KeyValuePair<string, int>> sorted = new List<KeyValuePair<string, int>>(counts);
+            sorted.Sort((a, b) => b.Value != a.Value ? b.Value - a.Value : string.CompareOrdinal(a.Key, b.Key));
+
+            System.Text.StringBuilder text = new System.Text.StringBuilder();
+            text.Append("n=").Append(total).Append(" distinct=").Append(counts.Count).Append(" top");
+            for (int i = 0; i < sorted.Count && i < 3; i++)
+            {
+                text.Append(' ').Append(sorted[i].Key).Append('=')
+                    .Append((sorted[i].Value * 100 + total / 2) / total).Append('%');
+            }
+            return text.ToString();
+        }
+
         /// <summary>The census section.</summary>
         public static void Report(float clanWeight, float skillWeight, int minimumTier)
         {
@@ -362,6 +407,18 @@ namespace HeroesEvolve
                 ModLog.Info("PURCHASE weaponClassChanges " + Top(_classChanges, 12));
                 ModLog.Info("PURCHASE weaponTypeChanges " + Top(_typeChanges, 12));
                 ModLog.Info("PURCHASE slotBoughtTwiceSameDay=" + _slotTwiceSameDay + " (expect 0)");
+
+                // How often a lord's own liking chose, rather than the top of
+                // the shelf (MarketTaste), and how far the purchases spread. A
+                // slot whose top piece takes a large share is lords dressing
+                // alike; taste exists to keep that share down where the shelf
+                // holds pieces nearly as good.
+                ModLog.Info("TASTE pieces=" + _pieces + " chosenByTaste=" + _boughtByTaste
+                            + " (the rest were the best on the shelf he could pay for)");
+                foreach (KeyValuePair<string, Dictionary<string, int>> slot in _itemsBySlot)
+                {
+                    ModLog.Info("VARIETY bought " + slot.Key + " " + Spread(slot.Value));
+                }
                 ModLog.Info("LOOTFIT weapons " + Kinds(_lootKinds));
                 ModLog.Info("QUALITY bought " + ItemGrade.Describe(_boughtByGrade) + " (expect poor=0 inferior=0)");
                 ModLog.Info("QUALITY boughtBecauseOfQuality=" + _boughtForQuality

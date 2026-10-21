@@ -88,6 +88,7 @@ namespace HeroesEvolve
             ReportClanWealth();
             ReportGearVsClan();
             ReportWornBySlot();
+            ReportWornVariety();
             ReportUniqueGear();
             ReportWeaponPerks();
             ReportBanners();
@@ -3451,6 +3452,60 @@ namespace HeroesEvolve
         /// lord, which is the only shape that can show a well-dressed lord in
         /// cheap boots.
         /// </summary>
+        /// <summary>
+        /// Whether lords dress alike: for each armour slot, the mount and the
+        /// harness, how many different pieces the lords the market dresses are
+        /// wearing, and the three commonest with their shares.
+        ///
+        /// Written with the lords' own taste (MarketTaste), because the thing it
+        /// changes is exactly this: late in a long campaign every rich lord of
+        /// a people bought the single highest-scoring piece, and the imperial
+        /// lion-head cloak ended up on most of three kingdoms. What a lord
+        /// already wears he keeps until something half a tier better comes
+        /// along, so this moves slowly -- through robberies and new lords --
+        /// and is read across censuses, not within one. The purchases behind
+        /// it are on the VARIETY bought lines.
+        /// </summary>
+        private static void ReportWornVariety()
+        {
+            EquipmentIndex[] slots =
+            {
+                EquipmentIndex.Head, EquipmentIndex.Body, EquipmentIndex.Leg, EquipmentIndex.Gloves,
+                EquipmentIndex.Cape, EquipmentIndex.Horse, EquipmentIndex.HorseHarness
+            };
+
+            Dictionary<EquipmentIndex, Dictionary<string, int>> worn = new Dictionary<EquipmentIndex, Dictionary<string, int>>();
+            for (int i = 0; i < slots.Length; i++) worn[slots[i]] = new Dictionary<string, int>();
+
+            foreach (Hero hero in Hero.AllAliveHeroes)
+            {
+                try
+                {
+                    if (!HeroFilter.IsEligibleToShop(hero) || hero.BattleEquipment == null) continue;
+
+                    for (int i = 0; i < slots.Length; i++)
+                    {
+                        ItemObject item = hero.BattleEquipment[slots[i]].Item;
+                        if (item == null || item.StringId == null) continue;
+
+                        Dictionary<string, int> counts = worn[slots[i]];
+                        int n;
+                        counts.TryGetValue(item.StringId, out n);
+                        counts[item.StringId] = n + 1;
+                    }
+                }
+                catch
+                {
+                    // One unreadable hero must not cost the survey.
+                }
+            }
+
+            for (int i = 0; i < slots.Length; i++)
+            {
+                ModLog.Info("VARIETY worn " + SlotMapping.NameOf(slots[i]) + " " + PurchaseWatch.Spread(worn[slots[i]]));
+            }
+        }
+
         /// <summary>
         /// The best tier on sale for each armour slot, the mount and its
         /// harness, in any culture: the numbers the headroom report and the

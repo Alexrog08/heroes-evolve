@@ -110,10 +110,11 @@ namespace HeroesEvolve
                         + " sold=" + (displaced.Item != null ? displaced.Item.StringId : "<nothing>")
                         + " grade=" + ItemGrade.NameOf(MarketScanner.GradeOf(offer.Element))
                         + " soldGrade=" + ItemGrade.NameOf(MarketScanner.GradeOf(displaced))
+                        + (offer.ByTaste ? " pick=taste" : "")
                         + BoughtFrom(offer.Item));
 
             PurchaseWatch.RecordPurchase(hero, slot, displaced, offer.Element,
-                                         PurchaseWatch.ForQuality(hero, displaced, offer));
+                                         PurchaseWatch.ForQuality(hero, displaced, offer), offer.ByTaste);
 
             // Paid for, worn, and the old piece sold: told to the mods
             // listening. The game hears nothing of a purchase made this way,

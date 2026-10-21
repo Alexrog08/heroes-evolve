@@ -174,7 +174,7 @@ namespace HeroesEvolve
                                                                  ItemCatalog.IsOwnCulture(worn, culture),
                                                                  skills, mounted, partner,
                                                                  prefersBlunt);
-                Add(found, slot, offers, worn, wornTier, wornFine, culture, limit);
+                Add(found, hero, slot, offers, worn, wornTier, wornFine, culture, limit);
             }
 
             foreach (EquipmentIndex slot in SlotMapping.ArmorSlots)
@@ -187,7 +187,7 @@ namespace HeroesEvolve
                 List<MarketOffer> offers = MarketScanner.Armor(stock, settlement, hero, worn.ItemType,
                                                                culture, ceiling, wornFine,
                                                                ItemCatalog.IsOwnCulture(worn, culture));
-                Add(found, slot, offers, worn, wornFine, culture, limit);
+                Add(found, hero, slot, offers, worn, wornFine, culture, limit);
             }
 
             ItemObject mount = hero.BattleEquipment[EquipmentIndex.Horse].Item;
@@ -200,7 +200,7 @@ namespace HeroesEvolve
                                                                     ceiling, mountFine,
                                                                     ItemCatalog.IsOwnCulture(mount, culture),
                                                                     skills);
-                    Add(found, EquipmentIndex.Horse, mounts, mount, mountFine, culture, limit);
+                    Add(found, hero, EquipmentIndex.Horse, mounts, mount, mountFine, culture, limit);
                 }
 
                 // The harness hangs off the mount only for the family match -- a
@@ -231,7 +231,7 @@ namespace HeroesEvolve
                     List<MarketOffer> harnesses = MarketScanner.Harnesses(stock, settlement, hero, mount,
                                                                           culture, ceiling, harnessFine,
                                                                           ItemCatalog.IsOwnCulture(harness, culture));
-                    Add(found, EquipmentIndex.HorseHarness, harnesses, harness, harnessTier, harnessFine,
+                    Add(found, hero, EquipmentIndex.HorseHarness, harnesses, harness, harnessTier, harnessFine,
                         culture, limit);
                 }
             }
@@ -374,7 +374,7 @@ namespace HeroesEvolve
                 int slice = pot / gaps;
                 if (slice <= 0) break;
 
-                Candidate candidate = BestOf(Within(due, slice));
+                Candidate candidate = BestOf(Within(hero, due, slice));
                 if (candidate == null) break;
 
                 // The shelves were read once, so a second slot can be offered
@@ -460,13 +460,14 @@ namespace HeroesEvolve
 
         /// <summary>
         /// The same candidates chosen again under a smaller limit: each slot's
-        /// best offer that fits, and no slot at all where none does.
+        /// offer that fits, chosen as Pick chooses, and no slot at all where
+        /// none does.
         ///
         /// Exactly what building them afresh at that limit would give -- the
         /// offers do not depend on the limit, only the choice among them does
         /// -- without reading the shelves a second time on every pass.
         /// </summary>
-        private static List<Candidate> Within(List<Candidate> found, int limit)
+        private static List<Candidate> Within(Hero hero, List<Candidate> found, int limit)
         {
             List<Candidate> fitting = new List<Candidate>(found.Count);
             for (int i = 0; i < found.Count; i++)
@@ -475,22 +476,61 @@ namespace HeroesEvolve
                 List<MarketOffer> offers = candidate.Offers;
                 if (offers == null) continue;
 
-                for (int j = 0; j < offers.Count; j++)
-                {
-                    if (offers[j].Price > limit) continue;
+                MarketOffer offer;
+                if (!Pick(hero, offers, limit, out offer)) continue;
 
-                    Candidate pick = new Candidate();
-                    pick.Slot = candidate.Slot;
-                    pick.Offer = offers[j];
-                    pick.WornTier = candidate.WornTier;
-                    pick.WornFine = candidate.WornFine;
-                    pick.WornOwnCulture = candidate.WornOwnCulture;
-                    pick.Offers = offers;
-                    fitting.Add(pick);
-                    break;
-                }
+                Candidate pick = new Candidate();
+                pick.Slot = candidate.Slot;
+                pick.Offer = offer;
+                pick.WornTier = candidate.WornTier;
+                pick.WornFine = candidate.WornFine;
+                pick.WornOwnCulture = candidate.WornOwnCulture;
+                pick.Offers = offers;
+                fitting.Add(pick);
             }
             return fitting;
+        }
+
+        /// <summary>
+        /// The offer he takes from a shelf sorted best-first: the best he can
+        /// pay for, or one he likes better that is nearly as good. See
+        /// MarketTaste for what "nearly" allows and what it never does. False
+        /// when he can pay for none.
+        ///
+        /// Marked when taste moved it off the market's first, so the purchase
+        /// line and the census can say how often a lord's liking decided.
+        /// </summary>
+        private static bool Pick(Hero hero, List<MarketOffer> offers, int limit, out MarketOffer offer)
+        {
+            offer = default(MarketOffer);
+            if (offers == null || offers.Count == 0) return false;
+
+            int count = offers.Count;
+            int[] tiers = new int[count];
+            bool[] ownClass = new bool[count];
+            int[] fines = new int[count];
+            int[] prices = new int[count];
+            uint[] tastes = new uint[count];
+            string heroId = hero != null ? hero.StringId : null;
+
+            int first = -1;
+            for (int i = 0; i < count; i++)
+            {
+                MarketOffer o = offers[i];
+                tiers[i] = o.Tier;
+                ownClass[i] = o.OwnClass;
+                fines[i] = o.FineTier;
+                prices[i] = o.Price;
+                tastes[i] = MarketTaste.Of(heroId, o.Item != null ? o.Item.StringId : null);
+                if (first < 0 && o.Price <= limit) first = i;
+            }
+
+            int chosen = MarketTaste.Choose(tiers, ownClass, fines, prices, tastes, limit);
+            if (chosen < 0) return false;
+
+            offer = offers[chosen];
+            offer.ByTaste = chosen != first;
+            return true;
         }
 
         /// <summary>How far behind the poorest armour he could trade is, and which piece that is.</summary>
@@ -658,34 +698,27 @@ namespace HeroesEvolve
         /// splendid sword he cannot buy and walk out with nothing, while a
         /// perfectly good cheaper upgrade sat on the same shelf.
         /// </summary>
-        private static void Add(List<Candidate> found, EquipmentIndex slot,
+        private static void Add(List<Candidate> found, Hero hero, EquipmentIndex slot,
                                 List<MarketOffer> offers, ItemObject worn, int wornFine,
                                 CultureObject culture, int limit)
         {
-            Add(found, slot, offers, worn, TierOf(worn), wornFine, culture, limit);
+            Add(found, hero, slot, offers, worn, TierOf(worn), wornFine, culture, limit);
         }
 
         /// <summary>As above, with the worn piece's tier given rather than read.</summary>
-        private static void Add(List<Candidate> found, EquipmentIndex slot,
+        private static void Add(List<Candidate> found, Hero hero, EquipmentIndex slot,
                                 List<MarketOffer> offers, ItemObject worn, int wornTier, int wornFine,
                                 CultureObject culture, int limit)
         {
-            if (offers == null || offers.Count == 0) return;
-
-            // Offers arrive best-first, so this is the best he can afford here.
-            // The limit chooses his quality, not his total: it is the reason a
-            // trip budget has to be divided between the slots before it is
-            // spent rather than handed to the first purchase whole.
-            int chosen = -1;
-            for (int i = 0; i < offers.Count; i++)
-            {
-                if (offers[i].Price <= limit) { chosen = i; break; }
-            }
-            if (chosen < 0) return;
+            // Offers arrive best-first, so the first he can pay for anchors the
+            // choice, and his own taste may take one nearly as good instead
+            // (Pick). The limit chooses his quality, not his total: it is the
+            // reason a trip budget has to be divided between the slots before
+            // it is spent rather than handed to the first purchase whole.
+            MarketOffer offer;
+            if (!Pick(hero, offers, limit, out offer)) return;
 
             bool wornOwn = ItemCatalog.IsOwnCulture(worn, culture);
-
-            MarketOffer offer = offers[chosen];
 
             Candidate candidate = new Candidate();
             candidate.Slot = slot;

@@ -74,6 +74,7 @@ namespace HeroesEvolve.Tests
             PlunderRulesTests.RunAll();
             RobberyCostTests.RunAll();
             ApiTests.RunAll();
+            MarketTasteTests.RunAll();
 
             Console.WriteLine();
             Console.WriteLine(Check.Passes + " passed, " + Check.Failures + " failed");
