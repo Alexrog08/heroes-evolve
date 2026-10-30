@@ -60,6 +60,15 @@ namespace HeroesEvolve
         // Property names are what MCM saves values under. Moving a property to
         // another section or renaming its label keeps the player's value;
         // renaming the property itself would silently reset it.
+        //
+        // Every label, hint, section, dropdown entry and the button carries a
+        // {=hev_mcm_...} id, and MCM resolves each through TextObject when it
+        // draws the screen, so a language folder translates this screen like
+        // any other text in the game. Section names must stay identical across
+        // a section's properties, id included: the raw string is the section.
+        // The ids are a promise to translators as much as the property names
+        // are to players -- rename one and its translation quietly falls back
+        // to English.
 
         public override string Id { get { return "HeroesEvolve"; } }
         public override string DisplayName { get { return "Heroes Evolve"; } }
@@ -68,122 +77,127 @@ namespace HeroesEvolve
 
         // ---- Skills -----------------------------------------------------------
 
-        [SettingPropertyBool("Grow lords' skills", RequireRestart = false, Order = 0,
-            HintText = "Without this a lord stagnates and ends up weaker than his own troops. One to three points a year, toward a ceiling set by his talent.")]
-        [SettingPropertyGroup("Skills", GroupOrder = 8)]
+        [SettingPropertyBool("{=hev_mcm_growth}Grow lords' skills", RequireRestart = false, Order = 0,
+            HintText = "{=hev_mcm_growth_hint}Without this a lord stagnates and ends up weaker than his own troops. One to three points a year, toward a ceiling set by his talent.")]
+        [SettingPropertyGroup("{=hev_mcm_group_skills}Skills", GroupOrder = 8)]
         public bool EnableSkillGrowth { get; set; } = true;
 
-        [SettingPropertyBool("Start lords on their curve", RequireRestart = false, Order = 1,
-            HintText = "New campaigns only, and only with skill growth on. Every lord starts where his age and talent put him, then grows. Saves already under way are left alone.")]
-        [SettingPropertyGroup("Skills", GroupOrder = 8)]
+        [SettingPropertyBool("{=hev_mcm_curve}Start lords on their curve", RequireRestart = false, Order = 1,
+            HintText = "{=hev_mcm_curve_hint}New campaigns only, and only with skill growth on. Every lord starts where his age and talent put him, then grows. Saves already under way are left alone.")]
+        [SettingPropertyGroup("{=hev_mcm_group_skills}Skills", GroupOrder = 8)]
         public bool StartLordsOnCurve { get; set; } = true;
 
         // ---- Starting kits --------------------------------------------------
 
-        [SettingPropertyBool("Give a starting kit to lords who have none", RequireRestart = false, Order = 0,
-            HintText = "Dresses a lord who has nothing: born in civilian clothes, or stripped by a captor. A plain kit for his culture and skills. The rest he buys.")]
-        [SettingPropertyGroup("Starting kits", GroupOrder = 7)]
+        [SettingPropertyBool("{=hev_mcm_repair}Give a starting kit to lords who have none", RequireRestart = false, Order = 0,
+            HintText = "{=hev_mcm_repair_hint}Dresses a lord who has nothing: born in civilian clothes, or stripped by a captor. A plain kit for his culture and skills. The rest he buys.")]
+        [SettingPropertyGroup("{=hev_mcm_group_kits}Starting kits", GroupOrder = 7)]
         public bool EnableRepair { get; set; } = true;
 
-        [SettingPropertyInteger("Archer threshold", 0, 300, "0", RequireRestart = false, Order = 1,
-            HintText = "How far a ranged skill must lead his melee skills before his kit is a bow or a crossbow. Lower makes more archers.")]
-        [SettingPropertyGroup("Starting kits", GroupOrder = 7)]
+        [SettingPropertyInteger("{=hev_mcm_archer}Archer threshold", 0, 300, "0", RequireRestart = false, Order = 1,
+            HintText = "{=hev_mcm_archer_hint}How far a ranged skill must lead his melee skills before his kit is a bow or a crossbow. Lower makes more archers.")]
+        [SettingPropertyGroup("{=hev_mcm_group_kits}Starting kits", GroupOrder = 7)]
         public int DominanceMargin { get; set; } = 30;
 
         // ---- Shopping ---------------------------------------------------------
 
-        [SettingPropertyBool("Lords buy their own gear", RequireRestart = false, Order = 0,
-            HintText = "In a town, a lord buys a better version of what he already carries. Never changes what kind of fighter he is, never fills an empty slot.")]
-        [SettingPropertyGroup("Shopping", GroupOrder = 6)]
+        [SettingPropertyBool("{=hev_mcm_purchases}Lords buy their own gear", RequireRestart = false, Order = 0,
+            HintText = "{=hev_mcm_purchases_hint}In a town, a lord buys a better version of what he already carries. Never changes what kind of fighter he is, never fills an empty slot.")]
+        [SettingPropertyGroup("{=hev_mcm_group_shopping}Shopping", GroupOrder = 6)]
         public bool EnablePurchases { get; set; } = true;
 
-        [SettingPropertyFloatingInteger("Share of the purse per shopping trip", 0f, 1f, "0.00",
+        [SettingPropertyFloatingInteger("{=hev_mcm_share}Share of the purse per shopping trip", 0f, 1f, "0.00",
             RequireRestart = false, Order = 2,
-            HintText = "What a lord may spend in one trip, split between the slots that town can improve. Lower means poorer lords and slower recovery after a robbery.")]
-        [SettingPropertyGroup("Shopping", GroupOrder = 6)]
+            HintText = "{=hev_mcm_share_hint}What a lord may spend in one trip, split between the slots that town can improve. Lower means poorer lords and slower recovery after a robbery.")]
+        [SettingPropertyGroup("{=hev_mcm_group_shopping}Shopping", GroupOrder = 6)]
         public float SpendingShare { get; set; } = 0.30f;
 
-        [SettingPropertyFloatingInteger("Gold held back for troops", 0f, 10f, "0.00",
+        [SettingPropertyFloatingInteger("{=hev_mcm_reserve}Gold held back for troops", 0f, 10f, "0.00",
             RequireRestart = false, Order = 3,
-            HintText = "Reserve kept back so buying gear can never stop a clan paying its men. Zero removes the safety net.")]
-        [SettingPropertyGroup("Shopping", GroupOrder = 6)]
+            HintText = "{=hev_mcm_reserve_hint}Reserve kept back so buying gear can never stop a clan paying its men. Zero removes the safety net.")]
+        [SettingPropertyGroup("{=hev_mcm_group_shopping}Shopping", GroupOrder = 6)]
         public float ReserveMultiplier { get; set; } = 1.0f;
 
         // Listed in CultureChoice's own order, so the selected index is the value.
-        [SettingPropertyDropdown("Culture favoured when buying", RequireRestart = false, Order = 4,
-            HintText = "Whose colours a lord prefers at market: his clan's, his own, or none. A piece in those colours counts a quarter of itself better. Repair still dresses him as his own people.")]
-        [SettingPropertyGroup("Shopping", GroupOrder = 6)]
+        [SettingPropertyDropdown("{=hev_mcm_culture}Culture favoured when buying", RequireRestart = false, Order = 4,
+            HintText = "{=hev_mcm_culture_hint}Whose colours a lord prefers at market: his clan's, his own, or none. A piece in those colours counts a quarter of itself better. Repair still dresses him as his own people.")]
+        [SettingPropertyGroup("{=hev_mcm_group_shopping}Shopping", GroupOrder = 6)]
         public Dropdown<string> ShoppingCulture { get; set; } =
-            new Dropdown<string>(new string[] { "His clan's culture", "His own culture", "No preference" }, 1);
+            new Dropdown<string>(new string[]
+            {
+                "{=hev_mcm_culture_clan}His clan's culture",
+                "{=hev_mcm_culture_own}His own culture",
+                "{=hev_mcm_culture_none}No preference"
+            }, 1);
 
-        [SettingPropertyBool("Armour of his own culture only", RequireRestart = false, Order = 5,
-            HintText = "A wall instead of a preference: no foreign armour or horse harness is ever bought, nor worn out of loot. Pieces belonging to no culture still pass. Every culture can dress every slot, but five of the seven have a single pair of boots, so expect his boots to be decided for him.")]
-        [SettingPropertyGroup("Shopping", GroupOrder = 6)]
+        [SettingPropertyBool("{=hev_mcm_own_armour}Armour of his own culture only", RequireRestart = false, Order = 5,
+            HintText = "{=hev_mcm_own_armour_hint}A wall instead of a preference: no foreign armour or horse harness is ever bought, nor worn out of loot. Pieces belonging to no culture still pass. Every culture can dress every slot, but five of the seven have a single pair of boots, so expect his boots to be decided for him.")]
+        [SettingPropertyGroup("{=hev_mcm_group_shopping}Shopping", GroupOrder = 6)]
         public bool OwnCultureArmorOnly { get; set; } = false;
 
-        [SettingPropertyBool("Weapons of his own culture only", RequireRestart = false, Order = 6,
-            HintText = "The same wall for weapons, in a market or over a beaten enemy kit. Weapons belonging to no culture still pass, which is what arms a Nord archer. Only Empire and Vlandia make crossbows, so a crossbowman of another culture will not upgrade.")]
-        [SettingPropertyGroup("Shopping", GroupOrder = 6)]
+        [SettingPropertyBool("{=hev_mcm_own_weapons}Weapons of his own culture only", RequireRestart = false, Order = 6,
+            HintText = "{=hev_mcm_own_weapons_hint}The same wall for weapons, in a market or over a beaten enemy kit. Weapons belonging to no culture still pass, which is what arms a Nord archer. Only Empire and Vlandia make crossbows, so a crossbowman of another culture will not upgrade.")]
+        [SettingPropertyGroup("{=hev_mcm_group_shopping}Shopping", GroupOrder = 6)]
         public bool OwnCultureWeaponsOnly { get; set; } = false;
 
         // ---- Gear limits: what a lord may wear, from a kit or a market --------------
 
-        [SettingPropertyInteger("Skill per tier of gear", 1, 400, "0", RequireRestart = false, Order = 0,
-            HintText = "Combat skill that buys one tier. LOWER MEANS BETTER EQUIPPED LORDS, and this is the first setting to reach for.")]
-        [SettingPropertyGroup("Gear limits", GroupOrder = 5)]
+        [SettingPropertyInteger("{=hev_mcm_skill_per_tier}Skill per tier of gear", 1, 400, "0", RequireRestart = false, Order = 0,
+            HintText = "{=hev_mcm_skill_per_tier_hint}Combat skill that buys one tier. LOWER MEANS BETTER EQUIPPED LORDS, and this is the first setting to reach for.")]
+        [SettingPropertyGroup("{=hev_mcm_group_limits}Gear limits", GroupOrder = 5)]
         public int SkillPerTier { get; set; } = 28;
 
-        [SettingPropertyFloatingInteger("Weight of personal skill", 0f, 10f, "0.00",
+        [SettingPropertyFloatingInteger("{=hev_mcm_skill_weight}Weight of personal skill", 0f, 10f, "0.00",
             RequireRestart = false, Order = 1,
-            HintText = "How far a lord's own fighting skill decides what he is allowed to wear.")]
-        [SettingPropertyGroup("Gear limits", GroupOrder = 5)]
+            HintText = "{=hev_mcm_skill_weight_hint}How far a lord's own fighting skill decides what he is allowed to wear.")]
+        [SettingPropertyGroup("{=hev_mcm_group_limits}Gear limits", GroupOrder = 5)]
         public float SkillWeight { get; set; } = 1.0f;
 
-        [SettingPropertyFloatingInteger("Weight of clan standing", 0f, 10f, "0.00",
+        [SettingPropertyFloatingInteger("{=hev_mcm_clan_weight}Weight of clan standing", 0f, 10f, "0.00",
             RequireRestart = false, Order = 2,
-            HintText = "Zero by default: two campaigns found clan tier does not predict what a lord wears. Raise it to have great houses dress their lords well regardless of merit.")]
-        [SettingPropertyGroup("Gear limits", GroupOrder = 5)]
+            HintText = "{=hev_mcm_clan_weight_hint}Zero by default: two campaigns found clan tier does not predict what a lord wears. Raise it to have great houses dress their lords well regardless of merit.")]
+        [SettingPropertyGroup("{=hev_mcm_group_limits}Gear limits", GroupOrder = 5)]
         public float ClanWeight { get; set; } = 0.0f;
 
-        [SettingPropertyInteger("Lowest ceiling", 1, 6, "0", RequireRestart = false, Order = 3,
-            HintText = "Nobody is capped below this, however unskilled.")]
-        [SettingPropertyGroup("Gear limits", GroupOrder = 5)]
+        [SettingPropertyInteger("{=hev_mcm_min_tier}Lowest ceiling", 1, 6, "0", RequireRestart = false, Order = 3,
+            HintText = "{=hev_mcm_min_tier_hint}Nobody is capped below this, however unskilled.")]
+        [SettingPropertyGroup("{=hev_mcm_group_limits}Gear limits", GroupOrder = 5)]
         public int MinimumTier { get; set; } = 1;
 
 
         // ---- Caravans ------------------------------------------------------------
 
-        [SettingPropertyFloatingInteger("Caravan leader's commission", 0f, 1f, "0.00",
+        [SettingPropertyFloatingInteger("{=hev_mcm_commission}Caravan leader's commission", 0f, 1f, "0.00",
             RequireRestart = false, Order = 0,
-            HintText = "What a caravan's leader keeps of its profit to buy his own gear. Higher arms him better and pays you less. Nothing is taken while he has nothing to improve.")]
-        [SettingPropertyGroup("Caravans", GroupOrder = 4)]
+            HintText = "{=hev_mcm_commission_hint}What a caravan's leader keeps of its profit to buy his own gear. Higher arms him better and pays you less. Nothing is taken while he has nothing to improve.")]
+        [SettingPropertyGroup("{=hev_mcm_group_caravans}Caravans", GroupOrder = 4)]
         public float CaravanGearShare { get; set; } = 0.20f;
 
         // ---- Robbery ---------------------------------------------------------------
 
-        [SettingPropertyBool("Lords rob their prisoners", RequireRestart = false, Order = 0,
-            HintText = "A captor may strip a captured lord, according to his character. Gear is moved and never destroyed, so it can be won back. You rob by asking, in conversation.")]
-        [SettingPropertyGroup("Robbery", GroupOrder = 3)]
+        [SettingPropertyBool("{=hev_mcm_robbery}Lords rob their prisoners", RequireRestart = false, Order = 0,
+            HintText = "{=hev_mcm_robbery_hint}A captor may strip a captured lord, according to his character. Gear is moved and never destroyed, so it can be won back. You rob by asking, in conversation.")]
+        [SettingPropertyGroup("{=hev_mcm_group_robbery}Robbery", GroupOrder = 3)]
         public bool EnableCaptureLoss { get; set; } = true;
 
-        [SettingPropertyFloatingInteger("How often lords rob", 0f, 2f, "0.00",
+        [SettingPropertyFloatingInteger("{=hev_mcm_robbery_rate}How often lords rob", 0f, 2f, "0.00",
             RequireRestart = false, Order = 1,
-            HintText = "1.00 is a normal campaign. It multiplies every captor's chance, so 2.00 doubles them all and 0.00 stops AI lords robbing without switching the system off (you can still rob in conversation). At 2.00 robbery becomes the biggest influence on what lords wear.")]
-        [SettingPropertyGroup("Robbery", GroupOrder = 3)]
+            HintText = "{=hev_mcm_robbery_rate_hint}1.00 is a normal campaign. It multiplies every captor's chance, so 2.00 doubles them all and 0.00 stops AI lords robbing without switching the system off (you can still rob in conversation). At 2.00 robbery becomes the biggest influence on what lords wear.")]
+        [SettingPropertyGroup("{=hev_mcm_group_robbery}Robbery", GroupOrder = 3)]
         public float RobberyRate { get; set; } = 1.0f;
 
         // ---- Your own clan ----------------------------------------------------------
 
-        [SettingPropertyBool("Include my own clan", RequireRestart = false, Order = 0,
-            HintText = "Your family and the companions leading your parties and caravans. Turn off if you outfit them by hand. Heroes inside your own party are never touched either way.")]
-        [SettingPropertyGroup("Your own clan", GroupOrder = 2)]
+        [SettingPropertyBool("{=hev_mcm_own_clan}Include my own clan", RequireRestart = false, Order = 0,
+            HintText = "{=hev_mcm_own_clan_hint}Your family and the companions leading your parties and caravans. Turn off if you outfit them by hand. Heroes inside your own party are never touched either way.")]
+        [SettingPropertyGroup("{=hev_mcm_group_clan}Your own clan", GroupOrder = 2)]
         public bool ManageOwnClan { get; set; } = true;
 
         // ---- Diagnostics --------------------------------------------------------
 
-        [SettingPropertyBool("Write hev.log", RequireRestart = false, Order = 0,
-            HintText = "Logs what the mod does, in the Bannerlord logs folder. The census below needs it on.")]
-        [SettingPropertyGroup("Diagnostics", GroupOrder = 1)]
+        [SettingPropertyBool("{=hev_mcm_log}Write hev.log", RequireRestart = false, Order = 0,
+            HintText = "{=hev_mcm_log_hint}Logs what the mod does, in the Bannerlord logs folder. The census below needs it on.")]
+        [SettingPropertyGroup("{=hev_mcm_group_diagnostics}Diagnostics", GroupOrder = 1)]
         public bool EnableLogging { get; set; } = true;
 
         /// <summary>
@@ -199,12 +213,12 @@ namespace HeroesEvolve
         /// a steep price for a log file. This button costs nothing and leaves
         /// cheat mode off.
         /// </summary>
-        [SettingPropertyButton("Write a census to hev.log",
-            Content = "Run",
+        [SettingPropertyButton("{=hev_mcm_census}Write a census to hev.log",
+            Content = "{=hev_mcm_census_run}Run",
             RequireRestart = false,
             Order = 1,
-            HintText = "Surveys every lord -- tiers, gear, skills, traits -- into hev.log. Reads only and changes nothing. About half a second. Needs logging on.")]
-        [SettingPropertyGroup("Diagnostics", GroupOrder = 1)]
+            HintText = "{=hev_mcm_census_hint}Surveys every lord -- tiers, gear, skills, traits -- into hev.log. Reads only and changes nothing. About half a second. Needs logging on.")]
+        [SettingPropertyGroup("{=hev_mcm_group_diagnostics}Diagnostics", GroupOrder = 1)]
         public Action RunCensus { get; set; } = Census;
 
         /// <summary>

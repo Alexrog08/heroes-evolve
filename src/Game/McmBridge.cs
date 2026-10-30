@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using MCM.Abstractions.Base.Global;
 using MCM.Abstractions.FluentBuilder;
 using MCM.Common;
+using TaleWorlds.Localization;
 
 namespace HeroesEvolve
 {
@@ -176,13 +177,21 @@ namespace HeroesEvolve
 
             _gearModsBound = true;
 
+            // The title is resolved here because MCM does not resolve it: it
+            // draws a screen's DisplayName as given (SettingsVM.RefreshValues)
+            // and orders the mod list by that text, so a raw "{=" would both
+            // show and file this page after every other mod. Section names,
+            // labels and hints MCM resolves itself, as on the main screen;
+            // the per-mod hint is resolved here all the same, because its
+            // numbers are this mod's and MCM would not fill them in.
             ISettingsBuilder builder = BaseSettingsBuilder
-                .Create("HeroesEvolve_ExcludedGear", "Heroes Evolve - Excluded gear")
+                .Create("HeroesEvolve_ExcludedGear",
+                        new TextObject("{=hev_mcm_gear_title}Heroes Evolve - Excluded gear").ToString())
                 .SetFormat("xml")
                 .SetFolderName("HeroesEvolve")
                 .SetSubFolder("ExcludedGear");
 
-            builder.CreateGroup("Mods whose gear lords never get", group =>
+            builder.CreateGroup("{=hev_mcm_gear_mods}Mods whose gear lords never get", group =>
             {
                 group.SetGroupOrder(0);
 
@@ -197,28 +206,31 @@ namespace HeroesEvolve
                     // it wrong would tick every box at once.
                     string id = mods[i].Id;
                     string name = mods[i].Name;
-                    int items = mods[i].Items;
+                    TextObject hint = new TextObject(
+                        "{=hev_mcm_gear_mod_hint}Ticked, your lords never buy or receive this mod's "
+                        + "{ITEMS} items. The mod itself is untouched: you and your"
+                        + " troops keep it. Folder name: {FOLDER}.");
+                    hint.SetTextVariable("ITEMS", mods[i].Items);
+                    hint.SetTextVariable("FOLDER", id);
+                    string hintText = hint.ToString();
 
                     group.AddBool(id, name,
                         new ProxyRef<bool>(
                             () => Settings.IsModuleExcluded(id),
                             value => ExcludeModule(id, value)),
-                        box => box.SetHintText(
-                            "Ticked, your lords never buy or receive this mod's "
-                            + items + " items. The mod itself is untouched: you and your"
-                            + " troops keep it. Folder name: " + id + "."));
+                        box => box.SetHintText(hintText));
                 }
             });
 
-            builder.CreateGroup("Single items", group =>
+            builder.CreateGroup("{=hev_mcm_gear_items_group}Single items", group =>
             {
                 group.SetGroupOrder(1);
-                group.AddText("ExcludedItems", "Items lords never get",
+                group.AddText("ExcludedItems", "{=hev_mcm_gear_items}Items lords never get",
                     new ProxyRef<string>(
                         () => Settings.ExcludedItemsText(),
                         value => ExcludeItems(value)),
                     box => box.SetHintText(
-                        "Item ids separated by commas: never bought, never given in a kit."
+                        "{=hev_mcm_gear_items_hint}Item ids separated by commas: never bought, never given in a kit."
                         + " For the odd piece another mod got wrong, when excluding the whole"
                         + " mod above would be too much. Incendiaries are already refused."));
             });
