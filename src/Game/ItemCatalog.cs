@@ -204,6 +204,16 @@ namespace HeroesEvolve
         private static ItemObject PickForGrant(List<ItemObject> offered, int lowest, int highest,
                                                Hero hero, string slotKey)
         {
+            // Before the band is read, so a piece he could not wear sets no
+            // tier for the fallback to reach for either. See IsWearableBy.
+            List<ItemObject> wearable = new List<ItemObject>(offered.Count);
+            for (int i = 0; i < offered.Count; i++)
+            {
+                if (IsWearableBy(offered[i], hero)) wearable.Add(offered[i]);
+                else Diagnostics.NoteBarredBySex("kit");
+            }
+            offered = wearable;
+
             List<ItemObject> chosen = new List<ItemObject>();
             List<int> tiers = new List<int>(offered.Count);
             for (int i = 0; i < offered.Count; i++)
@@ -398,9 +408,8 @@ namespace HeroesEvolve
         /// The same, with the armour floor named rather than assumed.
         ///
         /// Only the rags a robbery leaves behind pass anything but
-        /// KitTier.Lowest, and they pass it for the slots that hold no gowns.
-        /// See RagTier for why the chest is the exception and why the rest of
-        /// the man has to be allowed below the usual floor at all.
+        /// KitTier.Lowest. See RagTier for why a robbed man is allowed below
+        /// the usual floor, and how the gowns down there are kept off his chest.
         /// </summary>
         public static bool PassesCommonFilters(ItemObject item, CultureObject culture,
                                                int maxTier, int minArmorTier)
@@ -737,6 +746,28 @@ namespace HeroesEvolve
             if (item == null) return false;
             if (Settings.IsExcluded(item.StringId)) return true;
             return ItemModules.Refuses(item);
+        }
+
+        /// <summary>
+        /// Whether the game lets this hero wear this piece at all.
+        ///
+        /// The game marks some pieces as for one sex only -- every dress it
+        /// ships is NotUsableByMale, the Wildling Armor NotUsableByFemale --
+        /// and its own inventory refuses them to the other
+        /// (CharacterHelper.CanUseItem, which the inventory screen asks). This
+        /// mod never asked, so it could sell, hand out or let a captor keep for
+        /// himself a piece the player could not have put on that lord by hand,
+        /// and male lords took the field in another mod's bikinis.
+        ///
+        /// Asked of every hero alike. It cannot catch a piece whose mod left it
+        /// unmarked, since nothing then tells it from any other; the
+        /// excluded-gear screen is the answer for those.
+        /// </summary>
+        public static bool IsWearableBy(ItemObject item, Hero hero)
+        {
+            if (item == null || hero == null) return true;
+            ItemFlags barred = hero.IsFemale ? ItemFlags.NotUsableByFemale : ItemFlags.NotUsableByMale;
+            return (item.ItemFlags & barred) == 0;
         }
 
         /// <summary>

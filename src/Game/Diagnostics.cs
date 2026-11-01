@@ -49,10 +49,25 @@ namespace HeroesEvolve
             _repairsBeforeCensus++;
         }
 
+        /// <summary>
+        /// Pieces turned down because the game bars the hero's sex from them
+        /// (ItemCatalog.IsWearableBy), by where: shelf, loot, kit, rags.
+        /// </summary>
+        private static readonly string[] BarredPlaces = { "shelf", "loot", "kit", "rags" };
+        private static readonly Dictionary<string, int> _barredBySex = new Dictionary<string, int>();
+
+        public static void NoteBarredBySex(string where)
+        {
+            int n;
+            _barredBySex.TryGetValue(where, out n);
+            _barredBySex[where] = n + 1;
+        }
+
         /// <summary>Called when a campaign is loaded; statics outlive one campaign.</summary>
         public static void ResetSession()
         {
             _repairsBeforeCensus = 0;
+            _barredBySex.Clear();
             RobberyTally.Reset();
         }
 
@@ -89,6 +104,7 @@ namespace HeroesEvolve
             ReportGearVsClan();
             ReportWornBySlot();
             ReportWornVariety();
+            ReportBarredBySex();
             ReportUniqueGear();
             ReportWeaponPerks();
             ReportBanners();
@@ -213,7 +229,21 @@ namespace HeroesEvolve
             ModLog.Info("RAGS handedOut=" + Rags.HandedOut
                         + " slotsLeftEmpty=" + Rags.SlotsLeftEmpty
                         + " (body tier " + Core.RagTier.Body
+                        + ", weapons " + Core.RagTier.Weapon
                         + ", everything else " + Core.RagTier.Everything + ")");
+
+            // What the chest and cape rags were, the two slots whose floor
+            // moved. Chest rags are battle rags only, so civilianFallback
+            // should read nought: it counts chests that had to come off the
+            // clothes rack because no culture sold a battle rag cheap enough.
+            // openPassedOver is the chests left out for baring the body: nought
+            // in the base game, above nought with a gear mod that has some, and
+            // either way no open chest belongs in the spread before it.
+            ModLog.Info("RAGS gave Body " + Rags.GivenSpread(ItemObject.ItemTypeEnum.BodyArmor)
+                        + " civilianFallback=" + Rags.CivilianChests
+                        + " openPassedOver=" + Rags.OpenChests);
+            ModLog.Info("RAGS gave Cape " + Rags.GivenSpread(ItemObject.ItemTypeEnum.Cape)
+                        + " (cape tier " + Core.RagTier.Cape + ")");
 
             for (int i = 0; i < dishonourable.Count; i++)
             {
@@ -3507,6 +3537,61 @@ namespace HeroesEvolve
         }
 
         /// <summary>
+        /// Pieces lords are wearing that the game bars their sex from
+        /// (ItemCatalog.IsWearableBy), and what was turned down for it this
+        /// session.
+        ///
+        /// worn can only fall from here: nothing the mod hands out adds to it,
+        /// and a lord keeps what he wears until he buys something better.
+        /// barred counts the times a piece was turned down on a shelf, in a
+        /// pile of loot, in a kit or in rags. Nought everywhere means no such
+        /// piece ever came near a lord, which is the ordinary state of an
+        /// unmodded game: its dresses all sit below the armour floor.
+        /// </summary>
+        private static void ReportBarredBySex()
+        {
+            int men = 0;
+            int women = 0;
+            Dictionary<string, int> pieces = new Dictionary<string, int>();
+
+            foreach (Hero hero in Hero.AllAliveHeroes)
+            {
+                try
+                {
+                    if (!HeroFilter.IsEligibleToShop(hero) || hero.BattleEquipment == null) continue;
+
+                    for (int i = 0; i < (int)EquipmentIndex.NumEquipmentSetSlots; i++)
+                    {
+                        ItemObject item = hero.BattleEquipment[(EquipmentIndex)i].Item;
+                        if (item == null || item.StringId == null || ItemCatalog.IsWearableBy(item, hero)) continue;
+
+                        if (hero.IsFemale) women++;
+                        else men++;
+
+                        int n;
+                        pieces.TryGetValue(item.StringId, out n);
+                        pieces[item.StringId] = n + 1;
+                    }
+                }
+                catch
+                {
+                    // One unreadable hero must not cost the survey.
+                }
+            }
+
+            StringBuilder barred = new StringBuilder();
+            for (int i = 0; i < BarredPlaces.Length; i++)
+            {
+                int n;
+                _barredBySex.TryGetValue(BarredPlaces[i], out n);
+                barred.Append(' ').Append(BarredPlaces[i]).Append('=').Append(n);
+            }
+
+            ModLog.Info("SEXBAR worn onMen=" + men + " onWomen=" + women + " " + PurchaseWatch.Spread(pieces));
+            ModLog.Info("SEXBAR barred" + barred);
+        }
+
+        /// <summary>
         /// The best tier on sale for each armour slot, the mount and its
         /// harness, in any culture: the numbers the headroom report and the
         /// armour order both measure against (ItemCatalog.BestBuyableTier).
@@ -4491,6 +4576,10 @@ namespace HeroesEvolve
 
             bool wornOwn = ItemCatalog.IsOwnCulture(worn, culture);
 
+            // A tier-0 piece of armour read as the scanner reads it, so it is not
+            // blamed on the tier test it now passes. See MarketRules.WornArmourFine.
+            if (ItemCatalog.IsArmorSlot(worn.ItemType)) wornFine = MarketRules.WornArmourFine(wornFine);
+
             for (int i = 0; i < stock.Count; i++)
             {
                 ItemObject item = stock[i].Item;
@@ -4863,21 +4952,21 @@ namespace HeroesEvolve
             for (int i = 0; i < broken.Count; i++)
             {
                 Hero hero = broken[i];
-                // Says why he is bare, because the two causes want opposite
-                // responses and the census cannot be read without knowing
-                // which it found. A hero the come-of-age bug left half-dressed
-                // is a defect this mod exists to repair. A hero sitting in
-                // somebody's dungeon with nothing on was robbed, most likely
-                // yesterday, and TryRepair is skipping him on purpose until he
-                // is released -- re-equipping a prisoner would undo the capture
-                // within a day of it happening. The first live census reported
-                // two of the second kind as though they were the first.
+                // Every one is a defect. This used to tell a prisoner apart as
+                // stripped and due a repair on release, from the days when a
+                // robbery left a man bare and the daily repair dressed him once
+                // he walked free. Neither is true any more: a robbed man stands
+                // in his rags (Rags), which NeedsGrant does not read as broken,
+                // and the kit acts only the day after the game makes a lord
+                // (HeroLoadoutBehavior._freshlyMade), in a cell or out of one.
+                // A prisoner here carries the same defect as anyone else on the
+                // list and is only marked, because the cell is where he is.
                 ModLog.Info("BROKEN hero=" + hero.Name
                             + " age=" + (int)hero.Age
                             + " clan=" + (hero.Clan != null ? hero.Clan.Name.ToString() : "<none>")
                             + " culture=" + CultureIdOf(hero)
-                            + (hero.IsPrisoner ? " cause=prisoner(stripped; repaired on release)"
-                                               : " cause=defect"));
+                            + " cause=defect"
+                            + (hero.IsPrisoner ? " prisoner" : ""));
             }
 
             return broken;

@@ -598,9 +598,9 @@ namespace HeroesEvolve
 
         /// <summary>
         /// Tiers one slot is behind the best it could hold. Zero for an empty
-        /// slot, for gear the market never takes off him, and for anything the
-        /// game ranks below tier 1: none of those can be bought for, so none
-        /// may be the piece the rest wait on.
+        /// slot and for gear the market never takes off him: neither can be
+        /// bought for, so neither may be the piece the rest wait on. Tier 0
+        /// counts, as the furthest behind (GearBalance.Shortfall).
         ///
         /// Internal so the census measures with this exact number rather than
         /// a copy of it: headroom for every slot, evenness for the armour.
@@ -619,12 +619,12 @@ namespace HeroesEvolve
 
         /// <summary>
         /// Whether the market could ever replace what is worn: something is
-        /// there, a merchant could have sold it, and the game ranks it on the
-        /// tier scale at all.
+        /// there and a merchant could have sold it. Tier 0 is a rung of the
+        /// game's scale like any other; see GearBalance.Shortfall.
         /// </summary>
         internal static bool IsTradeable(ItemObject worn)
         {
-            return worn != null && !ItemCatalog.IsIrreplaceable(worn) && TierOf(worn) >= 1;
+            return worn != null && !ItemCatalog.IsIrreplaceable(worn);
         }
 
         private static int CountArmor(List<Candidate> candidates)

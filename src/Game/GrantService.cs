@@ -70,15 +70,14 @@ namespace HeroesEvolve
             // is answered: every gown in the game is a tier-1 body armour, and
             // a lord who came of age in civilian clothes is wearing one.
             //
-            // The head used to count too, and that made these two repairs
-            // collide. A robbery now leaves a man in rags -- tier-2 chest,
-            // tier-1 everywhere else, see RagTier -- so his cloth cap read as
-            // civilian, this said he was broken, and the next day's repair
-            // dressed him out of his skills and threw away the shape the
-            // robbery had just preserved. The two answer different questions
-            // and must not answer each other's.
+            // The head used to count too, from the days when this looked at
+            // every lord every day: a robbed man's cloth cap read as civilian,
+            // this said he was broken, and the next day's repair dressed him
+            // out of his skills and threw away the shape the robbery had just
+            // preserved. The chest rag now sits at tier 1 as well, and is kept
+            // apart from the gowns by the game's Civilian flag; see IsCivilian.
             //
-            // Nothing is lost by dropping it. A man with weapons and a proper
+            // The head stays out all the same. A man with weapons and a proper
             // chest is equipped, however cheap his hat, and the heroes this was
             // written for come of age civilian from the skin out -- the chest
             // catches them on its own.
@@ -90,10 +89,20 @@ namespace HeroesEvolve
         /// not civilian -- it is a gap, and gaps are filled by the armour pass
         /// without needing to trigger a repair on their own. NeedsGrant asks it
         /// of the chest alone; see there for why the head no longer counts.
+        ///
+        /// Below the kit's floor and marked civilian by the game, both. The
+        /// tier alone used to answer, and stopped being enough when the chest
+        /// rag fell to tier 1 (RagTier.Body): the first census after it counted
+        /// all seven men of a test robbery as broken kits, and a lord robbed on
+        /// the day the game made him would have been re-dressed out of his
+        /// skills the next. The rag is chosen from what the game does not call
+        /// civilian, and every gown and robe it ships does carry the flag --
+        /// layered_robe, the one robe in the class comment, among them -- so
+        /// the flag parts the two exactly where the tier cannot.
         /// </summary>
         private static bool IsCivilian(ItemObject item)
         {
-            return item != null && KitTier.IsClothing((int)item.Tier + 1);
+            return item != null && item.IsCivilian && KitTier.IsClothing((int)item.Tier + 1);
         }
 
         /// <summary>

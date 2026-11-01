@@ -161,6 +161,31 @@ namespace HeroesEvolve.Core
         }
 
         /// <summary>
+        /// The worn side of an armour comparison: a piece the game scores at
+        /// tier 0 enters at the very bottom of the scale instead of off it.
+        ///
+        /// IsUpgrade leaves anything below the scale alone because naphtha pots
+        /// score there. Armour at tier 0 is no consumable. It is the lowest rung
+        /// -- the scarves and headscarves, ladies' shoes and armwraps many
+        /// TaleWorlds sheets dress lords in, and the cape a robbery hands out
+        /// (RagTier.Cape) -- and left off the scale it could never be replaced.
+        /// The armour order counts it as the furthest behind
+        /// (GearBalance.Shortfall), so a census after the cape rag fell to tier
+        /// 0 found what that pairing does: every lord in a tier-0 piece waiting
+        /// on a purchase the market would never make, with the rest of his
+        /// armour held back behind it. Armour was held back on 59% of the trips
+        /// that had some on offer, against 39% before, and not one of the
+        /// capes bought replaced a tier-0 piece.
+        ///
+        /// Armour only, and the worn side only. The market still sells nothing
+        /// below tier 1, and a weapon below the scale is still a naphtha pot.
+        /// </summary>
+        public static int WornArmourFine(int wornFine)
+        {
+            return wornFine < 1 ? 1 : wornFine;
+        }
+
+        /// <summary>
         /// Orders two offers best-first, on four terms in this order: the higher
         /// whole tier, then the one that keeps the hero's own weapon class, then
         /// the finer tier, then the cheaper. Negative when the first comes

@@ -71,8 +71,8 @@ namespace HeroesEvolve
         private static readonly Dictionary<string, int> _classChanges = new Dictionary<string, int>();
         private static readonly Dictionary<string, int> _typeChanges = new Dictionary<string, int>();
 
-        private static readonly Dictionary<string, int> _lastBoughtDay = new Dictionary<string, int>();
-        private static int _slotTwiceSameDay;
+        private static readonly Dictionary<string, int> _lastBoughtTrip = new Dictionary<string, int>();
+        private static int _slotTwiceOneTrip;
 
         private static int _tripsArmorOnOffer;
         private static int _tripsBoughtArmor;
@@ -80,6 +80,7 @@ namespace HeroesEvolve
         private static int _tripsHeldBackNoArmor;
         private static int _piecesHeldBack;
         private static readonly Dictionary<string, int> _heldBackBehind = new Dictionary<string, int>();
+        private static readonly Dictionary<string, int> _replacedTierZero = new Dictionary<string, int>();
         private static readonly Dictionary<string, Streak> _held = new Dictionary<string, Streak>();
 
         /// <summary>Called when a campaign is loaded; statics outlive one campaign.</summary>
@@ -107,14 +108,15 @@ namespace HeroesEvolve
             _mountFamilyChanges.Clear();
             _classChanges.Clear();
             _typeChanges.Clear();
-            _lastBoughtDay.Clear();
-            _slotTwiceSameDay = 0;
+            _lastBoughtTrip.Clear();
+            _slotTwiceOneTrip = 0;
             _tripsArmorOnOffer = 0;
             _tripsBoughtArmor = 0;
             _tripsHeldBack = 0;
             _tripsHeldBackNoArmor = 0;
             _piecesHeldBack = 0;
             _heldBackBehind.Clear();
+            _replacedTierZero.Clear();
             _held.Clear();
         }
 
@@ -212,6 +214,7 @@ namespace HeroesEvolve
                 _boughtByGrade[ItemGrade.Index(MarketScanner.GradeOf(bought))]++;
                 if (forQuality) _boughtForQuality++;
                 if (sold.Item != null && ItemGrade.IsDamaged(MarketScanner.GradeOf(sold))) _boughtOverDamaged++;
+                if (sold.Item != null && MarketScanner.TierOf(sold.Item) < 1) Bump(_replacedTierZero, SlotMapping.NameOf(slot));
                 RecordCulture(hero, bought.Item);
 
                 if (slot == EquipmentIndex.Horse)
@@ -221,16 +224,24 @@ namespace HeroesEvolve
                     if (from != to) Bump(_mountFamilyChanges, CultureProfile.FamilyName(from) + ">" + CultureProfile.FamilyName(to));
                 }
 
-                // Same hero, same slot, same day. A lord gets one trip a day, so
-                // this is a trip that paid twice for one slot -- which the trip
-                // itself now forbids, and this is what notices if it ever stops.
+                // Same hero, same slot, same trip: a trip that paid twice for one
+                // slot, which the trip itself forbids, and this is what notices
+                // if it ever stops. A trip is recorded once its buying is done
+                // (RecordTrip), so every piece of one trip sees the same count
+                // of trips before it.
+                //
+                // By trip, not by day. It used to be the day, on the belief that
+                // a lord shops once a day, but the gate that allows one trip
+                // reopens on the game's daily tick, not at the turn of the
+                // calendar day. A census in the Alex save counted two lords who
+                // shopped twice in one town five seconds apart, either side of
+                // the tick, each trip buying the slot once.
                 if (hero != null && hero.StringId != null)
                 {
-                    int today = Today();
                     string key = hero.StringId + "|" + SlotMapping.NameOf(slot);
                     int last;
-                    if (_lastBoughtDay.TryGetValue(key, out last) && last == today) _slotTwiceSameDay++;
-                    _lastBoughtDay[key] = today;
+                    if (_lastBoughtTrip.TryGetValue(key, out last) && last == _trips) _slotTwiceOneTrip++;
+                    _lastBoughtTrip[key] = _trips;
                 }
 
                 Classify(_weaponKinds, true, hero, slot, sold.Item, bought.Item);
@@ -277,7 +288,12 @@ namespace HeroesEvolve
 
                 CultureObject culture = ShoppingTrip.PreferredCulture(hero);
 
-                return !MarketRules.IsUpgrade(MarketScanner.FineTierOf(worn.Item),
+                // A tier-0 piece of armour as the scanner reads it, or every
+                // scarf replaced would count as bought for quality alone.
+                int wornFine = MarketScanner.FineTierOf(worn.Item);
+                if (ItemCatalog.IsArmorSlot(worn.Item.ItemType)) wornFine = MarketRules.WornArmourFine(wornFine);
+
+                return !MarketRules.IsUpgrade(wornFine,
                                               ItemCatalog.IsOwnCulture(worn.Item, culture),
                                               MarketScanner.FineTierOf(offer.Item), offer.OwnCulture,
                                               offer.Tier, int.MaxValue);
@@ -403,10 +419,16 @@ namespace HeroesEvolve
                             + " tripsThatBought=" + _tripsThatBought
                             + " pieces=" + _pieces);
                 ModLog.Info("PURCHASE bySlot " + BySlot());
+
+                // Pieces bought over tier-0 armour: the scarves, ladies' shoes
+                // and robbery capes the market could not replace before
+                // MarketRules.WornArmourFine. <none> in a census with purchases
+                // and lords still in tier-0 pieces would mean it has stopped.
+                ModLog.Info("PURCHASE replacedTierZero " + Top(_replacedTierZero, 5));
                 ModLog.Info("PURCHASE weapons " + Kinds(_weaponKinds));
                 ModLog.Info("PURCHASE weaponClassChanges " + Top(_classChanges, 12));
                 ModLog.Info("PURCHASE weaponTypeChanges " + Top(_typeChanges, 12));
-                ModLog.Info("PURCHASE slotBoughtTwiceSameDay=" + _slotTwiceSameDay + " (expect 0)");
+                ModLog.Info("PURCHASE slotBoughtTwiceOneTrip=" + _slotTwiceOneTrip + " (expect 0)");
 
                 // How often a lord's own liking chose, rather than the top of
                 // the shelf (MarketTaste), and how far the purchases spread. A

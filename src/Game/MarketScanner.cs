@@ -151,6 +151,11 @@ namespace HeroesEvolve
             List<MarketOffer> offers = new List<MarketOffer>();
             if (stock == null) return offers;
 
+            // A tier-0 piece is the bottom of the scale here, not off it, so the
+            // piece the armour order waits on can be bought. See
+            // MarketRules.WornArmourFine.
+            wornFine = MarketRules.WornArmourFine(wornFine);
+
             for (int i = 0; i < stock.Count; i++)
             {
                 StockEntry entry = stock[i];
@@ -330,6 +335,15 @@ namespace HeroesEvolve
         private static void Offer(List<MarketOffer> offers, Settlement settlement, Hero hero,
                                   StockEntry entry, bool ownClass, bool ownCulture)
         {
+            // Nothing he could not wear, on a shelf or in a pile of loot. Here
+            // because every offer of every kind passes through this one line.
+            // See ItemCatalog.IsWearableBy.
+            if (!ItemCatalog.IsWearableBy(entry.Item, hero))
+            {
+                Diagnostics.NoteBarredBySex(settlement == null ? "loot" : "shelf");
+                return;
+            }
+
             // No settlement means nobody is selling: this is a man looking
             // through what he already owns. The item's own worth stands in for
             // the price so the ordering still breaks ties the same way, and

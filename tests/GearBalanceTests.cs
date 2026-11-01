@@ -22,7 +22,7 @@ namespace HeroesEvolve.Tests
             // Never negative, and never driven by what cannot be traded.
             Check.Equal(0, GearBalance.Shortfall(6, 4, 6), "gear above the ceiling is not behind");
             Check.Equal(0, GearBalance.Shortfall(3, 6, 0), "a kind nobody sells cannot be behind");
-            Check.Equal(0, GearBalance.Shortfall(0, 6, 6), "an unranked item the market will not trade is not behind");
+            Check.Equal(6, GearBalance.Shortfall(0, 6, 6), "tier 0 is the bottom rung, the furthest behind");
 
             // The poorest piece is always due, and so is anything within a tier.
             Check.True(GearBalance.IsDue(3, 3), "the poorest armour is always due");

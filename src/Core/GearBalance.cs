@@ -62,14 +62,21 @@ namespace HeroesEvolve.Core
         /// boots there are. Counted against a tier-6 ceiling they would look
         /// two tiers behind forever and hold the coat back for nothing.
         ///
-        /// Never negative: gear above either limit is simply not behind. And
-        /// zero for anything the game scores below tier 1, which the market
-        /// refuses to trade, so a slot that can never be bought for must never
-        /// be the one everything else waits on.
+        /// Never negative: gear above either limit is simply not behind.
+        ///
+        /// Tier 0 counts, as the furthest behind of all. It used to read as
+        /// not behind, on the belief that it was a piece the game had not
+        /// ranked; it is the bottom rung of the scale, where a piece scores
+        /// under half a tier, and the market replaces armour there like any
+        /// other (MarketRules.WornArmourFine, without which this would hold
+        /// every other piece back behind one the market never sells). Read
+        /// as not behind it could only be bought once everything else was
+        /// within a tier of the top, and a robbed man's tier-0 cape (RagTier)
+        /// would have been the last thing he ever replaced.
         /// </summary>
         public static int Shortfall(int wornTier, int ceiling, int bestSold)
         {
-            if (wornTier < 1) return 0;
+            if (wornTier < 0) return 0;
 
             int reach = bestSold < ceiling ? bestSold : ceiling;
             int behind = reach - wornTier;

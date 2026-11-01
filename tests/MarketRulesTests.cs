@@ -44,6 +44,18 @@ namespace HeroesEvolve.Tests
             Check.False(MarketRules.IsUpgrade(300, false, 0, false, 1, 6), "and nothing below the scale is ever bought");
             Check.False(MarketRules.IsUpgrade(300, false, 400, false, 0, 6), "nor anything whose whole tier is below one");
 
+            // Armour at tier 0 is no naphtha pot: it is the bottom rung, and a
+            // scarf the armour order waits on has to be something the market can
+            // replace. See MarketRules.WornArmourFine.
+            Check.Equal(1, MarketRules.WornArmourFine(0), "tier-0 armour enters at the bottom of the scale");
+            Check.Equal(350, MarketRules.WornArmourFine(350), "anything on the scale is taken as scored");
+            Check.True(MarketRules.IsUpgrade(MarketRules.WornArmourFine(0), false, 150, false, 2, 6),
+                       "so a tier-0 cape can be replaced");
+            Check.False(MarketRules.IsUpgrade(MarketRules.WornArmourFine(0), false, 50, false, 1, 6),
+                        "though not by the weakest tier-1 piece, which is not half a tier better");
+            Check.False(MarketRules.IsUpgrade(MarketRules.WornArmourFine(0), false, 0, false, 0, 6),
+                        "and never by another tier-0 piece, which the market does not sell");
+
             // --- culture as a preference, not a wall ---
             // The wall came down because armour is always culture-stamped: two
             // of 2,332 pieces in the shipped catalogue carry no culture, so a

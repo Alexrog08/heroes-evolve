@@ -9,11 +9,11 @@ namespace HeroesEvolve.Tests
     {
         public static void RunAll()
         {
-            // The chest is held at the mod's own clothing line, because every
-            // gown in the game is a tier-1 body armour and nothing can tell
-            // them from the tunics beside them.
-            Check.Equal(KitTier.Lowest, RagTier.Body, "the chest keeps the clothing floor");
-            Check.Equal(RagTier.Body, RagTier.For(true, false), "and For says so for body armour");
+            // The chest falls to the bottom with the rest of him. The gowns
+            // down there are kept off it by the game's own flags -- Civilian,
+            // and the one that bars a sex -- not by the tier (Rags.Cheapest).
+            Check.Equal(RagTier.Everything, RagTier.Body, "the chest takes the cheapest there is too");
+            Check.Equal(RagTier.Body, RagTier.For(true, false, false), "and For says so for body armour");
 
             // The weapons keep the same floor. Tier 1 of the weapon rack is the
             // peasant's -- pitchforks, hammers, sickles -- and a robbed lord was
@@ -21,7 +21,7 @@ namespace HeroesEvolve.Tests
             // the starting kit's own.
             Check.Equal(KitTier.Lowest, RagTier.Weapon, "weapons keep the kit's floor");
             Check.Equal(GrantTier.Minimum, RagTier.Weapon, "the same floor the starting kit keeps");
-            Check.Equal(RagTier.Weapon, RagTier.For(false, true), "and For says so for weapons");
+            Check.Equal(RagTier.Weapon, RagTier.For(false, true, false), "and For says so for weapons");
             Check.False(KitTier.IsClothing(RagTier.Weapon), "no weapon rag comes off the peasant's rack");
             Check.True(KitTier.IsClothing(RagTier.Everything),
                        "everything else is allowed below that floor, on purpose");
@@ -31,20 +31,23 @@ namespace HeroesEvolve.Tests
             // buy into an empty slot, so a tier-2 floor would strand him
             // barefoot for the rest of the campaign.
             Check.Equal(1, RagTier.Everything, "the rest of the man takes the cheapest there is");
-            Check.Equal(RagTier.Everything, RagTier.For(false, false), "and For says so for everything else");
+            Check.Equal(RagTier.Everything, RagTier.For(false, false, false), "and For says so for everything else");
 
-            // The line that keeps the two repairs apart. GrantService.NeedsGrant
-            // calls a man broken when his chest is clothing, so the chest rag
-            // must not be: otherwise a robbery would leave him looking broken,
-            // the next day's repair would dress him out of his skills, and the
-            // shape the robbery just preserved would be thrown away. The head
-            // rag is below that line on purpose, which is why NeedsGrant stopped
-            // reading the head at all.
-            Check.False(KitTier.IsClothing(RagTier.Body),
-                        "a robbed man is poor, not broken, so the repair leaves him alone");
+            // The cape alone goes to tier 0, where the plain cloth is. Tier 1
+            // of the cape rack is mostly pauldrons and fur.
+            Check.Equal(0, RagTier.Cape, "the cape comes off the bottom rung");
+            Check.Equal(RagTier.Cape, RagTier.For(false, false, true), "and For says so for a cape");
+            Check.True(RagTier.Cape < RagTier.Everything, "the cape is the one piece below the rest");
+
+            // Below the line GrantService.NeedsGrant reads as a lord who never
+            // had a soldier's kit, on purpose. That used to make a robbed man
+            // look broken to the next day's repair; the repair now judges a lord
+            // only the day after the game makes him, never a robbed one.
+            Check.True(KitTier.IsClothing(RagTier.Body),
+                       "the chest rag is clothing-tier now; the repair never looks at a robbed man");
 
             // The whole point is that these are worse than what a man loses.
-            Check.True(RagTier.Everything < RagTier.Body, "rags are not evenly bad");
+            Check.True(RagTier.Everything < RagTier.Weapon, "only the weapons are held up");
             Check.True(RagTier.Body < GrantTier.Maximum,
                        "and worse than what the repair hands a lord who never had anything");
         }

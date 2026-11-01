@@ -33,9 +33,34 @@ namespace HeroesEvolve
     {
         private static int _handedOut;
         private static int _slotsLeftEmpty;
+        private static int _civilianChests;
+        private static int _openChests;
+        private static readonly Dictionary<ItemObject.ItemTypeEnum, Dictionary<string, int>> _given =
+            new Dictionary<ItemObject.ItemTypeEnum, Dictionary<string, int>>();
 
         /// <summary>Counts since the session began, for the census.</summary>
         public static int HandedOut { get { return _handedOut; } }
+
+        /// <summary>
+        /// Chests that had to come off the clothes rack because the battle rack
+        /// had nothing for him anywhere. Nought in the base game, which sells
+        /// five tier-1 battle rags to anyone; see RagTier.Body.
+        /// </summary>
+        public static int CivilianChests { get { return _civilianChests; } }
+
+        /// <summary>
+        /// Chests passed over because they leave the body bare, counted each
+        /// time one would otherwise have been in the running. Nought in the
+        /// base game, whose chest rags all cover him; see CoversBody.
+        /// </summary>
+        public static int OpenChests { get { return _openChests; } }
+
+        /// <summary>What robbed men were handed of one kind, as the census reads it.</summary>
+        public static string GivenSpread(ItemObject.ItemTypeEnum type)
+        {
+            Dictionary<string, int> given;
+            return PurchaseWatch.Spread(_given.TryGetValue(type, out given) ? given : new Dictionary<string, int>());
+        }
 
         /// <summary>
         /// Slots a robbery emptied and this could not refill, which matter more
@@ -48,6 +73,9 @@ namespace HeroesEvolve
         {
             _handedOut = 0;
             _slotsLeftEmpty = 0;
+            _civilianChests = 0;
+            _openChests = 0;
+            _given.Clear();
         }
 
         /// <summary>
@@ -55,7 +83,7 @@ namespace HeroesEvolve
         /// a captor's trouble.
         ///
         /// Closes a mill the rags would otherwise turn. A man robbed once now
-        /// stands in tier-1 boots and a tier-2 coat; rob him again and he loses
+        /// stands in tier-1 boots and a tier-1 coat; rob him again and he loses
         /// those and is handed the same thing back, which is motion without
         /// consequence -- a line in the log, a few denars, and a lord who keeps
         /// being reported as robbed. Nothing worth taking is not taken.
@@ -84,7 +112,8 @@ namespace HeroesEvolve
             // A weapon component is what arms, shields, arrows and bolts have
             // and horses and armour do not, so it alone sorts the weapon slots.
             bool body = item.ItemType == ItemObject.ItemTypeEnum.BodyArmor;
-            return (int)item.Tier + 1 <= RagTier.For(body, item.HasWeaponComponent);
+            bool cape = item.ItemType == ItemObject.ItemTypeEnum.Cape;
+            return (int)item.Tier + 1 <= RagTier.For(body, item.HasWeaponComponent, cape);
         }
 
         /// <summary>
@@ -111,6 +140,16 @@ namespace HeroesEvolve
 
                 hero.BattleEquipment[slot] = new EquipmentElement(rag, null, null, false);
                 _handedOut++;
+
+                Dictionary<string, int> given;
+                if (!_given.TryGetValue(rag.ItemType, out given))
+                {
+                    given = new Dictionary<string, int>();
+                    _given[rag.ItemType] = given;
+                }
+                int n;
+                given.TryGetValue(rag.StringId, out n);
+                given[rag.StringId] = n + 1;
                 return true;
             }
             catch
@@ -141,6 +180,27 @@ namespace HeroesEvolve
         /// </summary>
         private static ItemObject Cheapest(Hero hero, ItemObject taken, string seed)
         {
+            // The chest from what fighting men wear, and only when the world
+            // sells none of that at any price he could be handed, from the
+            // clothes rack -- still never anything the game bars him from, and
+            // on both racks only what covers him (CoversBody). A bare chest is
+            // the one outcome worse than a tunic. See RagTier.Body.
+            if (taken.ItemType == ItemObject.ItemTypeEnum.BodyArmor)
+            {
+                ItemObject chest = Cheapest(hero, taken, seed, MountFamilyRules.NoFamily, null, true);
+                if (chest == null)
+                {
+                    chest = Cheapest(hero, taken, seed, MountFamilyRules.NoFamily, null, false);
+                    if (chest != null)
+                    {
+                        _civilianChests++;
+                        ModLog.Info("RAGS civilianChest hero=" + hero.Name + " taken=" + taken.StringId
+                                    + " gave=" + chest.StringId);
+                    }
+                }
+                return chest;
+            }
+
             int family = FamilyOf(taken);
 
             // A rider scavenges what he can use from the saddle. The market has
@@ -155,10 +215,10 @@ namespace HeroesEvolve
             Hero rider = taken.HasWeaponComponent && hero.BattleEquipment[EquipmentIndex.Horse].Item != null
                 ? hero : null;
 
-            ItemObject rag = Cheapest(hero, taken, seed, family, rider);
+            ItemObject rag = Cheapest(hero, taken, seed, family, rider, false);
             if (rag == null && rider != null)
             {
-                rag = Cheapest(hero, taken, seed, family, null);
+                rag = Cheapest(hero, taken, seed, family, null, false);
                 if (rag != null)
                 {
                     ModLog.Info("RAGS notMounted hero=" + hero.Name + " taken=" + taken.StringId
@@ -167,7 +227,7 @@ namespace HeroesEvolve
             }
             if (rag == null && family != MountFamilyRules.NoFamily)
             {
-                rag = Cheapest(hero, taken, seed, MountFamilyRules.NoFamily, null);
+                rag = Cheapest(hero, taken, seed, MountFamilyRules.NoFamily, null, false);
             }
             return rag;
         }
@@ -185,17 +245,20 @@ namespace HeroesEvolve
         }
 
         /// <summary>
-        /// The passes, for one beast or, with NoFamily, for any; and for a
-        /// rider, only what he can use mounted.
+        /// The passes, for one beast or, with NoFamily, for any; for a rider,
+        /// only what he can use mounted; and with battleOnly, nothing the game
+        /// calls civilian.
         /// </summary>
-        private static ItemObject Cheapest(Hero hero, ItemObject taken, string seed, int family, Hero rider)
+        private static ItemObject Cheapest(Hero hero, ItemObject taken, string seed, int family, Hero rider,
+                                           bool battleOnly)
         {
             CultureObject culture = hero.Culture;
             if (culture == null && hero.Clan != null) culture = hero.Clan.Culture;
 
             bool body = taken.ItemType == ItemObject.ItemTypeEnum.BodyArmor;
 
-            // The floor is the dress rule; the ceiling is what he just lost.
+            // The floor keeps the weapons off the peasant's rack (RagTier); the
+            // ceiling is what he just lost.
             //
             // These were the same number in the first version and four lords in
             // seven came out of a test robbery with a bare slot: passing the
@@ -208,12 +271,13 @@ namespace HeroesEvolve
             // Never above what was taken, so rags cannot be an upgrade. A man
             // robbed of plated boots does not walk away in better ones because
             // his people make nothing cheap.
-            int floor = RagTier.For(body, taken.HasWeaponComponent);
+            int floor = RagTier.For(body, taken.HasWeaponComponent,
+                                    taken.ItemType == ItemObject.ItemTypeEnum.Cape);
             int ceiling = (int)taken.Tier + 1;
             if (ceiling < floor) ceiling = floor;
 
             // His own people first, at the rag tier and no higher.
-            ItemObject own = Search(taken, culture, floor, floor, seed, family, rider);
+            ItemObject own = Search(hero, taken, culture, floor, floor, seed, family, rider, battleOnly);
             if (own != null) return own;
 
             // Then anyone's, still at the rag tier. Some cultures simply make
@@ -223,18 +287,18 @@ namespace HeroesEvolve
             // just taken off him. Foreign rags are the better answer and the
             // truer one -- what he is standing in was scavenged out of the
             // baggage of the army that held him, and none of that was his.
-            ItemObject foreign = Search(taken, null, floor, floor, seed, family, rider);
+            ItemObject foreign = Search(hero, taken, null, floor, floor, seed, family, rider, battleOnly);
             if (foreign != null) return foreign;
 
             // And if the world sells nothing that cheap in this slot, his own
             // people at whatever it costs, up to what was taken. Late because
             // it is the one that can hand back something nearly as good; still
             // better than a slot left bare, which stays bare for life.
-            ItemObject dearer = Search(taken, culture, ceiling, floor, seed, family, rider);
+            ItemObject dearer = Search(hero, taken, culture, ceiling, floor, seed, family, rider, battleOnly);
             if (dearer != null) return dearer;
 
             // Then anyone's, over the same band.
-            ItemObject dearerForeign = Search(taken, null, ceiling, floor, seed, family, rider);
+            ItemObject dearerForeign = Search(hero, taken, null, ceiling, floor, seed, family, rider, battleOnly);
             if (dearerForeign != null) return dearerForeign;
 
             // Last of all, below the floor. The floor is a preference -- a lord
@@ -246,7 +310,8 @@ namespace HeroesEvolve
             // look at.
             if (floor > RagTier.Everything)
             {
-                ItemObject lastResort = Search(taken, null, ceiling, RagTier.Everything, seed, family, rider);
+                ItemObject lastResort = Search(hero, taken, null, ceiling, RagTier.Everything, seed, family, rider,
+                                                       battleOnly);
                 if (lastResort != null)
                 {
                     ModLog.Info("RAGS belowFloor hero=" + hero.Name + " taken=" + taken.StringId
@@ -259,12 +324,14 @@ namespace HeroesEvolve
         }
 
         /// <summary>
-        /// The cheapest item of the same kind within one tier band. A null
-        /// culture means anybody's, NoFamily any beast, and a null rider a man
-        /// on foot.
+        /// The cheapest item of the same kind within one tier band, that the
+        /// game lets this hero wear. A null culture means anybody's, NoFamily
+        /// any beast, a null rider a man on foot, and battleOnly nothing the
+        /// game marks civilian.
         /// </summary>
-        private static ItemObject Search(ItemObject taken, CultureObject culture,
-                                         int ceiling, int floor, string seed, int family, Hero rider)
+        private static ItemObject Search(Hero hero, ItemObject taken, CultureObject culture,
+                                         int ceiling, int floor, string seed, int family, Hero rider,
+                                         bool battleOnly)
         {
             ItemObject.ItemTypeEnum type = taken.ItemType;
             bool mount = type == ItemObject.ItemTypeEnum.Horse;
@@ -282,6 +349,7 @@ namespace HeroesEvolve
             {
                 ItemObject item = all[i];
                 if (item == null || item.ItemType != type) continue;
+                if (battleOnly && item.IsCivilian) continue;
 
                 // A war mount, never a mule: ItemTypeEnum.Horse covers both, and
                 // the pack animals are the only ones a hero with no riding can
@@ -305,6 +373,19 @@ namespace HeroesEvolve
                 if (tier < floor) continue;
                 if (tier > bestTier) continue;
 
+                // Last, so they count only pieces that would otherwise have been
+                // in the running. See CoversBody and ItemCatalog.IsWearableBy.
+                if (type == ItemObject.ItemTypeEnum.BodyArmor && !CoversBody(item))
+                {
+                    _openChests++;
+                    continue;
+                }
+                if (!ItemCatalog.IsWearableBy(item, hero))
+                {
+                    Diagnostics.NoteBarredBySex("rags");
+                    continue;
+                }
+
                 if (tier < bestTier)
                 {
                     bestTier = tier;
@@ -316,6 +397,25 @@ namespace HeroesEvolve
 
             int pick = RagChoice.Pick(cheapest.Count, seed);
             return pick < 0 ? null : cheapest[pick];
+        }
+
+        /// <summary>
+        /// Whether a chest covers the man inside it, as its author says with
+        /// covers_body. The game reads the attribute into the armour's mesh
+        /// mask, showing the body's own skin wherever the piece says it does not
+        /// cover, and every chest in the base game and the gear mods tested
+        /// states it outright.
+        ///
+        /// For the bottom of the world in a modded game. The base game's five
+        /// battle rags all cover him; Open Source Armory adds two tier-1 Khuzait
+        /// pieces that are a harness over the bare chest, and the first robbery
+        /// test with it put five lords in seven into them -- a robbed man, who
+        /// should look poor, looking undressed instead.
+        /// </summary>
+        private static bool CoversBody(ItemObject item)
+        {
+            ArmorComponent armour = item.ArmorComponent;
+            return armour == null || (armour.MeshesMask & SkinMask.BodyVisible) == 0;
         }
     }
 }
