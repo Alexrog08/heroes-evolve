@@ -1,0 +1,80 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<base type="string">
+  <tags>
+    <tag language="简体中文" />
+  </tags>
+  <strings>
+    <!-- src/Game/McmBridge.cs -->
+    <string id="hev_mcm_gear_title" text="Heroes Evolve - 排除装备" />
+    <string id="hev_mcm_gear_mods" text="领主永远拿不到其装备的模组" />
+    <string id="hev_mcm_gear_mod_hint" text="勾选后，你的领主永远不会购买或获得此模组的{ITEMS}件物品。模组本身不受影响：你和你的士兵仍可使用。资料夹名称：{FOLDER}。" />
+    <string id="hev_mcm_gear_items_group" text="个别物品" />
+    <string id="hev_mcm_gear_items" text="领主永远拿不到的物品" />
+    <string id="hev_mcm_gear_items_hint" text="以逗号分隔的物品 ID：永远不会被购买，也不会出现在起始装备里。适用于被其他模组搞错的个别物品，因为排除上面整个模组又太过头的情况。燃烧武器本来就已排除。" />
+    <!-- src/Game/McmSettings.cs -->
+    <string id="hev_mcm_repair" text="替没有装备的领主配发起始装备" />
+    <string id="hev_mcm_repair_hint" text="替一无所有的领主穿上衣物：出生时只穿平民服装，或被俘虏他的人剥光。配发符合其文化与技能的简单装备，其余靠他自己购买。" />
+    <string id="hev_mcm_group_kits" text="起始装备" />
+    <string id="hev_mcm_archer" text="弓手门槛" />
+    <string id="hev_mcm_archer_hint" text="远程技能必须比近战技能高出多少，他的装备才会是弓或弩。数值越低，弓手越多。" />
+    <string id="hev_mcm_purchases" text="领主自行购买装备" />
+    <string id="hev_mcm_purchases_hint" text="在城镇里，领主会把身上已有的装备换成更好的版本。不会改变他的战斗类型，也不会填补空的栏位。" />
+    <string id="hev_mcm_group_shopping" text="购物" />
+    <string id="hev_mcm_share" text="每趟购物动用的钱袋比例" />
+    <string id="hev_mcm_share_hint" text="领主一趟最多能花多少钱，由该城镇能改善的栏位均分。数值越低，领主越穷，被搜刮后恢复得也越慢。" />
+    <string id="hev_mcm_reserve" text="为士兵保留的金币" />
+    <string id="hev_mcm_reserve_hint" text="预留的资金，确保买装备不会让家族发不出士兵的薪水。设为零就没有这道保险。" />
+    <string id="hev_mcm_culture" text="购买时偏好的文化" />
+    <string id="hev_mcm_culture_hint" text="领主在市集偏好谁的颜色：家族的、自己的，或不偏好。符合这些颜色的物品，评价会高出四分之一。补发装备时，仍照他自己的族人来穿搭。" />
+    <string id="hev_mcm_culture_clan" text="他的家族文化" />
+    <string id="hev_mcm_culture_own" text="他自己的文化" />
+    <string id="hev_mcm_culture_none" text="无偏好" />
+    <string id="hev_mcm_own_armour" text="只穿自己文化的护甲" />
+    <string id="hev_mcm_own_armour_hint" text="这是一堵墙，而不只是偏好：绝不购买外族的护甲或马具，也不会穿戴战利品中的外族护甲。不属于任何文化的物品仍然可以。每种文化都能穿满所有栏位，但七种文化中有五种只有一双靴子，所以他的靴子几乎没得选。" />
+    <string id="hev_mcm_own_weapons" text="只用自己文化的武器" />
+    <string id="hev_mcm_own_weapons_hint" text="武器适用同一道墙，无论是在市集，还是从战败敌人的装备上取得。不属于任何文化的武器仍然可以，诺德弓手就是靠这个武装起来。只有帝国和瓦兰迪亚制造弩，所以其他文化的弩手不会升级。" />
+    <string id="hev_mcm_skill_per_tier" text="每阶装备所需技能" />
+    <string id="hev_mcm_skill_per_tier_hint" text="换得一阶装备所需的战斗技能。数值越低，领主装备越好，这是最先该调整的设定。" />
+    <string id="hev_mcm_group_limits" text="装备上限" />
+    <string id="hev_mcm_skill_weight" text="个人技能权重" />
+    <string id="hev_mcm_skill_weight_hint" text="领主自身的战斗技能，在多大程度上决定他能穿戴什么。" />
+    <string id="hev_mcm_clan_weight" text="家族地位权重" />
+    <string id="hev_mcm_clan_weight_hint" text="预设为零：两次战役的观察发现，家族阶级并不能预测领主穿什么。调高它，大家族不论功绩都会把领主打扮得体面。" />
+    <string id="hev_mcm_min_tier" text="最低上限" />
+    <string id="hev_mcm_min_tier_hint" text="无论技能多差，都不会有人的上限低于这个值。" />
+    <string id="hev_mcm_commission" text="商队领队的佣金" />
+    <string id="hev_mcm_commission_hint" text="商队领队从利润中留下多少来买自己的装备。越高，他装备越好，你赚得越少。他没有可改善的地方时，就不会抽成。" />
+    <string id="hev_mcm_group_caravans" text="商队" />
+    <string id="hev_mcm_robbery" text="领主搜刮俘虏" />
+    <string id="hev_mcm_robbery_hint" text="俘虏者可能依其性格剥夺被俘领主的装备。装备只是转移而不会毁坏，因此可以夺回。你可以在对话中要求他交出装备。" />
+    <string id="hev_mcm_group_robbery" text="搜刮" />
+    <string id="hev_mcm_robbery_rate" text="领主搜刮的频率" />
+    <string id="hev_mcm_robbery_rate_hint" text="1.00 为正常战役。它会乘上每位俘虏者的几率，所以 2.00 让所有人加倍，0.00 则让 AI 领主不再搜刮，却不必关闭整个系统（你仍可在对话中搜刮）。在 2.00 时，搜刮会成为影响领主穿着的最大因素。" />
+    <string id="hev_mcm_own_clan" text="包含我自己的家族" />
+    <string id="hev_mcm_own_clan_hint" text="你的家人，以及带领你的部队与商队的同伴。如果你想亲手配置他们的装备，请关闭。无论如何，你自己部队里的英雄都不会被动到。" />
+    <string id="hev_mcm_group_clan" text="你自己的家族" />
+    <string id="hev_mcm_log" text="写入 hev.log" />
+    <string id="hev_mcm_log_hint" text="把模组的运作记录在 Bannerlord 的 logs 资料夹里。下方的普查需要开启它。" />
+    <string id="hev_mcm_group_diagnostics" text="诊断" />
+    <string id="hev_mcm_census" text="将普查写入 hev.log" />
+    <string id="hev_mcm_census_run" text="执行" />
+    <string id="hev_mcm_census_hint" text="调查每位领主——阶级、装备、技能、特质——写入 hev.log。只读取，不会改动任何东西。约需半秒。需要开启记录。" />
+    <!-- src/Game/PlunderService.cs -->
+    <string id="hev_of_faction" text="{FACTION}的{NAME}" />
+    <string id="hev_robbed_reprisal" text="{VICTIM}的武器和护甲被{CAPTOR}夺走，作为报复。" />
+    <string id="hev_robbed" text="{VICTIM}的武器和护甲被{CAPTOR}夺走了。" />
+    <string id="hev_released_scavenged" text="离开时，你从看守者的行李里搜出了简陋的装备，种类与你原先携带的相同。" />
+    <string id="hev_released_given" text="看守者放你上路时，给了你一套简陋的装备，种类与你原先携带的相同。" />
+    <!-- src/Game/PrisonerDialogue.cs -->
+    <string id="hev_strip" text="把你的武器和装备交出来。" />
+    <string id="hev_strip_reply" text="你竟要搜刮一个已被你击败之人的装备？这有损你的荣誉。那就拿去吧。我的家人会知道这件事，你的家人也会。" />
+    <string id="hev_strip_take" text="我要拿走。" />
+    <string id="hev_strip_leave" text="那就留着吧。" />
+    <string id="hev_strip_reprisal" text="你没有任何荣誉能让我冒犯。把你的武器和装备交出来。" />
+    <string id="hev_strip_friend" text="别往心里去。把你的武器和装备交出来。" />
+    <string id="hev_strip_friend_reply" text="任何人要这样对我，我都料得到，但唯独没想到会是你。那就拿去吧。我没什么好对你说的了。" />
+    <string id="hev_strip_reprisal_reply" text="等你搜刮完我，再来和我谈荣誉吧。全都拿去吧——过没多久我就会有更好的，而下一个被我剥到只剩下衬衣的人，说不定和你有一样的姓氏。" />
+    <string id="hev_strip_vengeance" text="你的家人剥夺了我族某人的装备。把你的武器和装备交出来。" />
+    <string id="hev_strip_vengeance_reply" text="原来是这样。那就拿去吧，此事到此为止，我族与你族两清。" />
+  </strings>
+</base>

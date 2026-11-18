@@ -28,12 +28,6 @@ namespace HeroesEvolve
         /// <summary>Repair lords the come-of-age bug left half-equipped.</summary>
         public static bool EnableRepair = true;
 
-        /// <summary>Grow lords' skills so they do not fall behind their troops.</summary>
-        public static bool EnableSkillGrowth = true;
-
-        /// <summary>At a new campaign, start every lord's skills where his age and talent put him.</summary>
-        public static bool StartLordsOnCurve = true;
-
         /// <summary>Let lords buy better gear when they visit a town.</summary>
         public static bool EnablePurchases = true;
 
@@ -199,11 +193,6 @@ namespace HeroesEvolve
         /// away rather than adding it. Some players outfit their family and
         /// their caravan masters by hand and want that respected past the edge
         /// of their own party; this moves the line, it does not bend a rule.
-        ///
-        /// Deliberately does not touch skill growth. That takes nothing from
-        /// anyone -- it makes a man better at what he already does -- and a
-        /// player who wants to choose his brother's armour rarely wants his
-        /// brother to stop learning.
         /// </summary>
         public static bool ManageOwnClan = true;
 
@@ -395,8 +384,6 @@ namespace HeroesEvolve
                 if (root == null) return;
 
                 EnableRepair = Flag(root, "EnableRepair", EnableRepair);
-                EnableSkillGrowth = Flag(root, "EnableSkillGrowth", EnableSkillGrowth);
-                StartLordsOnCurve = Flag(root, "StartLordsOnCurve", StartLordsOnCurve);
                 EnablePurchases = Flag(root, "EnablePurchases", EnablePurchases);
                 EnableLogging = Flag(root, "EnableLogging", EnableLogging);
                 ManageOwnClan = Flag(root, "ManageOwnClan", ManageOwnClan);
@@ -437,8 +424,6 @@ namespace HeroesEvolve
         {
             return "repair=" + EnableRepair
                    + " ownClan=" + ManageOwnClan
-                   + " growth=" + EnableSkillGrowth
-                   + " startCurve=" + StartLordsOnCurve
                    + " purchases=" + EnablePurchases
                    + " clanWeight=" + ClanWeight
                    + " skillWeight=" + SkillWeight

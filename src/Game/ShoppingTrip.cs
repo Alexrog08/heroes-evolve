@@ -81,10 +81,10 @@ namespace HeroesEvolve
         /// <summary>
         /// The single best thing this hero could buy here, or null.
         ///
-        /// The biggest gap first, which is the same discipline the skill growth
-        /// uses: chase the shortfall, not the average. Shop calls this until it
-        /// comes back empty, so a lord closes his worst gap, then his next
-        /// worst, for as long as the town and his purse allow.
+        /// The biggest gap first: chase the shortfall, not the average. Shop
+        /// calls this until it comes back empty, so a lord closes his worst
+        /// gap, then his next worst, for as long as the town and his purse
+        /// allow.
         /// </summary>
         public static Candidate Best(Hero hero, Settlement settlement, int ceiling, BudgetService budget)
         {

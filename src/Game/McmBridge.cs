@@ -349,8 +349,6 @@ namespace HeroesEvolve
             string before = Settings.Describe();
 
             Settings.EnableRepair = settings.EnableRepair;
-            Settings.EnableSkillGrowth = settings.EnableSkillGrowth;
-            Settings.StartLordsOnCurve = settings.StartLordsOnCurve;
             Settings.EnablePurchases = settings.EnablePurchases;
             Settings.EnableLogging = settings.EnableLogging;
             Settings.ManageOwnClan = settings.ManageOwnClan;

@@ -77,8 +77,6 @@ namespace HeroesEvolve
             CaptivityRobberies.ResetSession();
             PendingNotices.ResetSession();
             ItemCatalog.ResetSession();
-            HeroTalent.ResetSession();
-            WrittenSkills.ResetSession();
             CultureProfile.Reset();
             CultureArchetypes.Reset();
             WeaponPerks.Reset();
@@ -110,9 +108,7 @@ namespace HeroesEvolve
 
             CampaignEvents.DailyTickHeroEvent.AddNonSerializedListener(this, OnDailyTickHero);
 
-            // Weekly, not daily. The peak a lord grows toward takes forty years
-            // to arrive, so running seven times as often multiplies the work
-            // without changing anything anyone could notice.
+            // Weekly census lines only: saddles, kingdoms, feuds.
             CampaignEvents.WeeklyTickEvent.AddNonSerializedListener(this, OnWeeklyTick);
 
             // The purchase engine. Buying happens where the goods are, so the
@@ -143,18 +139,14 @@ namespace HeroesEvolve
             // the baggage afterwards. See StolenGoods.
             CampaignEvents.OnCollectLootsItemsEvent.AddNonSerializedListener(this, OnCollectLootItems);
 
-            // A new campaign's lords, put on the curve once before the first day.
-            // Two events because a loaded save must never be touched: only a new
-            // campaign raises OnNewGameCreated, and by the time the session has
-            // launched the game has finished building every lord it will start
-            // with. See StartingCurvePass.
+            // A new campaign's lords, noted for the kit once before the first
+            // day. Two events because only a new campaign raises
+            // OnNewGameCreated, and by the time the session has launched the
+            // game has finished building every lord it will start with.
             CampaignEvents.OnNewGameCreatedEvent.AddNonSerializedListener(this, OnNewGameCreated);
 
-            // Latecomers. The starting curve runs once at world creation, so
-            // anybody made afterwards kept whatever he was made with -- and
-            // growth only ever raises, so nothing was going to correct it. See
-            // StartingCurvePass.ApplyToLatecomer for who that actually reaches
-            // and why it has to happen exactly once.
+            // Heroes the game makes later, noted for the kit the same way. See
+            // _freshlyMade.
             CampaignEvents.HeroCreated.AddNonSerializedListener(this, OnHeroCreated);
             CampaignEvents.OnAfterSessionLaunchedEvent.AddNonSerializedListener(this, OnAfterSessionLaunched);
 
@@ -169,7 +161,7 @@ namespace HeroesEvolve
 
         /// <summary>
         /// Set when this session began as a new campaign rather than a load, and
-        /// cleared once the starting curve has had its one chance to run.
+        /// cleared once the world's lords have been noted for the kit.
         /// </summary>
         private bool _newCampaign;
 
@@ -182,40 +174,19 @@ namespace HeroesEvolve
         }
 
         /// <summary>
-        /// Puts a hero made after the campaign began on the same curve the rest
-        /// of the world was put on at its start.
-        ///
-        /// Children are skipped and do not need this: the game normalises what
-        /// they inherit, and their skills are not written until they come of
-        /// age anyway. It is the parentless heroes -- tavern wanderers, lords
-        /// generated to fill a clan -- who arrive carrying a template's grown
-        /// figures.
-        ///
-        /// Silent during world creation. HeroCreated fires for every lord in
-        /// Calradia while the map is being built, and Apply is about to walk
-        /// the whole roster a moment later; curving each of them twice would
-        /// log four hundred lines to reach the same answer.
+        /// A hero the game has just made, noted for the kit. HeroCreated fires
+        /// at the very end of InitializeHeroFromSettings, after his gear is
+        /// assigned. Children are skipped in NoteFreshlyMade and seen at 18.
         /// </summary>
         private void OnHeroCreated(Hero hero, bool isBornNaturally)
         {
             try
             {
-                // Before the curve's own guards: the kit looks at every hero the
-                // game makes, and HeroCreated fires at the very end of
-                // InitializeHeroFromSettings, after his gear is assigned.
-                // Children are skipped in NoteFreshlyMade and seen at 18.
                 NoteFreshlyMade(hero, _newCampaign ? "newCampaign" : "generated");
-
-                if (_newCampaign) return;
-                if (!Settings.EnableSkillGrowth || !Settings.StartLordsOnCurve) return;
-                if (hero == null || hero.IsChild) return;
-
-                StartingCurvePass.ApplyToLatecomer(hero);
             }
             catch (System.Exception error)
             {
-                ModLog.Error("STARTCURVE latecomer failed: "
-                             + error.GetType().Name + " " + error.Message);
+                ModLog.Error("KIT note failed: " + error.GetType().Name + " " + error.Message);
             }
         }
 
@@ -247,7 +218,7 @@ namespace HeroesEvolve
             _newCampaign = false;
 
             // Every lord the world was built with, for one look on his first
-            // day -- whatever the curve is set to. See _freshlyMade.
+            // day. See _freshlyMade.
             int lords = 0;
             foreach (Hero lord in Hero.AllAliveHeroes)
             {
@@ -261,27 +232,6 @@ namespace HeroesEvolve
             // printed alone read as 1704 lords waiting on the kit when there
             // were 497. Only a lord can be given one.
             ModLog.Info("KIT newCampaign lords=" + lords + " noted=" + _freshlyMade.Count);
-
-            if (!Settings.StartLordsOnCurve) return;
-
-            // The curve sets lords where growth will carry them from. With growth
-            // off nothing would ever carry them anywhere, and every lord on the map
-            // would stay where the curve left him for the rest of the campaign.
-            if (!Settings.EnableSkillGrowth)
-            {
-                ModLog.Info("STARTCURVE skipped: skill growth is off, so lords set on the curve would never grow");
-                return;
-            }
-
-            try
-            {
-                StartingCurvePass.Apply();
-            }
-            catch (System.Exception error)
-            {
-                // The campaign starts either way, on the sheets the generator wrote.
-                ModLog.Error("STARTCURVE failed: " + error.GetType().Name + " " + error.Message);
-            }
         }
 
         /// <summary>Nothing is stored in the save. Deliberately empty.</summary>
@@ -493,10 +443,9 @@ namespace HeroesEvolve
             try
             {
                 // A new campaign raises this for every party placed in a town
-                // before the session has launched, and so before the starting
-                // curve has run: a lord shopping then is judged on the sheet the
-                // generator wrote, and keeps what it lets him buy. Nothing here
-                // waits on the first day.
+                // before the session has launched, and so before the world's
+                // lords have been noted for the kit. Nothing here waits on the
+                // first day.
                 if (_newCampaign) return;
 
                 if (settlement == null) return;
@@ -604,58 +553,6 @@ namespace HeroesEvolve
             // houses is the one thing a robbery rule could quietly ruin, and it
             // moves too slowly to notice any other way.
             Diagnostics.ReportFeuds();
-
-            if (!Settings.EnableSkillGrowth) return;
-
-            int grown = 0;
-
-            foreach (Hero hero in Hero.AllAliveHeroes)
-            {
-                try
-                {
-                    if (SkillGrowthService.GrowWeekly(hero)) grown++;
-                }
-                catch (System.Exception ex)
-                {
-                    // Guarded per hero, as everywhere: one bad hero must not
-                    // take the tick down with it.
-                    ModLog.Error("skill growth failed for " + hero.Name
-                                 + ": " + ex.GetType().Name + " " + ex.Message);
-                }
-            }
-
-            // Logged once a week rather than per hero: six hundred lines every
-            // seven days would bury everything else in the file. The count is
-            // the heroes actually grown, not every living hero the loop walked
-            // past -- AllAliveHeroes carries wanderers, notables and templates,
-            // and calling those grown made the line a fiction.
-            // Asked against delivered. Hero.AddSkillXp multiplies the request by
-            // the generic XP multiplier and by the hero's focus factor, so the
-            // annual clamp in SkillGrowth caps what is requested and not what
-            // arrives. The ratio is the only honest way to know how far apart
-            // those two are -- see SkillGrowthService.TakeDelivered.
-            int delivered, asked;
-            SkillGrowthService.TakeDelivered(out delivered, out asked);
-
-            // The calendar too, because a growth rate means nothing without it.
-            // Every rate in SkillGrowth is annual and divided by the cycles a
-            // year actually holds, which is the fix for an old bug: FastMode
-            // runs fewer, longer weeks, and a per-cycle ceiling let it deliver a
-            // third of what stock delivered. The fix has never been watched
-            // working. If this number is 12 in a stock campaign and smaller
-            // under FastMode, and asked-per-lord holds steady between them, it
-            // is doing its job.
-            // And what focus did to the order of their weapons (WeaponRank),
-            // every figure against slot order, the rule before it. In a save
-            // grown under that rule the AI has spent years of focus following
-            // the slots, so primaryByFocus starts small there. Two readings
-            // would be a bug rather than a campaign: noFocus near multiWeapon
-            // means focus is not being read, and primaryByFocus at zero in a
-            // new campaign means it is not being used.
-            ModLog.Info("GROWTH weekly pass grew " + grown + " lords"
-                        + " asked=" + asked + " delivered=" + delivered
-                        + " cyclesPerYear=" + (int)SkillGrowthService.CyclesPerYear()
-                        + " weapons " + SkillGrowthService.TakeWeaponOrder().Describe());
         }
 
         /// <summary>
@@ -709,17 +606,6 @@ namespace HeroesEvolve
                     // census reports this as repairs already made, and an
                     // attempt that changed nothing is not one.
                     Diagnostics.NoteRepair();
-
-                    // Skills as well as kit. The failure that leaves a hero
-                    // without weapons leaves him without skills too, and a
-                    // well-dressed lord with zero in everything is still useless
-                    // and still capped at tier 1 for life.
-                    int seeded = SkillSeeding.Seed(hero);
-                    if (seeded > 0)
-                    {
-                        ModLog.Info("SEED hero=" + hero.Name + " skills=" + seeded
-                                    + " talent=" + (int)(HeroTalent.For(hero) * 100));
-                    }
                 }
                 else
                 {

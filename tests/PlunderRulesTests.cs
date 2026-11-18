@@ -373,8 +373,8 @@ namespace HeroesEvolve.Tests
             Check.False(PlunderRules.IsReprisal(0), "a neutral man does not");
             Check.False(PlunderRules.IsReprisal(2), "and an honourable one certainly does not");
 
-            // Half, matching DefaultExecutionRelationModel's own halving:
-            // -60/-30/-10 become -30/-15/-5 when the victim had it coming.
+            // Half, matching v1.4.8's DefaultExecutionRelationModel:
+            // -60/-30/-10 became -30/-15/-5 when the victim had it coming.
             Check.Equal(-6, PlunderRules.AfterReprisal(-12, true), "relation halves");
             Check.Equal(-10, PlunderRules.AfterReprisal(-20, true), "the trait charge halves");
 

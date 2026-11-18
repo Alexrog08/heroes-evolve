@@ -7,8 +7,7 @@ namespace HeroesEvolve.Core
     /// Two prices, and only one of them is new. His house loses standing with
     /// the house he robbed, much as it always has. And the player, who alone
     /// has a name that moves, loses half of what the game takes from it for
-    /// an execution -- read from the game's own model while the campaign
-    /// runs, so a mod that reprices executions reprices this with them.
+    /// an execution (ExecutionHonor).
     ///
     /// Both are halved against a prisoner without honour who is not the
     /// robber's friend, which is the game's own discount for the same case
@@ -43,11 +42,24 @@ namespace HeroesEvolve.Core
         public const int ExecutionDivisor = 2;
 
         /// <summary>
+        /// The Honor the game takes from the player for executing a lord.
+        ///
+        /// Written here because the game no longer says it anywhere it can be
+        /// read. Until v1.4.8 it was ExecutionRelationModel's
+        /// PlayerExecutingHeroHonorPenalty, read while the campaign ran so a
+        /// mod that repriced executions repriced robbery with them. v1.5.7
+        /// removed the model, and the same thousand is now a literal inside
+        /// TraitLevelingHelper.OnBloodFeudStarted, charged only when the
+        /// executed man's Honor is not negative.
+        /// </summary>
+        public const int ExecutionHonor = -1000;
+
+        /// <summary>
         /// What the act leaves on the robber's Mercy. Unchanged from when it
         /// was charged through TraitLevelingHelper.OnHostileAction, twenty to
-        /// Honor and Mercy alike: Honor now pays half an execution, and the
-        /// game charges an execution to Honor alone, so Mercy keeps the small
-        /// mark it always took for a small cruelty.
+        /// Honor and Mercy alike: Honor now pays half an execution, and until
+        /// v1.5.7 the game charged an execution to Honor alone, so Mercy keeps
+        /// the small mark it always took for a small cruelty.
         /// </summary>
         public const int MercyXp = -20;
 

@@ -23,9 +23,11 @@ namespace HeroesEvolve.Tests
             Check.Equal(-6, PlunderRules.AfterReprisal(RobberyCost.Standing, true),
                         "and six when the man had it coming");
 
-            // DefaultExecutionRelationModel's Honor figure, as shipped.
-            Check.Equal(-500, RobberyCost.Of(-1000), "half an execution's Honor");
-            Check.Equal(-250, PlunderRules.AfterReprisal(RobberyCost.Of(-1000), true),
+            // The game's Honor figure for an execution, as shipped in v1.4.8
+            // and v1.5.7 alike.
+            Check.Equal(-1000, RobberyCost.ExecutionHonor, "an execution costs a thousand Honor");
+            Check.Equal(-500, RobberyCost.Of(RobberyCost.ExecutionHonor), "half an execution's Honor");
+            Check.Equal(-250, PlunderRules.AfterReprisal(RobberyCost.Of(RobberyCost.ExecutionHonor), true),
                         "a quarter against a scoundrel");
             Check.Equal(-10, PlunderRules.AfterReprisal(RobberyCost.MercyXp, true),
                         "and the small mark on Mercy halves with it");

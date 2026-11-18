@@ -84,6 +84,16 @@ $dll  = Join-Path $root "build\out\HeroesEvolve.dll"
 
 if (-not (Test-Path $dll)) { Write-Host "Build the mod first."; exit 1 }
 
+# The version installed, read from the game rather than written here: the
+# messages below named v1.4.8 by hand and went on naming it after the game
+# moved to v1.5.7.
+$versionXml = Join-Path $game "bin\Win64_Shipping_Client\Version.xml"
+$gameVersion = "the installed game"
+if (Test-Path $versionXml) {
+    $node = ([xml](Get-Content $versionXml -Raw)).SelectSingleNode("/Version/Singleplayer")
+    if ($node -and $node.Value) { $gameVersion = $node.Value }
+}
+
 Add-Type -AssemblyName System.Reflection.Metadata | Out-Null
 Add-Type -AssemblyName System.Collections.Immutable | Out-Null
 
@@ -208,7 +218,7 @@ function Get-References([string]$path) {
     }
 }
 
-# ---- Build the "what actually exists in v1.4.8" index ----
+# ---- Build the "what actually exists in the installed game" index ----
 
 $known = @{}
 $scanned = 0
@@ -269,9 +279,9 @@ if ($NegativeControl) {
 $missing = Get-References $dll | Sort-Object -Unique | Where-Object { -not $known.ContainsKey($_) }
 
 if ($missing) {
-    Write-Host "MISSING FROM v1.4.8:"
+    Write-Host "MISSING FROM ${gameVersion}:"
     $missing | ForEach-Object { Write-Host "  $_" }
     exit 1
 }
-Write-Host "API OK: every TaleWorlds and StoryMode member referenced exists in v1.4.8"
+Write-Host "API OK: every TaleWorlds and StoryMode member referenced exists in $gameVersion"
 exit 0

@@ -458,6 +458,15 @@ namespace HeroesEvolve
         {
             if (item == null) return false;
 
+            // The filler spatha the game hands a hero it failed to equip
+            // (HeroAdapter.IsVanillaDummySword). The mod reads it as an empty
+            // slot and the market never replaces it, so anything that hands it
+            // out strands the man with it. v1.5.7 cut the Spatha's damage, which
+            // dropped this one to the rags' tier, and robbed imperial lords began
+            // walking away with it: Arytha, Sichanis and Semnon in the first
+            // v1.5.7 test, each robbed of a noble sword.
+            if (HeroAdapter.IsVanillaDummySword(item)) return false;
+
             // Clothing is not kit, whoever is selling it. See KitTier: the rack
             // below tier 2 is where every dress in the game lives, and a lord
             // has no business in one whether he was handed it, bought it or

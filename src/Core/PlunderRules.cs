@@ -450,12 +450,15 @@ namespace HeroesEvolve.Core
         /// What a reprisal costs against what an unprovoked robbery costs.
         ///
         /// Borrowed whole from the game's own answer to the same question.
-        /// DefaultExecutionRelationModel asks exactly one thing before pricing
-        /// an execution -- does the executed man have negative Honor -- and if
-        /// he does, every figure halves: -60 with his clan becomes -30, -30
-        /// with his friends becomes -15, -10 with his faction becomes -5. Only
+        /// Until v1.4.8, DefaultExecutionRelationModel asked exactly one thing
+        /// before pricing an execution -- does the executed man have negative
+        /// Honor -- and if he did, every figure halved: -60 with his clan
+        /// became -30, -30 with his friends -15, -10 with his faction -5. Only
         /// the uninvolved honourable noble, who would otherwise take -10,
-        /// stops caring altogether.
+        /// stopped caring altogether. v1.5.7 moved executions into blood feuds
+        /// and still asks the same question first: the houses near the dead
+        /// man take -30 rather than -45, his kingdom -25 rather than -50
+        /// (ExecutionCampaignBehavior.GetBloodFeudStartRelationPenaltyToOtherClan).
         ///
         /// Half rather than nothing, and that is the part worth copying. The
         /// game never says a killing was free because the dead man was a
@@ -489,8 +492,8 @@ namespace HeroesEvolve.Core
         /// prisoner and the same spell in the cells always give the same
         /// number, and revisiting simply asks the same question again -- which
         /// is the third time this project has replaced a ledger with a property
-        /// of the thing itself, after Talent.For and GrantTier.Choose, and it
-        /// uses their hash.
+        /// of the thing itself, after the talent draw (gone since Bannerlord v1.5.7 grows lords itself) and
+        /// GrantTier.Choose, and it uses their hash.
         ///
         /// What does move is the bar the number has to clear. Chance rises with
         /// his Roguery and falls as the two men warm to each other, so a man he

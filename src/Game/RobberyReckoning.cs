@@ -1,7 +1,6 @@
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.Actions;
 using TaleWorlds.CampaignSystem.CharacterDevelopment;
-using TaleWorlds.CampaignSystem.ComponentInterfaces;
 using HeroesEvolve.Core;
 
 namespace HeroesEvolve
@@ -97,14 +96,7 @@ namespace HeroesEvolve
         /// <summary>The Honor a robbery would be charged, read out and not charged.</summary>
         public static int NamePrice(bool hadItComing)
         {
-            ExecutionRelationModel prices = null;
-            if (Campaign.Current != null && Campaign.Current.Models != null)
-            {
-                prices = Campaign.Current.Models.ExecutionRelationModel;
-            }
-
-            int honour = prices != null ? RobberyCost.Of(prices.PlayerExecutingHeroHonorPenalty) : 0;
-            return PlunderRules.AfterReprisal(honour, hadItComing);
+            return PlunderRules.AfterReprisal(RobberyCost.Of(RobberyCost.ExecutionHonor), hadItComing);
         }
     }
 }

@@ -4,6 +4,7 @@ using MCM.Abstractions.Attributes.v2;
 using MCM.Abstractions.Base.Global;
 using MCM.Common;
 using TaleWorlds.CampaignSystem;
+using TaleWorlds.Localization;
 
 namespace HeroesEvolve
 {
@@ -69,23 +70,16 @@ namespace HeroesEvolve
         // The ids are a promise to translators as much as the property names
         // are to players -- rename one and its translation quietly falls back
         // to English.
+        //
+        // The title is the exception: MCM draws DisplayName as given, so it is
+        // resolved here, as the excluded-gear screen resolves its own
+        // (McmBridge). It went untranslated until the Chinese translator found
+        // it was the one text no language file could reach.
 
         public override string Id { get { return "HeroesEvolve"; } }
-        public override string DisplayName { get { return "Heroes Evolve"; } }
+        public override string DisplayName { get { return new TextObject("{=hev_mcm_title}Heroes Evolve").ToString(); } }
         public override string FolderName { get { return "HeroesEvolve"; } }
         public override string FormatType { get { return "json2"; } }
-
-        // ---- Skills -----------------------------------------------------------
-
-        [SettingPropertyBool("{=hev_mcm_growth}Grow lords' skills", RequireRestart = false, Order = 0,
-            HintText = "{=hev_mcm_growth_hint}Without this a lord stagnates and ends up weaker than his own troops. One to three points a year, toward a ceiling set by his talent.")]
-        [SettingPropertyGroup("{=hev_mcm_group_skills}Skills", GroupOrder = 8)]
-        public bool EnableSkillGrowth { get; set; } = true;
-
-        [SettingPropertyBool("{=hev_mcm_curve}Start lords on their curve", RequireRestart = false, Order = 1,
-            HintText = "{=hev_mcm_curve_hint}New campaigns only, and only with skill growth on. Every lord starts where his age and talent put him, then grows. Saves already under way are left alone.")]
-        [SettingPropertyGroup("{=hev_mcm_group_skills}Skills", GroupOrder = 8)]
-        public bool StartLordsOnCurve { get; set; } = true;
 
         // ---- Starting kits --------------------------------------------------
 
