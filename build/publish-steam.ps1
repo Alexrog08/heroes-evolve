@@ -162,13 +162,19 @@ $source = Get-Content $descriptionFile -Raw
 # Steam's cap with these steps in it, which is not headroom, it is a trap for
 # whoever edits this next.
 $nexusOnly = '(?s)\[nexus-only\].*?\[/nexus-only\]\r?\n?'
+
+# And the reverse, for a passage only a subscriber needs: telling a player who
+# stays on an older Bannerlord to leave the Workshop item for the version Nexus
+# keeps would read as nonsense on the Nexus page itself.
+$steamOnly = '(?s)\[steam-only\].*?\[/steam-only\]\r?\n?'
+$steamOnlyMarks = '\[/?steam-only\]\r?\n?'
 # Normalised to LF before anything counts it. Git decides on checkout
 # whether this file lands CRLF or LF, so the same description measured
 # 7,969 characters in one working copy and 8,154 in another -- over
 # Steam's cap, from a git checkout and nothing else. BBCode does not care
 # which it gets, and the count has to mean the same thing every time.
 $source = $source -replace "`r`n", "`n"
-$description = ($source -replace $nexusOnly, '').TrimEnd() + "`n"
+$description = (($source -replace $nexusOnly, '') -replace $steamOnlyMarks, '').TrimEnd() + "`n"
 
 # Steam caps a Workshop description at 8000 characters and does not say so
 # politely: the whole upload runs, the content transfers, the preview transfers,
@@ -266,13 +272,16 @@ $update.Add('  </UpdateItem>')
 # Built from the SOURCE, not from the Steam copy: Nexus is the page that wants
 # the installation steps, so it is the one that must not be handed a version
 # with them already cut out.
-$nexus = $source -replace '\[/?nexus-only\]\r?\n?', ''
+$nexus = ($source -replace $steamOnly, '') -replace '\[/?nexus-only\]\r?\n?', ''
 $nexus = $nexus -replace '\[h1\](.*?)\[/h1\]', '[size=5][b]$1[/b][/size]'
 $nexus = $nexus -replace '\[h2\](.*?)\[/h2\]', '[size=4][b]$1[/b][/size]'
 $nexusOut = Join-Path $root ".tmp\store-description-nexus.bbcode"
 New-Item -ItemType Directory -Force (Split-Path $nexusOut) | Out-Null
 $nexus | Set-Content -Path $nexusOut -Encoding UTF8 -NoNewline
 if ($nexus -match '\[h[0-9]\]') { throw "a header tag survived the Nexus rendering" }
+if ($nexus -match '\[/?(steam|nexus)-only\]' -or $description -match '\[/?(steam|nexus)-only\]') {
+    throw "an audience marker survived the rendering (unbalanced [steam-only] or [nexus-only]?)"
+}
 
 $out = Join-Path $root ".tmp\workshop.xml"
 New-Item -ItemType Directory -Force (Split-Path $out) | Out-Null
