@@ -174,6 +174,35 @@ $steamOnlyMarks = '\[/?steam-only\]\r?\n?'
 # Steam's cap, from a git checkout and nothing else. BBCode does not care
 # which it gets, and the count has to mean the same thing every time.
 $source = $source -replace "`r`n", "`n"
+
+# The source is wrapped at 80 columns to be edited, and both sites print every
+# newline as a line break, so a paragraph came out cut at 80 characters with
+# half the column empty beside it. Lines of running text are joined back into
+# their paragraph or bullet here, which costs nothing against the cap: a space
+# for a newline. A line that opens a block (a bullet, a list, a heading, a code
+# block, an audience marker) starts its own line, and [code] is left exactly
+# as written, since its tables are aligned by the spaces in each line.
+$blockTag = '^\[(\*|/?list|/?olist|/?h[1-3]|/?code|hr|/?nexus-only|/?steam-only)[\]=]'
+$joined = New-Object System.Collections.Generic.List[string]
+$inCode = $false
+$prevText = $false
+foreach ($line in ($source -split "`n")) {
+    $isBlock = $line -match $blockTag
+    $isText = $line.Trim() -ne '' -and -not $isBlock -and -not $inCode
+    if ($isText -and $prevText) {
+        $joined[$joined.Count - 1] = $joined[$joined.Count - 1].TrimEnd() + ' ' + $line.Trim()
+    } else {
+        $joined.Add($line)
+    }
+    if ($line -match '^\[code\]') { $inCode = $true }
+    if ($line -match '^\[/code\]') { $inCode = $false }
+    # A bullet's first line carries its text, so what follows it continues it.
+    $prevText = -not $inCode -and $line.Trim() -ne '' -and
+                (-not $isBlock -or $line -match '^\[\*\]') -and
+                $line -notmatch '\[/(list|olist|h[1-3]|code|nexus-only|steam-only)\]\s*$'
+}
+$source = $joined -join "`n"
+
 $description = (($source -replace $nexusOnly, '') -replace $steamOnlyMarks, '').TrimEnd() + "`n"
 
 # Steam caps a Workshop description at 8000 characters and does not say so
@@ -273,8 +302,16 @@ $update.Add('  </UpdateItem>')
 # the installation steps, so it is the one that must not be handed a version
 # with them already cut out.
 $nexus = ($source -replace $steamOnly, '') -replace '\[/?nexus-only\]\r?\n?', ''
-$nexus = $nexus -replace '\[h1\](.*?)\[/h1\]', '[size=5][b]$1[/b][/size]'
-$nexus = $nexus -replace '\[h2\](.*?)\[/h2\]', '[size=4][b]$1[/b][/size]'
+# Nexus also takes colour, which Steam's BBCode has no tag for, so the colour
+# lives here and the shared source stays plain. The gallery's own palette,
+# lifted for Nexus's dark page: ochre for headings, brick for the names
+# picked out in bold. Bold first, so the [b] the headings gain is not
+# coloured twice.
+$ochre = '#e0b34a'
+$brick = '#d9714f'
+$nexus = $nexus -replace '\[b\](.*?)\[/b\]', "[b][color=$brick]`$1[/color][/b]"
+$nexus = $nexus -replace '\[h1\](.*?)\[/h1\]', "[center][size=6][b][color=$ochre]`$1[/color][/b][/size][/center]"
+$nexus = $nexus -replace '\[h2\](.*?)\[/h2\]', "[line]`n[size=4][b][color=$ochre]`$1[/color][/b][/size]"
 $nexusOut = Join-Path $root ".tmp\store-description-nexus.bbcode"
 New-Item -ItemType Directory -Force (Split-Path $nexusOut) | Out-Null
 $nexus | Set-Content -Path $nexusOut -Encoding UTF8 -NoNewline
