@@ -12,6 +12,7 @@
     <string id="hev_mcm_gear_items" text="领主永远拿不到的物品" />
     <string id="hev_mcm_gear_items_hint" text="以逗号分隔的物品 ID：永远不会被购买，也不会出现在起始装备里。适用于被其他模组搞错的个别物品，因为排除上面整个模组又太过头的情况。燃烧武器本来就已排除。" />
     <!-- src/Game/McmSettings.cs -->
+    <string id="hev_mcm_group_skills" text="技能" />
     <string id="hev_mcm_repair" text="替没有装备的领主配发起始装备" />
     <string id="hev_mcm_repair_hint" text="替一无所有的领主穿上衣物：出生时只穿平民服装，或被俘虏他的人剥光。配发符合其文化与技能的简单装备，其余靠他自己购买。" />
     <string id="hev_mcm_group_kits" text="起始装备" />

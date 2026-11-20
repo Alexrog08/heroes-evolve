@@ -74,6 +74,7 @@ namespace HeroesEvolve
         public static void RunCensus(float clanWeight, float skillWeight, int minimumTier, int dominanceMargin)
         {
             ModLog.Info("===== CENSUS BEGIN =====");
+            ModLog.Info("GROWTH " + GrowthMode.Describe());
             ReportCatalog();
             ReportTiers();
             ReportGold();
@@ -87,13 +88,17 @@ namespace HeroesEvolve
             ReportVariety(dominanceMargin);
             ReportDefectRate();
             ReportSkillCurve();
+            ReportChase();
             ReportPlayerCharacters();
             ReportMyClan();
             ReportAttributes();
+            ReportTalentSpread();
+            ReportAuthoredTalent();
             ReportTraits();
             ReportFeuds();
             ModLog.Info(HeroesEvolve.Api.HeroesEvolveEvents.Describe());
             ReportAllSkills();
+            ReportGaps();
             ReportNaval();
             CaravanWatch.Report();
             ReportClanWealth();
@@ -1008,6 +1013,7 @@ namespace HeroesEvolve
 
                     lines.Add(kingdom.StringId + " ruler=" + ruler.Name
                               + " age=" + (int)ruler.Age
+                              + " authored=" + HeroTalent.IsAuthored(ruler)
                               + " clanTier=" + (ruler.Clan != null ? ruler.Clan.Tier : 0)
                               + " steward=" + ruler.GetSkillValue(DefaultSkills.Steward)
                               + " leadership=" + ruler.GetSkillValue(DefaultSkills.Leadership)
@@ -1910,20 +1916,23 @@ namespace HeroesEvolve
         /// What a healthy lord's combat skills look like at each age, and how
         /// they are shaped.
         ///
-        /// Once the measure the mod's own skill seeding was built on; since
-        /// Bannerlord v1.5.7 grows lords itself and the mod no longer touches
-        /// skills, it is how that growth is watched. Compare its percentiles
-        /// with the baselines recorded before (hev.log of v1.5.3 and earlier).
+        /// The mod is about to seed skills on repaired heroes, and the value to
+        /// seed cannot be invented: a lord repaired at forty-eight should end up
+        /// where his healthy contemporaries are, not where a number that felt
+        /// right puts him. Two things are needed and neither is guessable.
         ///
-        /// The level: the campaign's own skill-by-age curve.
+        /// The level: the campaign's own skill-by-age curve, so a catch-up has
+        /// somewhere to catch up to.
         ///
         /// The shape: a healthy lord does not carry one skill, he carries a
-        /// spread -- Zoana runs 85/81/76/72/70/70, Kjarvon 187/157/155/135/68/36.
-        /// Reported as the median ratio of each ranked skill to the best one.
+        /// spread -- Zoana runs 85/81/76/72/70/70, Kjarvon 187/157/155/135/68/36
+        /// -- so seeding a single skill would produce something no lord in the
+        /// game resembles. Reported as the median ratio of each ranked skill to
+        /// the best one.
         ///
         /// Degenerate heroes (one weapon skill or none) are excluded from both:
-        /// they are the come-of-age defect, and leaving them in would drag the
-        /// healthy curve down toward it.
+        /// they are the population being fixed, and leaving them in would drag
+        /// the target down toward the defect it is meant to repair.
         /// </summary>
         private static void ReportSkillCurve()
         {
@@ -2020,8 +2029,11 @@ namespace HeroesEvolve
             // The line this one is read against. Measured over the 458 lord
             // sheets TaleWorlds shipped, the same way: six weapon lines sorted
             // high to low, each as a share of that sheet's own best, median at
-            // each rank, so the two lines together say whether the world came
-            // out the shape he drew.
+            // each rank. It is what SkillGrowth.TargetForRank is calibrated to,
+            // so the two lines together say whether the world came out the
+            // shape he drew. The first four ranks are the ones the rule sets;
+            // the last two are whatever a lord's own sheet and his years leave
+            // behind.
             StringBuilder text = new StringBuilder("SKILLSHAPE medianRatioToBest");
             for (int i = 0; i < shape.Length; i++)
             {
@@ -2039,9 +2051,8 @@ namespace HeroesEvolve
         /// skills and the focus invested in each.
         ///
         /// Two things need it. The player is meant to be the most capable hero
-        /// on the map, so their skills are the line the AI's lords are read
-        /// against -- and that line can only be read from the character
-        /// themselves.
+        /// on the map, so their skills are the ceiling AI growth must not cross
+        /// -- and that ceiling can only be read from the character themselves.
         /// And the focus allocation shows where a human actually spent a
         /// campaign's worth of points, which is the shape a deliberately built
         /// hero has, as opposed to the one the AI's own allocator produces.
@@ -2058,10 +2069,17 @@ namespace HeroesEvolve
         /// every other line filters on HeroFilter.IsEligible and that refuses
         /// heroes travelling in the main party. Those heroes are refused for a
         /// reason about equipment -- their inventory belongs to the player --
-        /// and whether they keep up with the map depends on how much a given
-        /// player fights, which is not something that can be reasoned about
-        /// from here. So it is measured instead, against the cohort the man
-        /// would be compared to if he were anyone else.
+        /// and the same filter happens to gate skill growth, so a companion
+        /// riding with the player gets none of it while every lord on the map
+        /// gets one to three points a year for life.
+        ///
+        /// That may be fine. A companion in the player's party fights when the
+        /// player fights, earns experience the ordinary way, and receives focus
+        /// and perks by hand, which no AI lord does. Whether it comes out even
+        /// depends entirely on how much a given player fights, which is not
+        /// something that can be reasoned about from here -- so it is measured
+        /// instead, against the cohort the man would be compared to if he were
+        /// anyone else.
         ///
         /// Reports the best of the six weapon skills, which is what SKILLAGE
         /// buckets, so the two are the same measurement and the comparison is
@@ -2089,8 +2107,7 @@ namespace HeroesEvolve
             int[] bounds = { 18, 25, 35, 45, 55, 200 };
             string[] labels = { "18-24", "25-34", "35-44", "45-54", "55+" };
 
-            // The map to measure against: every adult lord, companion and
-            // wanderer, the heroes the game's own daily experience reaches.
+            // The map to measure against: every lord this mod does grow.
             List<int>[] cohort = new List<int>[labels.Length];
             List<int>[] cohortTotal = new List<int>[labels.Length];
             for (int i = 0; i < cohort.Length; i++)
@@ -2103,7 +2120,7 @@ namespace HeroesEvolve
             {
                 try
                 {
-                    if (!IsCohortHero(hero)) continue;
+                    if (!HeroFilter.IsEligibleToGrow(hero)) continue;
                     int b = Bucket(bounds, (int)hero.Age);
                     if (b < 0) continue;
                     int best = BestWeaponSkill(hero);
@@ -2143,16 +2160,18 @@ namespace HeroesEvolve
                     ModLog.Info("MYCLAN " + hero.Name
                                 + " age=" + (int)hero.Age
                                 + " where=" + place
+                                + " grown=" + HeroFilter.IsEligibleToGrow(hero)
                                 // The repair's own answer, not the general
                                 // one: a companion can be robbed and still
                                 // never be handed the starting kit. The kit
                                 // also needs its moment -- once, when the game
                                 // makes his gear -- which this cannot show.
                                 + " geared=" + HeroFilter.IsEligibleForRepair(hero)
-                                // The other filter, and it was missing. A
-                                // census without it cannot show a hero the mod
-                                // repairs but never shops for, which is exactly
-                                // what every companion was.
+                                // The third filter, and it was missing. A
+                                // census that reports two of the three answers
+                                // cannot show a hero the mod repairs and grows
+                                // but never shops for, which is exactly what
+                                // every companion was.
                                 + " shops=" + HeroFilter.IsEligibleToShop(hero)
                                 + " why=" + (HeroFilter.WhyIneligible(hero) ?? "-")
                                 + (HeroFilter.WhyIneligible(hero) == null
@@ -2236,19 +2255,6 @@ namespace HeroesEvolve
             return best;
         }
 
-        /// <summary>
-        /// An adult lord, companion or wanderer: who the game's daily
-        /// experience reaches (HeroDailyXpCampaignBehavior), and so the
-        /// population a hero's skills are fairly compared with.
-        /// </summary>
-        private static bool IsCohortHero(Hero hero)
-        {
-            if (hero == null || hero.IsDead || hero.IsChild || hero.IsTemplate) return false;
-            if (hero == Hero.MainHero) return false;
-            if (hero.Clan != null && hero.Clan.IsBanditFaction) return false;
-            return hero.IsLord || hero.CompanionOf != null || hero.Occupation == Occupation.Wanderer;
-        }
-
         private static int Bucket(int[] bounds, int age)
         {
             for (int b = 0; b + 1 < bounds.Length; b++)
@@ -2263,6 +2269,126 @@ namespace HeroesEvolve
             if (values == null || values.Count == 0) return 0;
             values.Sort();
             return values[values.Count / 2];
+        }
+
+        /// <summary>
+        /// The player's skills against everyone else's, and how far each hero
+        /// is behind the target this mod is walking him toward.
+        ///
+        /// Written for one question the rest of the census cannot answer: does
+        /// a lord climb the way the player does, only lower? That is the shape
+        /// the design asks for -- the player fastest and furthest, the lords on
+        /// a similar curve beneath him, separated by talent -- and nothing has
+        /// ever checked it. The two men are grown by completely different
+        /// machinery: the player earns experience by swinging a weapon, and a
+        /// lord is moved by SkillGrowth on a weekly tick. There is no reason
+        /// the two curves should match except that somebody looked.
+        ///
+        /// The line to watch is the gap. PointsStep closes twelve hundredths of
+        /// the distance to the target each year and returns exactly zero once a
+        /// hero arrives, so if growth were a staircase -- climb, stall at the
+        /// cap, wait for a birthday to raise it, climb again -- the heroes would
+        /// pile up AT their targets and gapAtOrOver would be most of them.
+        ///
+        /// What the arithmetic predicts instead is a steady chase. The target
+        /// is peak * Maturity(age), and maturity runs from 0.55 at eighteen to
+        /// 1.0 at sixty, so it rises by peak * 0.0107 a year. Growth is
+        /// gap * 0.12 * talent and the target's rise is peak * 0.0107 * talent
+        /// with the same peak, so the two balance where
+        ///
+        ///     gap * 0.12 = 150 * 0.0107   ->   gap = 13.4
+        ///
+        /// and the talent cancels out of it entirely. Every hero, gifted or
+        /// hopeless, should settle about thirteen points short and travel
+        /// alongside his target rather than sitting on it.
+        ///
+        /// So the census prints the prediction beside the measurement. If the
+        /// gaps cluster near thirteen the curve is smooth and the rate is
+        /// right; if they cluster at zero it is a staircase and the rate is too
+        /// fast for the target that restrains it.
+        /// </summary>
+        private static void ReportChase()
+        {
+            // Stamped so two censuses become a rate rather than two snapshots.
+            ModLog.Info("CHASE date day=" + (int)CampaignTime.Now.ToDays
+                        + " daysPerYear=" + (int)CampaignTime.DaysInYear);
+
+            Hero me = Hero.MainHero;
+            if (me != null)
+            {
+                try
+                {
+                    ModLog.Info("CHASE player name=" + me.Name
+                                + " age=" + (int)me.Age
+                                + " level=" + me.Level
+                                + " bestWeapon=" + BestWeaponSkill(me)
+                                + " allSkills=" + AllSkillTotal(me));
+                    ModLog.Info("CHASE player skills " + EverySkill(me));
+                }
+                catch
+                {
+                    // The player is one hero; losing him costs the comparison
+                    // and not the census.
+                }
+            }
+
+            List<int> best = new List<int>();
+            List<int> targets = new List<int>();
+            List<int> gaps = new List<int>();
+            List<int> totals = new List<int>();
+            int atOrOver = 0;
+
+            // Banded by talent, because the prediction is that the band makes
+            // no difference to the gap. If it does, the cancellation above is
+            // wrong somewhere.
+            string[] bands = { "talent<1.0", "talent1.0-1.3", "talent>1.3" };
+            List<int>[] gapByBand = new List<int>[bands.Length];
+            for (int i = 0; i < gapByBand.Length; i++) gapByBand[i] = new List<int>();
+
+            foreach (Hero hero in Hero.AllAliveHeroes)
+            {
+                try
+                {
+                    if (!HeroFilter.IsEligibleToGrow(hero)) continue;
+
+                    float talent = HeroTalent.For(hero, Talent.Combat);
+                    int target = SkillGrowth.PrimaryTarget(hero.Age, talent);
+                    if (target <= 0) continue;
+
+                    int top = BestWeaponSkill(hero);
+                    int gap = target - top;
+
+                    best.Add(top);
+                    targets.Add(target);
+                    gaps.Add(gap);
+                    totals.Add(AllSkillTotal(hero));
+                    if (gap <= 0) atOrOver++;
+
+                    int band = talent < 1.0f ? 0 : (talent <= 1.3f ? 1 : 2);
+                    gapByBand[band].Add(gap);
+                }
+                catch
+                {
+                    // One unreadable hero must not cost the population.
+                }
+            }
+
+            ModLog.Info("CHASE heroes n=" + best.Count
+                        + " atOrOverTarget=" + atOrOver
+                        + " (" + (best.Count > 0 ? atOrOver * 100 / best.Count : 0) + "%)");
+            ModLog.Info("CHASE heroes bestWeapon " + Percentiles(best));
+            ModLog.Info("CHASE heroes target     " + Percentiles(targets));
+            ModLog.Info("CHASE heroes gap        " + Percentiles(gaps));
+            ModLog.Info("CHASE heroes allSkills  " + Percentiles(totals));
+
+            for (int i = 0; i < bands.Length; i++)
+            {
+                ModLog.Info("CHASE gapByTalent " + bands[i] + " " + Percentiles(gapByBand[i]));
+            }
+
+            ModLog.Info("CHASE predicted equilibriumGap=13"
+                        + " (talent cancels; a median near 13 is a smooth chase,"
+                        + " near 0 is a staircase and the rate is too fast)");
         }
 
         private static void ReportPlayerCharacters()
@@ -2402,6 +2528,430 @@ namespace HeroesEvolve
         }
 
         /// <summary>
+        /// How talent actually lands across this campaign's lords, and who the
+        /// gifted ones are.
+        ///
+        /// The distribution is triangular by construction, so the arithmetic is
+        /// known: for a threshold t above the midpoint, the share above it is
+        /// 2(1-t)^2. Over six hundred lords that puts roughly six above 1.90,
+        /// one or two above 1.95 and almost none at the ceiling -- which is the
+        /// intent, a handful of exceptional lords per campaign arrived at by
+        /// probability rather than by a rule that forces them.
+        ///
+        /// The bottom of it is no longer triangular. A lord TaleWorlds wrote
+        /// keeps his sheet as a floor, so the poor tail here is made of heroes
+        /// born in play, hired out of taverns, or written weak in the first place.
+        ///
+        /// Arithmetic is not evidence, though. This reports where the hashes of
+        /// the real hero ids actually fell, and names the top few so they can be
+        /// looked up in game.
+        /// </summary>
+        private static void ReportTalentSpread()
+        {
+            List<int> all = new List<int>();
+            List<string> gifted = new List<string>();
+            int above190 = 0, above195 = 0, below070 = 0, atLevel = 0, pastTheBest = 0;
+
+            // The two figures that mean something on this scale, rather than the
+            // two that used to: 1.90 and 1.95 were exceptional when the dice
+            // stopped at 2.07 and are merely above the middle now that they reach
+            // 2.25. Level is standing with the best lord TaleWorlds ever wrote;
+            // past it is the prodigy the dice are widened for.
+            float best = AuthoredTalent.Floor(300, SkillGrowth.PeakNorm);
+
+            foreach (Hero hero in Hero.AllAliveHeroes)
+            {
+                try
+                {
+                    if (!HeroFilter.IsEligible(hero)) continue;
+
+                    float talent = HeroTalent.For(hero);
+                    all.Add((int)(talent * 100));
+
+                    if (talent < 0.70f) below070++;
+                    if (talent > 1.90f)
+                    {
+                        above190++;
+                        if (gifted.Count < 12)
+                        {
+                            gifted.Add(hero.Name + " (" + CultureIdOf(hero) + ", "
+                                       + (int)hero.Age + ") " + (int)(talent * 100));
+                        }
+                    }
+                    if (talent > 1.95f) above195++;
+                    if (talent >= Talent.Level) atLevel++;
+                    if (talent > best) pastTheBest++;
+                }
+                catch
+                {
+                    // One unreadable hero must not cost the spread.
+                }
+            }
+
+            ModLog.Info("TALENT " + Percentiles(all));
+            ModLog.Info("TALENT exceptional above190=" + above190
+                        + " above195=" + above195
+                        + " poor below070=" + below070
+                        + " of " + all.Count);
+            ModLog.Info("TALENT standing atLevelWithCaladog=" + atLevel
+                        + " pastHim=" + pastTheBest
+                        + " of " + all.Count
+                        + " (level " + TwoPlaces(Talent.Level)
+                        + ", his sheet asks " + TwoPlaces(best) + ")");
+
+            for (int i = 0; i < gifted.Count; i++)
+            {
+                ModLog.Info("TALENT gifted " + gifted[i]);
+            }
+        }
+
+        /// <summary>
+        /// Who stands on the sheet TaleWorlds wrote him rather than on his own
+        /// dice, which sheet it was, and what it came to -- with every reigning
+        /// ruler alongside.
+        ///
+        /// Written to check the reading of TaleWorlds' sheets against figures
+        /// worked out from the game's own files before any of it shipped. Of the
+        /// 484 lords TaleWorlds wrote, 284 should stand on their sheet in some
+        /// field -- combat 124, civil 223, naval 22 -- and 200 be left entirely
+        /// to the dice. The census population adds the wanderers and every hero
+        /// born in play, none of whom has a sheet of his own, so its share is
+        /// lower and falls as a campaign goes on.
+        ///
+        /// The ten written for a station are the spot check, their figures being
+        /// known: their sheets ask for Caladog 2.10 in combat, Halthdar 1.82,
+        /// Derthert, Monchug and Raganvad 1.75, Unqid 1.61, Hurunag 1.54; in
+        /// civil Unqid 1.75, Caladog, Garios, Lucon and Rhagaea 1.68, the other
+        /// kings 1.61, Hurunag 1.54; at sea Halthdar 1.96. Three are dealt more
+        /// than their sheet asks with a blade -- Lucon 1.93, Garios 1.80,
+        /// Rhagaea 1.56 -- and keep it, because a sheet is a floor and not a
+        /// wage. A king below the figure above means his sheet was not where it
+        /// was expected.
+        /// </summary>
+        private static void ReportAuthoredTalent()
+        {
+            int combat = 0, civil = 0, naval = 0;
+            List<Hero> growing = new List<Hero>();
+            List<Hero> authored = new List<Hero>();
+            foreach (Hero hero in Hero.AllAliveHeroes)
+            {
+                try
+                {
+                    if (!HeroFilter.IsEligibleToGrow(hero)) continue;
+                    growing.Add(hero);
+
+                    if (HeroTalent.StandsOnSheet(hero, Talent.Combat)) combat++;
+                    if (HeroTalent.StandsOnSheet(hero, Talent.Civil)) civil++;
+                    if (HeroTalent.StandsOnSheet(hero, Talent.Naval)) naval++;
+                    if (HeroTalent.IsAuthored(hero)) authored.Add(hero);
+                }
+                catch
+                {
+                    // One unreadable hero must not cost the count.
+                }
+            }
+
+            ModLog.Info("TALENT sheets " + authored.Count + " of " + growing.Count
+                        + " growing heroes stand on what TaleWorlds wrote in some field"
+                        + " (combat=" + combat + " civil=" + civil + " naval=" + naval + ");"
+                        + " the rest are left to the hash");
+            ModLog.Info("TALENT floor a sheet's best skill in a field is what its man must reach:"
+                        + " talent = best * " + TwoPlaces(1f + AuthoredTalent.Surplus)
+                        + " / the norm of that field, so he is back on his sheet near 55 and "
+                        + (int)(AuthoredTalent.Surplus * 100f) + "% above it at " + SkillGrowth.MatureAge);
+            ModLog.Info("TALENT norms combat=" + SkillGrowth.PeakNorm
+                        + " civil=" + SkillGrowth.CivilPeakNorm
+                        + " naval=" + SkillGrowth.NavalPeakNorm
+                        + ", each the most TaleWorlds wrote in that field over the talent that stands"
+                        + " level with him (" + TwoPlaces(Talent.Level) + "): combat "
+                        + Talent.TargetFor(SkillGrowth.PeakNorm, Talent.Level)
+                        + " civil " + Talent.TargetFor(SkillGrowth.CivilPeakNorm, Talent.Level)
+                        + " naval " + Talent.TargetFor(SkillGrowth.NavalPeakNorm, Talent.Level));
+            ModLog.Info("TALENT prodigy the dice reach " + TwoPlaces(Talent.Maximum) + ", so the rarest hero"
+                        + " finishes combat " + Talent.TargetFor(SkillGrowth.PeakNorm, Talent.Maximum)
+                        + " civil " + Talent.TargetFor(SkillGrowth.CivilPeakNorm, Talent.Maximum)
+                        + " naval " + Talent.TargetFor(SkillGrowth.NavalPeakNorm, Talent.Maximum)
+                        + ", past the best written lord of each field and short of the "
+                        + SkillGrowth.GameSkillMaximum + " the game can show");
+
+            ReportAboveAuthored(growing);
+            ReportSheetPromise(growing);
+
+            List<Hero> shown = new List<Hero>(authored);
+            foreach (Kingdom kingdom in Kingdom.All)
+            {
+                try
+                {
+                    Hero ruler = kingdom.Leader;
+                    if (ruler != null && !shown.Contains(ruler)) shown.Add(ruler);
+                }
+                catch
+                {
+                    // Same reason as above.
+                }
+            }
+
+            for (int i = 0; i < shown.Count; i++)
+            {
+                try
+                {
+                    Hero hero = shown[i];
+                    string sheet = HeroTalent.SheetIdOf(hero);
+                    string station = hero.IsKingdomLeader && hero.Clan != null && hero.Clan.Kingdom != null
+                                   ? "ruler " + hero.Name + " (" + hero.Clan.Kingdom.Name
+                                   : "lord " + hero.Name + " (" + (hero.Clan != null ? hero.Clan.Name.ToString() : "no clan");
+
+                    ModLog.Info("TALENT " + station + ", " + (int)hero.Age + ")"
+                                + " sheet=" + (sheet ?? "none")
+                                + " written=" + HeroTalent.BestWritten(hero, Talent.Combat)
+                                + "/" + HeroTalent.BestWritten(hero, Talent.Civil)
+                                + "/" + HeroTalent.BestWritten(hero, Talent.Naval)
+                                + " combat=" + TwoPlaces(HeroTalent.For(hero, Talent.Combat))
+                                + " civil=" + TwoPlaces(HeroTalent.For(hero, Talent.Civil))
+                                + " naval=" + TwoPlaces(HeroTalent.For(hero, Talent.Naval))
+                                + " source=" + HeroTalent.SourceOf(hero));
+                }
+                catch
+                {
+                    // Same reason as above.
+                }
+            }
+        }
+
+        /// <summary>
+        /// Whether the promise actually holds in this campaign: every lord
+        /// TaleWorlds wrote reaches the best skill his sheet gives him, in every
+        /// field, and passes it by AuthoredTalent.Surplus once he is grown.
+        ///
+        /// The arithmetic says it must, since the floor is derived from exactly
+        /// that -- but the arithmetic runs on the sheets this installation
+        /// actually has. A mod may write one above what the game can show, and
+        /// such a sheet is held at the ceiling and falls short of itself. So
+        /// short=0 is the expected answer and anything else names the men it
+        /// failed, which is the whole reason to count it rather than assert it.
+        ///
+        /// The ratio is the other half of the picture. The median lord peaks far
+        /// above his sheet because his dice were kinder than it -- 143% of his
+        /// written best in combat on the vanilla roster, 109% in civil -- so this
+        /// measures how much of the roster the floor is actually carrying, not
+        /// how generous it is. The tenth percentile is the figure that moved:
+        /// 82% before the sheets became a floor, 105% after.
+        ///
+        /// Measured at the peak rather than at his age, because the promise is
+        /// about where he ends, and most of the roster is nowhere near sixty.
+        /// </summary>
+        private static void ReportSheetPromise(List<Hero> growing)
+        {
+            string[] fields = { Talent.Combat, Talent.Civil, Talent.Naval };
+            for (int f = 0; f < fields.Length; f++)
+            {
+                List<int> ratios = new List<int>();
+                List<string> named = new List<string>();
+                int onSheet = 0, fellShort = 0;
+
+                for (int i = 0; i < growing.Count; i++)
+                {
+                    try
+                    {
+                        Hero hero = growing[i];
+                        int written = HeroTalent.BestWritten(hero, fields[f]);
+                        if (written <= 0) continue;
+
+                        int peak = Talent.TargetFor(SkillGrowth.PeakNormFor(fields[f]),
+                                                    HeroTalent.For(hero, fields[f]));
+                        ratios.Add(peak * 100 / written);
+                        if (HeroTalent.StandsOnSheet(hero, fields[f])) onSheet++;
+                        if (peak >= written) continue;
+
+                        // Counted apart from the sample: three names are enough
+                        // to chase a modded sheet down, and the count is the
+                        // number that says whether the promise held at all.
+                        fellShort++;
+                        if (named.Count < 3) named.Add(hero.Name + " " + peak + " of " + written);
+                    }
+                    catch
+                    {
+                        // One unreadable hero must not cost the count.
+                    }
+                }
+
+                ModLog.Info("TALENT promise " + fields[f] + " peak as a share of what he was written"
+                            + " (standing on the sheet " + onSheet + "): " + Percentiles(ratios)
+                            + " | short=" + fellShort
+                            + (named.Count > 0 ? " " + string.Join("; ", named.ToArray()) : ""));
+            }
+
+            ReportWrittenLines(growing);
+        }
+
+        /// <summary>
+        /// The other half of the promise: every single line of a sheet, not just
+        /// the best of each field.
+        ///
+        /// Every line is aimed at where his own written profile puts it at his
+        /// age (AuthoredTalent.WrittenAt). Below what he was written is expected
+        /// and not counted: a young lord is meant to be, and grows into it.
+        ///
+        /// The count below the line is not expected to be nought, and the second
+        /// census of the curve is what taught us to stop asking for that. A line
+        /// that carries an age term rises every single day, while the skill
+        /// chasing it moves in whole points as experience arrives, so a lord who
+        /// stood exactly on his line in the morning stands a point under it a
+        /// season later. Measured: the maturity ramp climbs 0.0107 a year, so a
+        /// written 200 asks for about six tenths of a point more each season,
+        /// and a first census that read 10 lines below read 794 three weeks
+        /// later -- all of them a point or so short, none of them falling away.
+        ///
+        /// So the size of the gap is the figure that means something, and the
+        /// three worst are named rather than the three found first. Points, not
+        /// shares, because a share exaggerates at the bottom of the scale: a
+        /// line of 25 that is one point short reads as 96%, the same as a line
+        /// of 250 that is ten points short. A gap of a point or two is a hero
+        /// mid-step. A gap of twenty is a line nobody is aiming at.
+        ///
+        /// The share is the other half: how far above his sheet the mod has
+        /// carried each line. It was the civil middle that prompted this -- a
+        /// census found trade at 60 against the 90 he wrote, medicine 62 against
+        /// 90 -- so those two skills are the ones to watch, against his profile
+        /// rather than against his raw figures, since a lord below his written
+        /// trade at twenty-seven is on the curve rather than short of it.
+        /// </summary>
+        private static void ReportWrittenLines(List<Hero> growing)
+        {
+            List<int> ratios = new List<int>();
+            List<int> gaps = new List<int>();
+            int[] worst = new int[3];
+            string[] named = new string[3];
+            int written = 0, below = 0;
+
+            for (int i = 0; i < growing.Count; i++)
+            {
+                try
+                {
+                    Hero hero = growing[i];
+                    foreach (SkillObject skill in TaleWorlds.CampaignSystem.Extensions.Skills.All)
+                    {
+                        if (skill == null) continue;
+
+                        int floor = AuthoredTalent.WrittenAt(HeroTalent.WrittenIn(hero, skill), hero.Age);
+                        if (floor <= 0) continue;
+
+                        written++;
+                        int has = hero.GetSkillValue(skill);
+                        ratios.Add(has * 100 / floor);
+                        if (has >= floor) continue;
+
+                        below++;
+                        int gap = floor - has;
+                        gaps.Add(gap);
+
+                        // The three widest, kept in order, so the sample names
+                        // the lines that are actually being missed rather than
+                        // whichever hero the roster happens to start with.
+                        for (int w = 0; w < worst.Length; w++)
+                        {
+                            if (gap <= worst[w]) continue;
+
+                            for (int m = worst.Length - 1; m > w; m--)
+                            {
+                                worst[m] = worst[m - 1];
+                                named[m] = named[m - 1];
+                            }
+                            worst[w] = gap;
+                            named[w] = hero.Name + " " + (skill.Name != null ? skill.Name.ToString() : "?")
+                                     + " " + has + " of " + floor;
+                            break;
+                        }
+                    }
+                }
+                catch
+                {
+                    // One unreadable hero must not cost the count.
+                }
+            }
+
+            List<string> sample = new List<string>();
+            for (int w = 0; w < named.Length; w++)
+            {
+                if (named[w] != null) sample.Add(named[w]);
+            }
+
+            ModLog.Info("TALENT written lines " + written + " chase a line; below it " + below
+                        + (sample.Count > 0 ? " (widest: " + string.Join("; ", sample.ToArray()) + ")" : "")
+                        + " | short by points " + Percentiles(gaps)
+                        + " | value as a share of the line " + Percentiles(ratios));
+        }
+
+        /// <summary>
+        /// How many heroes the dice favoured stand above every hero whose sheet
+        /// decided that same field.
+        ///
+        /// What a written sheet does to the top of the world. A lord the dice
+        /// favoured should be able to stand above the written ones, and in civil
+        /// and at sea he does: over the lords TaleWorlds wrote, 46 stand above
+        /// the strongest civil sheet, 1.75, and 8 above Halthdar's 1.96. In
+        /// combat he no longer can. Caladog's 300 asks for 2.10, past anything
+        /// the hash deals, so the count there is 0 -- by choice, taken when the
+        /// sheets became a floor, and not by accident. Anything above 0 in
+        /// combat means a modded roster wrote a lord higher still.
+        ///
+        /// Counted field by field rather than hero by hero, because a man can
+        /// stand on his sheet with a ledger and on his dice with a sword, and the
+        /// question is about the field.
+        /// </summary>
+        private static void ReportAboveAuthored(List<Hero> growing)
+        {
+            string[] fields = { Talent.Combat, Talent.Civil, Talent.Naval };
+            float[] best = new float[fields.Length];
+            Hero[] strongest = new Hero[fields.Length];
+            List<float>[] dealt = new List<float>[fields.Length];
+            for (int f = 0; f < fields.Length; f++) dealt[f] = new List<float>();
+
+            for (int i = 0; i < growing.Count; i++)
+            {
+                try
+                {
+                    Hero hero = growing[i];
+                    for (int f = 0; f < fields.Length; f++)
+                    {
+                        float talent = HeroTalent.For(hero, fields[f]);
+                        if (!HeroTalent.StandsOnSheet(hero, fields[f]))
+                        {
+                            dealt[f].Add(talent);
+                            continue;
+                        }
+
+                        if (talent <= best[f]) continue;
+                        best[f] = talent;
+                        strongest[f] = hero;
+                    }
+                }
+                catch
+                {
+                    // One unreadable hero must not cost the comparison.
+                }
+            }
+
+            for (int f = 0; f < fields.Length; f++)
+            {
+                int above = 0;
+                for (int i = 0; i < dealt[f].Count; i++)
+                {
+                    if (dealt[f][i] > best[f]) above++;
+                }
+
+                ModLog.Info("TALENT above every " + fields[f] + " sheet (" + TwoPlaces(best[f])
+                            + (strongest[f] != null ? ", " + strongest[f].Name : "") + "):"
+                            + " " + above + " of " + dealt[f].Count + " left to the hash there");
+            }
+        }
+
+        private static string TwoPlaces(float value)
+        {
+            return value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+        }
+
+        /// <summary>
         /// Every skill the game has, across the lords this mod acts on: how high
         /// they run, and how the AI has spent its focus on them.
         ///
@@ -2412,9 +2962,10 @@ namespace HeroesEvolve
         /// never been looked at at all, and there is no reason to think guessing
         /// would go better this time.
         ///
-        /// Focus matters as much as level here: since v1.5.7 the game's own
-        /// daily experience goes only to skills with focus, so where the AI has
-        /// invested decides what grows.
+        /// Focus matters as much as level here. The plan for non-combat growth
+        /// is to follow where the AI has already invested, since that is the
+        /// game's own statement of what this lord is for; whether that
+        /// investment is broad, narrow or absent decides whether the plan works.
         /// </summary>
         private static void ReportAllSkills()
         {
@@ -2463,6 +3014,11 @@ namespace HeroesEvolve
 
             ModLog.Info("ALLSKILL lords=" + lords + " focusPointsPerLord " + Percentiles(focusTotals));
 
+            // The envelope beside the values, because the question every one of
+            // these lines raises is whether the mod has carried anybody past
+            // what TaleWorlds wrote for that skill.
+            ModLog.Info("WRITTEN highest TaleWorlds wrote per skill: " + WrittenSkills.Describe());
+
             foreach (KeyValuePair<string, List<int>> pair in values)
             {
                 List<int> fs;
@@ -2478,6 +3034,161 @@ namespace HeroesEvolve
                             + " | focus " + (fs == null ? "n=0" : Percentiles(fs))
                             + " | lordsWithFocus=" + withFocus + " (" + pct + "%)");
             }
+        }
+
+        /// <summary>
+        /// How many lords the growth system currently has anything to do, and
+        /// how far behind they are.
+        ///
+        /// A year of live campaign moved nothing at all, and there are two
+        /// entirely different reasons that could happen: the system is broken,
+        /// or there is nobody below their target to lift. Percentiles of skill
+        /// cannot tell those apart. This can.
+        ///
+        /// It turned out to be the second -- in a fresh campaign TaleWorlds'
+        /// authored lords sit at 175 to 200 against a target of 170, so the
+        /// system correctly does nothing -- but that was a guess until it was
+        /// counted, and the next time it will not be.
+        /// </summary>
+        private static void ReportGaps()
+        {
+            List<int> gaps = new List<int>();
+            int behind = 0, atOrAbove = 0;
+            int behindByTen = 0, behindByFifty = 0;
+
+            foreach (Hero hero in Hero.AllAliveHeroes)
+            {
+                try
+                {
+                    if (!HeroFilter.IsEligible(hero)) continue;
+                    if (hero.BattleEquipment == null) continue;
+
+                    float talent = HeroTalent.For(hero, Talent.Combat);
+                    int target = SkillGrowth.PrimaryTarget(hero.Age, talent);
+                    if (target <= 0) continue;
+
+                    int best = HeroAdapter.ReadSkills(hero).MaxCombatSkill;
+                    int gap = target - best;
+
+                    if (gap <= 0) { atOrAbove++; continue; }
+
+                    behind++;
+                    gaps.Add(gap);
+                    if (gap >= 10) behindByTen++;
+                    if (gap >= 50) behindByFifty++;
+                }
+                catch
+                {
+                    // One unreadable hero must not cost the count.
+                }
+            }
+
+            ModLog.Info("GAP combat behind=" + behind + " atOrAbove=" + atOrAbove
+                        + " behindBy10+=" + behindByTen + " behindBy50+=" + behindByFifty);
+            ModLog.Info("GAP combat sizes " + Percentiles(gaps));
+
+            ReportFocusGaps();
+        }
+
+        /// <summary>
+        /// The same count for everything that is not a weapon, per skill.
+        ///
+        /// Two years of campaign proved the combat side works by showing its gap
+        /// distribution shrink -- median shortfall 33 to 24 while the number of
+        /// lords behind grew -- and proved nothing at all about the rest of the
+        /// sheet, because percentiles of skill cannot separate "growing slowly"
+        /// from "not growing". Leadership sat at 146 both times. This says
+        /// whether there was anything to do.
+        /// </summary>
+        private static void ReportFocusGaps()
+        {
+            Dictionary<string, List<int>> gapsBySkill = new Dictionary<string, List<int>>();
+            Dictionary<string, int> atOrAboveBySkill = new Dictionary<string, int>();
+
+            foreach (Hero hero in Hero.AllAliveHeroes)
+            {
+                try
+                {
+                    if (!HeroFilter.IsEligible(hero)) continue;
+                    if (hero.HeroDeveloper == null) continue;
+
+                    foreach (SkillObject skill in TaleWorlds.CampaignSystem.Extensions.Skills.All)
+                    {
+                        if (skill == null || skill.Name == null) continue;
+
+                        // The eight weapon and movement skills are grown by the
+                        // equipment pass against a rank-based target, not by
+                        // focus. Measuring them here reported a shortfall
+                        // against a target the system does not use for them --
+                        // a diagnostic describing something nobody runs, which
+                        // is exactly the drift that made the old dry-run lie.
+                        if (IsGrownByEquipment(skill)) continue;
+
+                        int focus = hero.HeroDeveloper.GetFocus(skill);
+                        if (focus <= 0) continue;
+
+                        string domain = IsNaval(skill) ? Talent.Naval : Talent.Civil;
+                        int target = FocusGrowth.TargetFor(hero.Age, HeroTalent.For(hero, domain),
+                                                           focus, SkillGrowth.PeakNormFor(domain));
+                        if (target <= 0) continue;
+
+                        string name = skill.Name.ToString();
+                        int gap = target - hero.GetSkillValue(skill);
+
+                        if (gap <= 0) { Bump(atOrAboveBySkill, name); continue; }
+
+                        List<int> list;
+                        if (!gapsBySkill.TryGetValue(name, out list))
+                        {
+                            list = new List<int>();
+                            gapsBySkill[name] = list;
+                        }
+                        list.Add(gap);
+                    }
+                }
+                catch
+                {
+                    // One unreadable hero must not cost the sweep.
+                }
+            }
+
+            foreach (KeyValuePair<string, List<int>> pair in gapsBySkill)
+            {
+                int atOrAbove;
+                atOrAboveBySkill.TryGetValue(pair.Key, out atOrAbove);
+
+                ModLog.Info("GAPFOCUS " + pair.Key
+                            + " behind=" + pair.Value.Count
+                            + " atOrAbove=" + atOrAbove
+                            + " | " + Percentiles(pair.Value));
+            }
+        }
+
+        /// <summary>
+        /// The skills the equipment pass owns: six weapons plus the two the
+        /// mount decision picks between. Mirrors SkillGrowthService.
+        /// </summary>
+        private static bool IsGrownByEquipment(SkillObject skill)
+        {
+            return skill == DefaultSkills.OneHanded
+                   || skill == DefaultSkills.TwoHanded
+                   || skill == DefaultSkills.Polearm
+                   || skill == DefaultSkills.Bow
+                   || skill == DefaultSkills.Crossbow
+                   || skill == DefaultSkills.Throwing
+                   || skill == DefaultSkills.Riding
+                   || skill == DefaultSkills.Athletics;
+        }
+
+        /// <summary>
+        /// War Sails skills, matched by string id so the report still runs for
+        /// anyone without that DLC. Mirrors SkillGrowthService deliberately: if
+        /// the two disagreed the diagnostic would describe a system nobody runs.
+        /// </summary>
+        private static bool IsNaval(SkillObject skill)
+        {
+            string id = skill.StringId;
+            return id == "Mariner" || id == "Boatswain" || id == "Shipmaster";
         }
 
         /// <summary>
@@ -3376,7 +4087,7 @@ namespace HeroesEvolve
         /// </summary>
         private static void ReportMercenaryCompanies()
         {
-            int managed = 0;
+            int managed = 0, growing = 0;
             Dictionary<string, int> companies = new Dictionary<string, int>();
 
             foreach (Hero hero in Hero.AllAliveHeroes)
@@ -3388,8 +4099,12 @@ namespace HeroesEvolve
                     if (!hero.Clan.IsMinorFaction && !hero.Clan.IsOutlaw) continue;
                     if (hero.Clan.IsBanditFaction) continue;
 
-                    if (!HeroFilter.IsEligible(hero)) continue;
-                    managed++;
+                    bool gear = HeroFilter.IsEligible(hero);
+                    bool grows = HeroFilter.IsEligibleToGrow(hero);
+                    if (!gear && !grows) continue;
+
+                    if (gear) managed++;
+                    if (grows) growing++;
 
                     string name = hero.Clan.Name != null ? hero.Clan.Name.ToString() : hero.Clan.StringId;
                     int seen;
@@ -3402,7 +4117,8 @@ namespace HeroesEvolve
                 }
             }
 
-            ModLog.Info("MERCENARIES managedForGear=" + managed + " companies=" + companies.Count);
+            ModLog.Info("MERCENARIES managedForGear=" + managed + " growing=" + growing
+                        + " companies=" + companies.Count);
 
             foreach (KeyValuePair<string, int> pair in companies)
             {
@@ -4351,6 +5067,7 @@ namespace HeroesEvolve
                                             ? hero.CharacterObject.DefaultFormationClass.ToString() : "<none>")
                     + " charId=" + (hero.CharacterObject != null ? hero.CharacterObject.StringId : "<none>")
                     + " heroId=" + hero.StringId
+                    + " talent=" + (int)(HeroTalent.For(hero) * 100)
                     + " | skills=" + RenderSkills(HeroAdapter.ReadSkills(hero))
                     + " | current=" + resolved.CurrentWeapons
                     + " | target=" + resolved.TargetWeapons
@@ -4359,6 +5076,10 @@ namespace HeroesEvolve
 
                 ModLog.Info(header);
                 echo.AppendLine(header);
+
+                string growth = "DRY   growth " + SkillGrowthService.DescribeWeaponOrder(hero);
+                ModLog.Info(growth);
+                echo.AppendLine(growth);
 
                 for (int i = 0; i < resolved.Slots.Count; i++)
                 {

@@ -1,8 +1,9 @@
 # Heroes Evolve
 
 A Mount & Blade II: Bannerlord mod. In vanilla, AI lords keep the equipment they
-were made with until they die. Here they keep up: they buy their own gear in town
-markets, and take it off each other after a battle.
+were made with until they die. Here they develop: they grow by their age and
+talent, buy their own gear in town markets, and take it off each other after a
+battle.
 
 ![Overview](docs/gallery/1-overview.jpg)
 
@@ -18,12 +19,15 @@ markets, and take it off each other after a battle.
 |---|---|
 | Starting kit | Lords who come of age with nothing — a known TaleWorlds bug — get a plain kit matched to culture, role and age. |
 | Their own way | Now and then a lord comes of age armed for what he is good at, within what his culture's troops actually field. |
+| Skills grow | Three hidden talents — combat, management, seafaring — decide how fast each hero learns and where they stop. The game's own growth can be chosen instead. |
 | Shopping | Lords buy better versions of what they already carry, with their clan's money, capped by their skills. |
 | Caravans | A caravan master arms himself from a commission you set. |
 | Robbery | Captors may strip their prisoners, on a roll weighted by character. A robbed man comes back in basic gear of the same kinds he carried, and his clan swears vengeance: it strips the robber's people in return when it captures one. |
 
-Skills are left to the game: since v1.5.7 Bannerlord grows lords, companions and
-wanderers itself, so the mod's own skill growth was removed.
+Skill growth is a choice in the options. Heroes Evolve's, the default, turns off
+the daily experience Bannerlord v1.5.7 added; the game's own leaves it running and
+the mod's off. The two cannot run together: the game's would undo the age curve
+within a decade.
 
 The full description, with every figure, is in
 [docs/store-description.bbcode](docs/store-description.bbcode). The diagrams are

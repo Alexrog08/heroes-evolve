@@ -22,6 +22,21 @@
        dresses a man however he came to have nothing. -->
   <EnableRepair>true</EnableRepair>
 
+  <!-- Which skill growth runs. true: Heroes Evolve's. Every hero has a hidden
+       talent, young lords start young, and skills grow a few points a year
+       toward a ceiling that rises with age; the game's own daily experience is
+       turned off. false: the game's own, since Bannerlord v1.5.7: every lord,
+       companion and wanderer gains experience each day in the skills they have
+       focus points in, with no age curve and no talent. Takes effect when a
+       campaign is loaded. -->
+  <EnableSkillGrowth>true</EnableSkillGrowth>
+
+  <!-- New campaigns only, and only with EnableSkillGrowth true. Before the
+       first day, every lord's skills are set where their age and talent put
+       them, so young lords start young and grow into their strength. Saves
+       already under way are never touched. -->
+  <StartLordsOnCurve>true</StartLordsOnCurve>
+
   <!-- Lets lords buy better gear when they visit a town. Never changes what
        kind of fighter a lord is: it replaces what he already carries with
        something better of the same kind, and never touches an empty slot. -->
@@ -68,7 +83,8 @@
 
        Set it false if you outfit them by hand and want that respected. Heroes
        travelling inside your own party are never touched either way, since
-       their inventory is already yours to manage. -->
+       their inventory is already yours to manage. Their skills keep growing
+       regardless: that takes nothing from you. -->
   <ManageOwnClan>true</ManageOwnClan>
 
   <!-- ============ Money ============ -->

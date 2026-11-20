@@ -492,8 +492,8 @@ namespace HeroesEvolve.Core
         /// prisoner and the same spell in the cells always give the same
         /// number, and revisiting simply asks the same question again -- which
         /// is the third time this project has replaced a ledger with a property
-        /// of the thing itself, after the talent draw (gone since Bannerlord v1.5.7 grows lords itself) and
-        /// GrantTier.Choose, and it uses their hash.
+        /// of the thing itself, after Talent.For and GrantTier.Choose, and it
+        /// uses their hash.
         ///
         /// What does move is the bar the number has to clear. Chance rises with
         /// his Roguery and falls as the two men warm to each other, so a man he

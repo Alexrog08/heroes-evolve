@@ -51,8 +51,7 @@ namespace HeroesEvolve
         ///
         /// Eighty-four is the stock answer -- four seasons of twenty-one -- and
         /// writing it down as a constant is a mistake this project has already
-        /// made once and fixed once, in the mod's own skill growth (gone since
-        /// Bannerlord v1.5.7 grows lords itself).
+        /// made once and fixed once, in SkillGrowthService.CyclesPerYear.
         /// CampaignTime derives its calendar from static fields any mod may
         /// change, and FastMode cuts a season to a single week. A death rate
         /// computed per stock year on a FastMode calendar would be wrong by a

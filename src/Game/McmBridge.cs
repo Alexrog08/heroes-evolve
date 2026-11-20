@@ -349,6 +349,11 @@ namespace HeroesEvolve
             string before = Settings.Describe();
 
             Settings.EnableRepair = settings.EnableRepair;
+            // Index 0 is the mod's growth, and anything unreadable keeps it: the
+            // default a player who never opened the screen is running.
+            Settings.EnableSkillGrowth = settings.SkillGrowthMode == null
+                                         || settings.SkillGrowthMode.SelectedIndex != 1;
+            Settings.StartLordsOnCurve = settings.StartLordsOnCurve;
             Settings.EnablePurchases = settings.EnablePurchases;
             Settings.EnableLogging = settings.EnableLogging;
             Settings.ManageOwnClan = settings.ManageOwnClan;

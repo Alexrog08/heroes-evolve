@@ -15,7 +15,7 @@ namespace HeroesEvolve.Core
     /// The same hero robbed of the same slot always comes away with the same
     /// thing, which keeps a robbery replayable from a test command and keeps
     /// the answer stable if the mod is asked twice. FNV-1a rather than
-    /// string.GetHashCode because .NET randomises that
+    /// string.GetHashCode for the reason Talent gives: .NET randomises that
     /// per process, so a saved campaign would hand a man different rags after
     /// every restart.
     ///

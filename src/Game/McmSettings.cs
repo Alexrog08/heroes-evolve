@@ -4,6 +4,7 @@ using MCM.Abstractions.Attributes.v2;
 using MCM.Abstractions.Base.Global;
 using MCM.Common;
 using TaleWorlds.CampaignSystem;
+using TaleWorlds.Library;
 using TaleWorlds.Localization;
 
 namespace HeroesEvolve
@@ -80,6 +81,71 @@ namespace HeroesEvolve
         public override string DisplayName { get { return new TextObject("{=hev_mcm_title}Heroes Evolve").ToString(); } }
         public override string FolderName { get { return "HeroesEvolve"; } }
         public override string FormatType { get { return "json2"; } }
+
+        // ---- Skills -----------------------------------------------------------
+
+        // A new property rather than the old switch under a new face: the old
+        // one was a bool named EnableSkillGrowth, and MCM would read a stored
+        // bool into a dropdown as nothing. Index 0 is the mod's growth, the
+        // default; see McmBridge.Pull and GrowthMode.
+        //
+        // The entries name the two systems themselves, because MCM draws an
+        // option as one line and the hint only on hover; what each one does and
+        // costs is in the window the button below opens.
+        [SettingPropertyDropdown("{=hev_mcm_growth_mode}Skill growth", RequireRestart = false, Order = 0,
+            HintText = "{=hev_mcm_growth_mode_hint}Heroes Evolve's turns off the game's daily experience. Takes effect when a campaign is loaded.")]
+        [SettingPropertyGroup("{=hev_mcm_group_skills}Skills", GroupOrder = 8)]
+        public Dropdown<string> SkillGrowthMode { get; set; } =
+            new Dropdown<string>(new string[]
+            {
+                "{=hev_mcm_growth_mode_he}Heroes Evolve's: age and talent",
+                "{=hev_mcm_growth_mode_game}The game's: focus points"
+            }, 0);
+
+        [SettingPropertyButton("{=hev_mcm_growth_compare}How the two compare",
+            Content = "{=hev_mcm_growth_compare_run}Read",
+            RequireRestart = false,
+            Order = 1,
+            HintText = "{=hev_mcm_growth_compare_hint}Opens a window with what each growth does and what it costs.")]
+        [SettingPropertyGroup("{=hev_mcm_group_skills}Skills", GroupOrder = 8)]
+        public Action CompareGrowth { get; set; } = ShowGrowthComparison;
+
+        // Named for what a player sees, not for the mechanism: "start lords on
+        // their curve" meant nothing to anyone who had not read the code.
+        [SettingPropertyBool("{=hev_mcm_start_age}Starting skills match each lord's age", RequireRestart = false, Order = 2,
+            HintText = "{=hev_mcm_start_age_hint}New campaigns only, with Heroes Evolve's growth. Lords the game writes as finished veterans start with the skills of their age, so a 20-year-old does not fight like a 50-year-old. Saves already under way are left alone.")]
+        [SettingPropertyGroup("{=hev_mcm_group_skills}Skills", GroupOrder = 8)]
+        public bool StartLordsOnCurve { get; set; } = true;
+
+        /// <summary>
+        /// The comparison a player needs to choose, in the game's own notice
+        /// window. MCM draws no paragraph anywhere -- every option is one line of
+        /// fixed height and a hint shows only on hover -- so the pros and cons
+        /// live here, one click away and readable. Every line is neutral about
+        /// who a hero is: no "his" (see the no-gendered-text rule).
+        /// </summary>
+        private static void ShowGrowthComparison()
+        {
+            try
+            {
+                InformationManager.ShowInquiry(new InquiryData(
+                    new TextObject("{=hev_growth_compare_title}Skill growth").ToString(),
+                    new TextObject("{=hev_growth_compare_text}HEROES EVOLVE'S (default){newline}"
+                        + "Every hero has a hidden talent for combat, management and seafaring. A new campaign sets each lord where their age and talent put them, so young lords start young, and from there they gain a few points a year toward a ceiling that rises with age. Gifted heroes stand out.{newline}"
+                        + "- Turns off the game's own daily experience.{newline}"
+                        + "- Changing it takes effect when a campaign is loaded.{newline}{newline}"
+                        + "THE GAME'S{newline}"
+                        + "Bannerlord's own system since v1.5.7. Every lord, companion and wanderer gains experience each day in the skills they have focus points in. There is no age curve and no talent: the game's character sheets stand as written, so some young lords start as veterans, and skills keep rising for life.{newline}{newline}"
+                        + "Either way, a skill a hero has gained is never taken away during play.").ToString(),
+                    true, false,
+                    new TextObject("{=hev_growth_compare_ok}Close").ToString(), null,
+                    null, null));
+            }
+            catch (Exception ex)
+            {
+                ModLog.Error("growth comparison window failed: " + ex.GetType().Name + " " + ex.Message);
+            }
+        }
 
         // ---- Starting kits --------------------------------------------------
 
